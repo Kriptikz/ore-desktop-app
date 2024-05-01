@@ -19,6 +19,7 @@ use spl_associated_token_account::get_associated_token_address;
 #[derive(Deserialize)]
 pub struct Config {
     pub rpc_url: String,
+    pub ore_mint: String,
 }
 
 fn main() {
@@ -62,6 +63,8 @@ fn main() {
         wallet = new_wallet;
     }
 
+    let ore_mint = Pubkey::from_str(&config.ore_mint).expect("Config ore_mint is not a valid pubkey");
+
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WorldInspectorPlugin::new())
@@ -69,6 +72,9 @@ fn main() {
             wallet,
             sol_balance: 0.0,
             ore_balance: 0.0,
+        })
+        .insert_resource(OreAppState {
+            ore_mint,
         })
         .insert_resource(RpcConnection {
             rpc: rpc_connection,
@@ -97,6 +103,12 @@ pub struct AppWallet {
 pub struct RpcConnection {
     // Cannot use the nonblocking client and await with the bevy tasks because bevy doesn't actually use tokio for async tasks.
     rpc: Arc<RpcClient>,
+}
+
+// TODO: use real AppState for this
+#[derive(Resource)]
+pub struct OreAppState {
+    ore_mint: Pubkey,
 }
 
 // Components
@@ -154,6 +166,7 @@ fn button_update_sol_balance(
         (Changed<Interaction>, With<ButtonUpdateSolOreBalances>),
     >,
     app_wallet: Res<AppWallet>,
+    ore_app_state: Res<OreAppState>,
     rpc_connection: ResMut<RpcConnection>,
 ) {
     for (entity, interaction, mut color, mut border_color) in &mut interaction_query {
@@ -166,10 +179,10 @@ fn button_update_sol_balance(
                 let pool = AsyncComputeTaskPool::get();
 
                 let connection = rpc_connection.rpc.clone();
+                let ore_mint = ore_app_state.ore_mint.clone();
                 let task = pool.spawn(async move {
                     let balance = connection.get_balance(&pubkey).unwrap();
                     let sol_balance = balance as f64 / LAMPORTS_PER_SOL as f64;
-                    let ore_mint = Pubkey::from_str("oreoN2tQbHXVaZsr3pf66A48miqcBXCDJozganhEJgz").unwrap();
                     let token_account = get_associated_token_address(&pubkey, &ore_mint);
                     
                     let ore_balance = connection.get_token_account_balance(&token_account).unwrap().ui_amount.unwrap();
