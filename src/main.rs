@@ -1,10 +1,30 @@
-use std::{fs::File, path::Path};
+use std::{fs::{self, File}, io::Read, path::Path};
 
 use bevy::prelude::*;
 use cocoon::Cocoon;
+use serde::Deserialize;
 use solana_sdk::signature::{Keypair, Signer};
 
+#[derive(Deserialize)]
+pub struct Config {
+   pub rpc_url: String,
+}
+
 fn main() {
+    let config: Config;
+    let config_path = Path::new("config.toml");
+    if config_path.exists() {
+        let config_string = fs::read_to_string(config_path).unwrap();
+        config = match toml::from_str(&config_string) {
+            Ok(d) => d,
+            Err(_) => {
+                panic!("Failed to read config string.");
+            }
+        };
+    } else {
+        panic!("Please create a config.toml with the rpc_url.");
+    }
+    
     let wallet: Keypair;
     let wallet_path = Path::new("save.data");
 
