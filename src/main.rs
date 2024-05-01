@@ -1,14 +1,27 @@
-use std::{fs::{self, File}, path::Path, sync::Arc};
+use std::{
+    fs::{self, File},
+    path::Path,
+    sync::Arc,
+};
 
-use bevy::{prelude::*, tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task}};
+use bevy::{
+    prelude::*,
+    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
+};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use cocoon::Cocoon;
+use copypasta::{ClipboardContext, ClipboardProvider};
 use serde::Deserialize;
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL, signature::{Keypair, Signer}};
+use solana_sdk::{
+    commitment_config::CommitmentConfig,
+    native_token::LAMPORTS_PER_SOL,
+    signature::{Keypair, Signer},
+};
 
 #[derive(Deserialize)]
 pub struct Config {
-   pub rpc_url: String,
+    pub rpc_url: String,
 }
 
 fn main() {
@@ -26,9 +39,12 @@ fn main() {
     } else {
         panic!("Please create a config.toml with the rpc_url.");
     }
-    
-    let rpc_connection = Arc::new(RpcClient::new_with_commitment(config.rpc_url, CommitmentConfig::confirmed()));
-    
+
+    let rpc_connection = Arc::new(RpcClient::new_with_commitment(
+        config.rpc_url,
+        CommitmentConfig::confirmed(),
+    ));
+
     let wallet: Keypair;
     let wallet_path = Path::new("save.data");
 
@@ -49,9 +65,9 @@ fn main() {
         wallet = new_wallet;
     }
 
-
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(WorldInspectorPlugin::new())
         .insert_resource(AppWallet {
             wallet,
             sol_balance: 0.0,
@@ -62,6 +78,7 @@ fn main() {
         })
         .add_systems(Startup, setup)
         .add_systems(Update, button_update_sol_balance)
+        .add_systems(Update, button_copy_text)
         .add_systems(Update, task_update_app_wallet_sol_balance)
         .add_systems(Update, update_app_wallet_ui)
         .run();
@@ -87,13 +104,21 @@ pub struct RpcConnection {
 
 // Components
 #[derive(Component)]
-pub struct WalletPubkeyText;
+pub struct CopyableText {
+    full_text: String,
+}
+
+#[derive(Component)]
+pub struct TextWalletPubkey;
 
 #[derive(Component)]
 pub struct TextWalletSolBalance;
 
 #[derive(Component)]
 pub struct ButtonUpdateSolBalance;
+
+#[derive(Component)]
+pub struct ButtonCopyText;
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
@@ -110,7 +135,9 @@ fn task_update_app_wallet_sol_balance(
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
             app_wallet.sol_balance = result;
-            commands.entity(entity).remove::<TaskUpdateAppWalletSolBalance>();
+            commands
+                .entity(entity)
+                .remove::<TaskUpdateAppWalletSolBalance>();
         }
     }
 }
@@ -119,13 +146,10 @@ fn button_update_sol_balance(
     mut commands: Commands,
     mut interaction_query: Query<
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
-        (
-            Changed<Interaction>,
-            With<ButtonUpdateSolBalance>,
-        ),
+        (Changed<Interaction>, With<ButtonUpdateSolBalance>),
     >,
     app_wallet: Res<AppWallet>,
-    rpc_connection: ResMut<RpcConnection>
+    rpc_connection: ResMut<RpcConnection>,
 ) {
     for (entity, interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
@@ -142,8 +166,60 @@ fn button_update_sol_balance(
                     balance as f64 / LAMPORTS_PER_SOL as f64
                 });
 
-                commands.entity(entity).insert(TaskUpdateAppWalletSolBalance { task });
+                commands
+                    .entity(entity)
+                    .insert(TaskUpdateAppWalletSolBalance { task });
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+                border_color.0 = Color::WHITE;
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+                border_color.0 = Color::BLACK;
+            }
+        }
+    }
+}
 
+fn button_copy_text(
+    mut commands: Commands,
+    mut interaction_query: Query<
+        (
+            Entity,
+            &Interaction,
+            &mut BackgroundColor,
+            &mut BorderColor,
+            &Children,
+        ),
+        (Changed<Interaction>, With<ButtonCopyText>),
+    >,
+    text_query: Query<(&CopyableText, &Children)>,
+) {
+    for (entity, interaction, mut color, mut border_color, children) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+                border_color.0 = Color::RED;
+
+                let mut text: Option<String> = None;
+                for (copyable_text, children) in text_query.iter() {
+                    for child in children.iter() {
+                        if *child == entity {
+                            text = Some(copyable_text.full_text.clone());
+                        }
+                    }
+                }
+                if let Some(text) = text {
+                    let mut ctx = ClipboardContext::new().unwrap();
+                    if let Err(_) = ctx.set_contents(text) {
+                        info!("Failed to set clipboard content.");
+                    } else {
+                        info!("Succesfully copied to clipboard");
+                    }
+                } else {
+                    info!("Failed to find copyable_text.");
+                }
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -159,32 +235,36 @@ fn button_update_sol_balance(
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
     commands.spawn(Camera2dBundle::default());
-    let wallet_str = app_wallet.wallet.pubkey().to_string();
+    let full_addr = app_wallet.wallet.pubkey().to_string();
+    let wallet_str;
+    let len = full_addr.len();
+    if len > 10 {
+        let prefix = &full_addr[0..5];
+
+        let suffix = &full_addr[len - 5..len];
+
+        wallet_str = format!("{}...{}", prefix, suffix);
+    } else {
+        wallet_str = full_addr;
+    }
     let sol_balance_str = app_wallet.sol_balance.to_string();
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::Center,
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        })
+            Name::new("Screen Node"),
+        ))
         .with_children(|parent| {
-            parent.spawn((
-                TextBundle::from_section(
-                    &wallet_str,
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 40.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
-                    },
-                ),
-                WalletPubkeyText,
-            ));
+            spawn_copyable_text(parent, &asset_server, app_wallet.wallet.pubkey().to_string(), wallet_str);
             parent.spawn((
                 TextBundle::from_section(
                     &sol_balance_str,
@@ -195,6 +275,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                     },
                 ),
                 TextWalletSolBalance,
+                Name::new("TextWalletSolBalance"),
             ));
 
             parent
@@ -215,6 +296,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                         ..default()
                     },
                     ButtonUpdateSolBalance,
+                    Name::new("ButtonUpdateSolBalance"),
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
@@ -231,9 +313,71 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
 
 fn update_app_wallet_ui(
     app_wallet: Res<AppWallet>,
-    mut text_query: Query<&mut Text, With<TextWalletSolBalance>>
+    mut text_query: Query<&mut Text, With<TextWalletSolBalance>>,
 ) {
     let mut text = text_query.single_mut();
     text.sections[0].value = app_wallet.sol_balance.to_string();
+}
 
+fn spawn_copyable_text(parent: &mut ChildBuilder, asset_server: &AssetServer, copy_text: String, display_text: String) {
+    parent
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Px(300.0),
+                    height: Val::Px(30.0),
+                    border: UiRect::all(Val::Px(5.0)),
+                    ..default()
+                },
+                ..default()
+            },
+            CopyableText {
+                full_text: copy_text.clone(),
+            },
+            Name::new("CopyableText"),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                TextBundle::from_section(
+                    &display_text,
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+                TextWalletPubkey,
+                Name::new("WalletPubkeyText"),
+            ));
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(60.0),
+                            height: Val::Px(60.0),
+                            border: UiRect::all(Val::Px(5.0)),
+                            // horizontally center child text
+                            justify_content: JustifyContent::Center,
+                            // vertically center child text
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        border_color: BorderColor(Color::BLACK),
+                        background_color: NORMAL_BUTTON.into(),
+                        ..default()
+                    },
+                    ButtonCopyText,
+                    Name::new("ButtonCopyText"),
+                ))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Click to Copy...",
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 20.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                        },
+                    ));
+                });
+        });
 }
