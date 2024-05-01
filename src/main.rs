@@ -1,4 +1,7 @@
+use std::fs::File;
+
 use bevy::prelude::*;
+use cocoon::Cocoon;
 use solana_sdk::signature::{Keypair, Signer};
 
 fn main() {
@@ -39,6 +42,20 @@ fn button_system(
                 let wallet = Keypair::new();
 
                 wallet_pubkey_text.sections[0].value = wallet.pubkey().to_string();
+
+                let wallet_bytes = wallet.to_bytes();
+
+                let mut cocoon = Cocoon::new(b"secret password");
+                let mut file = File::create("target/encrypted_data.data").unwrap();
+
+                // Dump the serialized database into a file as an encrypted container.
+                let container = cocoon.dump(wallet_bytes.to_vec(), &mut file).unwrap();
+
+                // Let's look at how to decrypt the container and parse it back.
+                // let mut file = File::open("target/encrypted_data.data").unwrap();
+                // let encoded = cocoon.parse(&mut file).unwrap();
+                // let decoded = Database::try_from_slice(&encoded).unwrap();
+
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();

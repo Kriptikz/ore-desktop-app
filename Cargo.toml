@@ -7,4 +7,6 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.13.2"
+# Using cocoon 0.3.1 because solana-sdk dependency curve25519-dalek has pinned zeroize version >=1 to <1.4, where cocoon 0.3.2 and after use zeroize >1.5
+cocoon = "=0.3.1"
 solana-sdk = "1.18.12"
