@@ -4752,6 +4752,7 @@ dependencies = [
  "serde",
  "solana-client",
  "solana-sdk",
+ "spl-associated-token-account",
  "toml 0.8.12",
 ]
 

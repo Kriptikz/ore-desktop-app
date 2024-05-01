@@ -14,4 +14,5 @@ copypasta = "0.10.1"
 serde = "1.0.199"
 solana-client = "1.18.12"
 solana-sdk = "1.18.12"
+spl-associated-token-account = { version = "^2.2", features = [ "no-entrypoint" ] }
 toml = "0.8.12"
