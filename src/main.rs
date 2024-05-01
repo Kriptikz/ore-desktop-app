@@ -1,12 +1,36 @@
-use std::fs::File;
+use std::{fs::File, path::Path};
 
 use bevy::prelude::*;
 use cocoon::Cocoon;
 use solana_sdk::signature::{Keypair, Signer};
 
 fn main() {
+    let wallet: Keypair;
+    let wallet_path = Path::new("save.data");
+
+    // TODO: get password from user with UI.
+    let cocoon = Cocoon::new(b"secret password");
+
+    if wallet_path.exists() {
+        let mut file = File::open(wallet_path).unwrap();
+        let encoded = cocoon.parse(&mut file).unwrap();
+        wallet = Keypair::from_bytes(&encoded).unwrap();
+    } else {
+        let new_wallet = Keypair::new();
+        let wallet_bytes = new_wallet.to_bytes();
+
+        let mut file = File::create(wallet_path).unwrap();
+
+        let _ = cocoon.dump(wallet_bytes.to_vec(), &mut file).unwrap();
+        wallet = new_wallet;
+    }
+
+
     App::new()
         .add_plugins(DefaultPlugins)
+        .insert_resource(AppWallet {
+            wallet,
+        })
         .add_systems(Startup, setup)
         .add_systems(Update, button_system)
         .run();
@@ -15,6 +39,12 @@ fn main() {
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+
+// Resources
+#[derive(Resource)]
+pub struct AppWallet {
+    wallet: Keypair,
+}
 
 #[derive(Component)]
 pub struct WalletPubkeyText;
@@ -29,33 +59,13 @@ fn button_system(
             Changed<Interaction>,
             With<ButtonGenerateWallet>,
         ),
-    >,
-    mut wallet_pubkey_text_query: Query<&mut Text, With<WalletPubkeyText>>,
+    >
 ) {
     for (interaction, mut color, mut border_color) in &mut interaction_query {
-        let mut wallet_pubkey_text = wallet_pubkey_text_query.get_single_mut().unwrap();
-
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
-                let wallet = Keypair::new();
-
-                wallet_pubkey_text.sections[0].value = wallet.pubkey().to_string();
-
-                let wallet_bytes = wallet.to_bytes();
-
-                let mut cocoon = Cocoon::new(b"secret password");
-                let mut file = File::create("target/encrypted_data.data").unwrap();
-
-                // Dump the serialized database into a file as an encrypted container.
-                let container = cocoon.dump(wallet_bytes.to_vec(), &mut file).unwrap();
-
-                // Let's look at how to decrypt the container and parse it back.
-                // let mut file = File::open("target/encrypted_data.data").unwrap();
-                // let encoded = cocoon.parse(&mut file).unwrap();
-                // let decoded = Database::try_from_slice(&encoded).unwrap();
-
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -69,8 +79,9 @@ fn button_system(
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
     commands.spawn(Camera2dBundle::default());
+    let wallet_str = app_wallet.wallet.pubkey().to_string();
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -86,7 +97,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .with_children(|parent| {
             parent.spawn((
                 TextBundle::from_section(
-                    "Generate A New Wallet...",
+                    &wallet_str,
                     TextStyle {
                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                         font_size: 40.0,
