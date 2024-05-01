@@ -10,5 +10,6 @@ bevy = "0.13.2"
 # Using cocoon 0.3.1 because solana-sdk dependency curve25519-dalek has pinned zeroize version >=1 to <1.4, where cocoon 0.3.2 and after use zeroize >1.5
 cocoon = "=0.3.1"
 serde = "1.0.199"
+solana-client = "1.18.12"
 solana-sdk = "1.18.12"
 toml = "0.8.12"
