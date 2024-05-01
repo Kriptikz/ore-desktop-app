@@ -1,9 +1,10 @@
-use std::{fs::{self, File}, io::Read, path::Path};
+use std::{fs::{self, File}, path::Path, sync::Arc};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task}};
 use cocoon::Cocoon;
 use serde::Deserialize;
-use solana_sdk::signature::{Keypair, Signer};
+use solana_client::rpc_client::RpcClient;
+use solana_sdk::{commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL, signature::{Keypair, Signer}};
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -11,6 +12,7 @@ pub struct Config {
 }
 
 fn main() {
+    // TODO: put rpc_url in save.data and let user input from UI.
     let config: Config;
     let config_path = Path::new("config.toml");
     if config_path.exists() {
@@ -24,6 +26,8 @@ fn main() {
     } else {
         panic!("Please create a config.toml with the rpc_url.");
     }
+    
+    let rpc_connection = Arc::new(RpcClient::new_with_commitment(config.rpc_url, CommitmentConfig::confirmed()));
     
     let wallet: Keypair;
     let wallet_path = Path::new("save.data");
@@ -51,8 +55,12 @@ fn main() {
         .insert_resource(AppWallet {
             wallet,
         })
+        .insert_resource(RpcConnection {
+            rpc: rpc_connection,
+        })
         .add_systems(Startup, setup)
-        .add_systems(Update, button_system)
+        .add_systems(Update, button_log_balance_system)
+        .add_systems(Update, task_system_log_sol_balance)
         .run();
 }
 
@@ -66,26 +74,67 @@ pub struct AppWallet {
     wallet: Keypair,
 }
 
+#[derive(Resource)]
+pub struct RpcConnection {
+    // Cannot use the nonblocking client and await with the bevy tasks because bevy doesn't actually use tokio for async tasks.
+    rpc: Arc<RpcClient>,
+}
+
+// Components
 #[derive(Component)]
 pub struct WalletPubkeyText;
 
 #[derive(Component)]
-pub struct ButtonGenerateWallet;
+pub struct ButtonLogBalance;
 
-fn button_system(
+// Task Components
+// TODO: tasks should return results so errors can be dealt with by the task handler system
+#[derive(Component)]
+struct TaskLogSolBalance {
+    pub task: Task<f64>,
+}
+
+fn task_system_log_sol_balance(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut TaskLogSolBalance)>,
+) {
+    for (entity, mut task) in &mut query.iter_mut() {
+        if let Some(result) = block_on(future::poll_once(&mut task.task)) {
+            info!("BALANCE: {}", result);
+            commands.entity(entity).remove::<TaskLogSolBalance>();
+        }
+    }
+}
+
+fn button_log_balance_system(
+    mut commands: Commands,
     mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor, &mut BorderColor),
+        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
         (
             Changed<Interaction>,
-            With<ButtonGenerateWallet>,
+            With<ButtonLogBalance>,
         ),
-    >
+    >,
+    app_wallet: Res<AppWallet>,
+    rpc_connection: ResMut<RpcConnection>
 ) {
-    for (interaction, mut color, mut border_color) in &mut interaction_query {
+    for (entity, interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
+                let pubkey = app_wallet.wallet.pubkey();
+
+                let pool = AsyncComputeTaskPool::get();
+
+                let connection = rpc_connection.rpc.clone();
+                let task = pool.spawn(async move {
+                    let balance = connection.get_balance(&pubkey).unwrap();
+                    balance as f64 / LAMPORTS_PER_SOL as f64
+                });
+
+                commands.entity(entity).insert(TaskLogSolBalance { task });
+
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -144,11 +193,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                         background_color: NORMAL_BUTTON.into(),
                         ..default()
                     },
-                    ButtonGenerateWallet,
+                    ButtonLogBalance,
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
-                        "Generate Wallet",
+                        "Log balance",
                         TextStyle {
                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                             font_size: 20.0,
