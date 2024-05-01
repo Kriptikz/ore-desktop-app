@@ -1,7 +1,5 @@
 use std::{
-    fs::{self, File},
-    path::Path,
-    sync::Arc,
+    fs::{self, File}, path::Path, str::FromStr, sync::Arc
 };
 
 use bevy::{
@@ -14,10 +12,9 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 use serde::Deserialize;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
-    native_token::LAMPORTS_PER_SOL,
-    signature::{Keypair, Signer},
+    commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{Keypair, Signer}
 };
+use spl_associated_token_account::get_associated_token_address;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -115,16 +112,23 @@ pub struct TextWalletPubkey;
 pub struct TextWalletSolBalance;
 
 #[derive(Component)]
-pub struct ButtonUpdateSolBalance;
+pub struct TextWalletOreBalance;
+
+#[derive(Component)]
+pub struct ButtonUpdateSolOreBalances;
 
 #[derive(Component)]
 pub struct ButtonCopyText;
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
+struct TaskUpdateAppWalletSolBalanceData {
+    pub sol_balance: f64,
+    pub ore_balance: f64,
+}
 #[derive(Component)]
 struct TaskUpdateAppWalletSolBalance {
-    pub task: Task<f64>,
+    pub task: Task<TaskUpdateAppWalletSolBalanceData>,
 }
 
 fn task_update_app_wallet_sol_balance(
@@ -134,7 +138,8 @@ fn task_update_app_wallet_sol_balance(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            app_wallet.sol_balance = result;
+            app_wallet.sol_balance = result.sol_balance;
+            app_wallet.ore_balance = result.ore_balance;
             commands
                 .entity(entity)
                 .remove::<TaskUpdateAppWalletSolBalance>();
@@ -146,7 +151,7 @@ fn button_update_sol_balance(
     mut commands: Commands,
     mut interaction_query: Query<
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ButtonUpdateSolBalance>),
+        (Changed<Interaction>, With<ButtonUpdateSolOreBalances>),
     >,
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
@@ -163,7 +168,16 @@ fn button_update_sol_balance(
                 let connection = rpc_connection.rpc.clone();
                 let task = pool.spawn(async move {
                     let balance = connection.get_balance(&pubkey).unwrap();
-                    balance as f64 / LAMPORTS_PER_SOL as f64
+                    let sol_balance = balance as f64 / LAMPORTS_PER_SOL as f64;
+                    let ore_mint = Pubkey::from_str("oreoN2tQbHXVaZsr3pf66A48miqcBXCDJozganhEJgz").unwrap();
+                    let token_account = get_associated_token_address(&pubkey, &ore_mint);
+                    
+                    let ore_balance = connection.get_token_account_balance(&token_account).unwrap().ui_amount.unwrap();
+
+                    TaskUpdateAppWalletSolBalanceData {
+                        sol_balance,
+                        ore_balance
+                    }
                 });
 
                 commands
@@ -183,20 +197,18 @@ fn button_update_sol_balance(
 }
 
 fn button_copy_text(
-    mut commands: Commands,
     mut interaction_query: Query<
         (
             Entity,
             &Interaction,
             &mut BackgroundColor,
             &mut BorderColor,
-            &Children,
         ),
         (Changed<Interaction>, With<ButtonCopyText>),
     >,
     text_query: Query<(&CopyableText, &Children)>,
 ) {
-    for (entity, interaction, mut color, mut border_color, children) in &mut interaction_query {
+    for (entity, interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
@@ -248,6 +260,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
         wallet_str = full_addr;
     }
     let sol_balance_str = app_wallet.sol_balance.to_string();
+    let ore_balance_str = app_wallet.ore_balance.to_string();
     commands
         .spawn((
             NodeBundle {
@@ -267,7 +280,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
             spawn_copyable_text(parent, &asset_server, app_wallet.wallet.pubkey().to_string(), wallet_str);
             parent.spawn((
                 TextBundle::from_section(
-                    &sol_balance_str,
+                    &(sol_balance_str + " SOL"),
                     TextStyle {
                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                         font_size: 40.0,
@@ -276,6 +289,19 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                 ),
                 TextWalletSolBalance,
                 Name::new("TextWalletSolBalance"),
+            ));
+
+            parent.spawn((
+                TextBundle::from_section(
+                    &(ore_balance_str + " ORE"),
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+                TextWalletOreBalance,
+                Name::new("TextWalletOreBalance"),
             ));
 
             parent
@@ -295,12 +321,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                         background_color: NORMAL_BUTTON.into(),
                         ..default()
                     },
-                    ButtonUpdateSolBalance,
-                    Name::new("ButtonUpdateSolBalance"),
+                    ButtonUpdateSolOreBalances,
+                    Name::new("ButtonUpdateSolOreBalances"),
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
-                        "Update Sol balance",
+                        "Update Sol and Ore balances",
                         TextStyle {
                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                             font_size: 20.0,
@@ -313,10 +339,13 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
 
 fn update_app_wallet_ui(
     app_wallet: Res<AppWallet>,
-    mut text_query: Query<&mut Text, With<TextWalletSolBalance>>,
+    mut sol_balance_text_query: Query<&mut Text, With<TextWalletSolBalance>>,
+    mut ore_balance_text_query: Query<&mut Text, (With<TextWalletOreBalance>, Without<TextWalletSolBalance>)>,
 ) {
-    let mut text = text_query.single_mut();
-    text.sections[0].value = app_wallet.sol_balance.to_string();
+    let mut text_sol_balance = sol_balance_text_query.single_mut();
+    let mut text_ore_balance = ore_balance_text_query.single_mut();
+    text_sol_balance.sections[0].value = app_wallet.sol_balance.to_string() + " SOL";
+    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORE";
 }
 
 fn spawn_copyable_text(parent: &mut ChildBuilder, asset_server: &AssetServer, copy_text: String, display_text: String) {
