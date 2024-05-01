@@ -54,13 +54,16 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .insert_resource(AppWallet {
             wallet,
+            sol_balance: 0.0,
+            ore_balance: 0.0,
         })
         .insert_resource(RpcConnection {
             rpc: rpc_connection,
         })
         .add_systems(Startup, setup)
-        .add_systems(Update, button_log_balance_system)
-        .add_systems(Update, task_system_log_sol_balance)
+        .add_systems(Update, button_update_sol_balance)
+        .add_systems(Update, task_update_app_wallet_sol_balance)
+        .add_systems(Update, update_app_wallet_ui)
         .run();
 }
 
@@ -72,6 +75,8 @@ const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 #[derive(Resource)]
 pub struct AppWallet {
     wallet: Keypair,
+    sol_balance: f64,
+    ore_balance: f64,
 }
 
 #[derive(Resource)]
@@ -85,34 +90,38 @@ pub struct RpcConnection {
 pub struct WalletPubkeyText;
 
 #[derive(Component)]
-pub struct ButtonLogBalance;
+pub struct TextWalletSolBalance;
+
+#[derive(Component)]
+pub struct ButtonUpdateSolBalance;
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
 #[derive(Component)]
-struct TaskLogSolBalance {
+struct TaskUpdateAppWalletSolBalance {
     pub task: Task<f64>,
 }
 
-fn task_system_log_sol_balance(
+fn task_update_app_wallet_sol_balance(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut TaskLogSolBalance)>,
+    mut app_wallet: ResMut<AppWallet>,
+    mut query: Query<(Entity, &mut TaskUpdateAppWalletSolBalance)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            info!("BALANCE: {}", result);
-            commands.entity(entity).remove::<TaskLogSolBalance>();
+            app_wallet.sol_balance = result;
+            commands.entity(entity).remove::<TaskUpdateAppWalletSolBalance>();
         }
     }
 }
 
-fn button_log_balance_system(
+fn button_update_sol_balance(
     mut commands: Commands,
     mut interaction_query: Query<
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
         (
             Changed<Interaction>,
-            With<ButtonLogBalance>,
+            With<ButtonUpdateSolBalance>,
         ),
     >,
     app_wallet: Res<AppWallet>,
@@ -133,7 +142,7 @@ fn button_log_balance_system(
                     balance as f64 / LAMPORTS_PER_SOL as f64
                 });
 
-                commands.entity(entity).insert(TaskLogSolBalance { task });
+                commands.entity(entity).insert(TaskUpdateAppWalletSolBalance { task });
 
             }
             Interaction::Hovered => {
@@ -151,6 +160,7 @@ fn button_log_balance_system(
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
     commands.spawn(Camera2dBundle::default());
     let wallet_str = app_wallet.wallet.pubkey().to_string();
+    let sol_balance_str = app_wallet.sol_balance.to_string();
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -175,6 +185,17 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                 ),
                 WalletPubkeyText,
             ));
+            parent.spawn((
+                TextBundle::from_section(
+                    &sol_balance_str,
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+                TextWalletSolBalance,
+            ));
 
             parent
                 .spawn((
@@ -193,11 +214,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                         background_color: NORMAL_BUTTON.into(),
                         ..default()
                     },
-                    ButtonLogBalance,
+                    ButtonUpdateSolBalance,
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
-                        "Log balance",
+                        "Update Sol balance",
                         TextStyle {
                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                             font_size: 20.0,
@@ -206,4 +227,13 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                     ));
                 });
         });
+}
+
+fn update_app_wallet_ui(
+    app_wallet: Res<AppWallet>,
+    mut text_query: Query<&mut Text, With<TextWalletSolBalance>>
+) {
+    let mut text = text_query.single_mut();
+    text.sections[0].value = app_wallet.sol_balance.to_string();
+
 }
