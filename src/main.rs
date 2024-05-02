@@ -93,6 +93,8 @@ fn main() {
             sol_balance: 0.0,
             ore_balance: 0.0,
         })
+        .init_resource::<MinerStatusResource>()
+        .register_type::<MinerStatusResource>()
         .init_resource::<ProofAccountResource>()
         .register_type::<ProofAccountResource>()
         .init_resource::<TreasuryAccountResource>()
@@ -103,10 +105,12 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, button_update_sol_balance)
         .add_systems(Update, button_copy_text)
+        .add_systems(Update, button_start_stop_mining)
         .add_systems(Update, task_update_app_wallet_sol_balance)
         .add_systems(Update, update_app_wallet_ui)
         .add_systems(Update, update_proof_account_ui)
         .add_systems(Update, update_treasury_account_ui)
+        .add_systems(Update, update_miner_status_ui)
         .add_systems(Update, mouse_scroll)
         .run();
 }
@@ -168,6 +172,24 @@ impl Default for TreasuryAccountResource {
     }
 }
 
+#[derive(Reflect, Resource, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
+pub struct MinerStatusResource {
+    miner_status: String,
+    cpu_usage: u64,
+    ram_usage: f64,
+}
+
+impl Default for MinerStatusResource {
+    fn default() -> Self {
+        Self {
+            miner_status: "STOPPED".to_string(),
+            cpu_usage: Default::default(),
+            ram_usage: Default::default(),
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct RpcConnection {
     // Cannot use the nonblocking client and await with the bevy tasks because bevy doesn't actually use tokio for async tasks.
@@ -225,10 +247,22 @@ pub struct TextTreasuryRewardRate;
 pub struct TextTreasuryTotalClaimedRewards;
 
 #[derive(Component)]
+pub struct TextMinerStatusStatus;
+
+#[derive(Component)]
+pub struct TextMinerStatusCpuUsage;
+
+#[derive(Component)]
+pub struct TextMinerStatusRamUsage;
+
+#[derive(Component)]
 pub struct ButtonUpdateSolOreBalances;
 
 #[derive(Component)]
 pub struct ButtonCopyText;
+
+#[derive(Component)]
+pub struct ButtonStartStopMining;
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
@@ -401,6 +435,32 @@ fn button_copy_text(
                 } else {
                     info!("Failed to find copyable_text.");
                 }
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+                border_color.0 = Color::WHITE;
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+                border_color.0 = Color::BLACK;
+            }
+        }
+    }
+}
+
+fn button_start_stop_mining(
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
+        (Changed<Interaction>, With<ButtonStartStopMining>),
+    >,
+) {
+    for (entity, interaction, mut color, mut border_color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+                border_color.0 = Color::RED;
+                
+                info!("Start Mining");
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -909,8 +969,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                         background_color: NORMAL_BUTTON.into(),
                         ..default()
                     },
-                    //ButtonCopyText,
-                    //Name::new("ButtonCopyText"),
+                    ButtonStartStopMining,
+                    Name::new("ButtonStartStopMining"),
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
@@ -1191,6 +1251,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                                                 ..default()
                                             },
                                         ),
+                                        TextMinerStatusStatus,
                                     ));
                                     parent.spawn((
                                         TextBundle::from_section(
@@ -1203,6 +1264,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                                                 ..default()
                                             },
                                         ),
+                                        TextMinerStatusCpuUsage,
                                     ));
                                     parent.spawn((
                                         TextBundle::from_section(
@@ -1215,6 +1277,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                                                 ..default()
                                             },
                                         ),
+                                        TextMinerStatusRamUsage,
                                     ));
                                 });
                             parent
@@ -1413,6 +1476,28 @@ fn update_treasury_account_ui(
     let mut text_5 = text_query_5.single_mut();
     text_5.sections[0].value = "Total Claimed Rewards: ".to_string()
         + &treasury_account_res.total_claimed_rewards.to_string();
+}
+
+fn update_miner_status_ui(
+    res: Res<MinerStatusResource>,
+    mut set: ParamSet<(
+        Query<&mut Text, With<TextMinerStatusStatus>>,
+        Query<&mut Text, With<TextMinerStatusCpuUsage>>,
+        Query<&mut Text, With<TextMinerStatusRamUsage>>,
+    )>,
+) {
+    let mut text_query_0 = set.p0();
+    let mut text_0 = text_query_0.single_mut();
+    text_0.sections[0].value = "Miner Status: ".to_string() + &res.miner_status.clone();
+
+    let mut text_query_1 = set.p1();
+    let mut text_1 = text_query_1.single_mut();
+    text_1.sections[0].value = "CPU Usage: ".to_string() + &res.cpu_usage.to_string();
+
+    let mut text_query_2 = set.p2();
+    let mut text_2 = text_query_2.single_mut();
+    text_2.sections[0].value =
+        "RAM Usage: ".to_string() + &res.ram_usage.to_string();
 }
 
 fn spawn_copyable_text(
