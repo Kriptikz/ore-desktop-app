@@ -1024,6 +1024,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                                         ));
                                     });
                                     // List with hidden overflow
+                                    // TODO: look into lazy loading items
+                                    // TODO: add the scroll bar on the right
                                     parent
                                         .spawn(NodeBundle {
                                             style: Style {
