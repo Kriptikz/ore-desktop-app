@@ -316,8 +316,8 @@ fn button_update_sol_balance(
                     let treasury_account = get_treasury(&connection);
                     let treasury_account_res_data;
                     if let Ok(treasury_account) = treasury_account {
-
-                        let reward_rate = (treasury_account.reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                        let reward_rate = (treasury_account.reward_rate as f64)
+                            / 10f64.powf(ore::TOKEN_DECIMALS as f64);
                         let total_claimed_rewards = (treasury_account.total_claimed_rewards as f64)
                             / 10f64.powf(ore::TOKEN_DECIMALS as f64);
 
@@ -430,9 +430,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
                 style: Style {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
                     flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::SpaceBetween,
                     ..default()
                 },
                 ..default()
@@ -440,250 +438,437 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
             Name::new("Screen Node"),
         ))
         .with_children(|parent| {
-            spawn_copyable_text(
-                parent,
-                &asset_server,
-                app_wallet.wallet.pubkey().to_string(),
-                wallet_str,
-            );
-            parent.spawn((
-                TextBundle::from_section(
-                    &(sol_balance_str + " SOL"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: FONT_SIZE,
-                        color: Color::rgb(0.9, 0.9, 0.9),
-                    },
-                ),
-                TextWalletSolBalance,
-                Name::new("TextWalletSolBalance"),
-            ));
-
-            parent.spawn((
-                TextBundle::from_section(
-                    &(ore_balance_str + " ORE"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: FONT_SIZE,
-                        color: Color::rgb(0.9, 0.9, 0.9),
-                    },
-                ),
-                TextWalletOreBalance,
-                Name::new("TextWalletOreBalance"),
-            ));
-
-            parent
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(300.0),
-                            height: Val::Px(30.0),
-                            border: UiRect::all(Val::Px(5.0)),
-                            // horizontally center child text
-                            justify_content: JustifyContent::Center,
-                            // vertically center child text
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        border_color: BorderColor(Color::BLACK),
-                        background_color: NORMAL_BUTTON.into(),
-                        ..default()
-                    },
-                    ButtonUpdateSolOreBalances,
-                    Name::new("ButtonUpdateSolOreBalances"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Update Sol and Ore balances",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: FONT_SIZE,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                        },
-                    ));
-                });
-
             parent
                 .spawn((
                     NodeBundle {
                         style: Style {
-                            width: Val::Px(200.0),
-                            height: Val::Px(110.0),
-                            align_items: AlignItems::Center,
-                            flex_direction: FlexDirection::Column,
-                            justify_content: JustifyContent::Center,
+                            width: Val::Percent(100.0),
+                            height: Val::Percent(50.0),
+                            flex_direction: FlexDirection::Row,
                             ..default()
                         },
                         ..default()
                     },
-                    Name::new("ProofAccountNode"),
+                    Name::new("Top Half"),
                 ))
                 .with_children(|parent| {
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Proof Account",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
+                    parent
+                        .spawn((
+                            NodeBundle {
+                                style: Style {
+                                    width: Val::Percent(50.0),
+                                    height: Val::Percent(50.0),
+                                    flex_direction: FlexDirection::Column,
+                                    ..default()
+                                },
+                                ..default()
                             },
-                        ),
-                        Name::new("TextTitleProofAccount"),
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "current hash: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextCurrentHash"),
-                        TextCurrentHash,
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "total hashes: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTotalHashes"),
-                        TextTotalHashes,
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "total rewards: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTotalRewards"),
-                        TextTotalRewards,
-                    ));
+                            Name::new("Top Half Left"),
+                        ))
+                        .with_children(|parent| {
+                            parent
+                                .spawn((
+                                    NodeBundle {
+                                        style: Style {
+                                            width: Val::Px(350.0),
+                                            height: Val::Px(150.0),
+                                            align_items: AlignItems::Center,
+                                            flex_direction: FlexDirection::Column,
+                                            justify_content: JustifyContent::Center,
+                                            ..default()
+                                        },
+                                        ..default()
+                                    },
+                                    Name::new("TreasuryAccountNode"),
+                                ))
+                                .with_children(|parent| {
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Treasury",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTitleTreasury"),
+                                    ));
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Balance: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTreasuryBalance"),
+                                        TextTreasuryBalance,
+                                    ));
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Admin: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTreasuryAdmin"),
+                                        TextTreasuryAdmin,
+                                    ));
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Difficulty: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTreasuryDifficulty"),
+                                        TextTreasuryDifficulty,
+                                    ));
 
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "claimable rewards: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextClaimableRewards"),
-                        TextClaimableRewards,
-                    ));
-                });
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Last Reset At: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTreasuryLastResetAt"),
+                                        TextTreasuryLastResetAt,
+                                    ));
 
-            parent
-                .spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(300.0),
-                            height: Val::Px(150.0),
-                            align_items: AlignItems::Center,
-                            flex_direction: FlexDirection::Column,
-                            justify_content: JustifyContent::Center,
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Reward Rate: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTreasuryRewardRate"),
+                                        TextTreasuryRewardRate,
+                                    ));
+
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Total Claimed Rewards: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTreasuryTotalClaimedRewards"),
+                                        TextTreasuryTotalClaimedRewards,
+                                    ));
+                                });
+                        });
+
+                    parent
+                        .spawn((
+                            NodeBundle {
+                                style: Style {
+                                    width: Val::Percent(50.0),
+                                    height: Val::Percent(50.0),
+                                    flex_direction: FlexDirection::Column,
+                                    align_items: AlignItems::End,
+                                    ..default()
+                                },
+                                ..default()
+                            },
+                            Name::new("Top Half Right"),
+                        ))
+                        .with_children(|parent| {
+                            parent
+                                .spawn((
+                                    NodeBundle {
+                                        style: Style {
+                                            flex_direction: FlexDirection::Column,
+                                            align_items: AlignItems::End,
+                                            ..default()
+                                        },
+                                        ..default()
+                                    },
+                                    Name::new("AppWallet Node"),
+                                ))
+                                .with_children(|parent| {
+                                    spawn_copyable_text(
+                                        parent,
+                                        &asset_server,
+                                        app_wallet.wallet.pubkey().to_string(),
+                                        wallet_str,
+                                    );
+                                    parent
+                                        .spawn((
+                                            NodeBundle {
+                                                style: Style {
+                                                    flex_direction: FlexDirection::Column,
+                                                    align_items: AlignItems::End,
+                                                    padding: UiRect {
+                                                        left: Val::Px(0.0),
+                                                        right: Val::Px(20.0),
+                                                        top: Val::Px(0.0),
+                                                        bottom: Val::Px(0.0),
+                                                    },
+                                                    ..default()
+                                                },
+                                                ..default()
+                                            },
+                                            Name::new("WalletBalance Nodes"),
+                                        ))
+                                        .with_children(|parent| {
+                                            parent.spawn((
+                                                TextBundle::from_section(
+                                                    &(sol_balance_str + " SOL"),
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load("fonts/FiraSans-Bold.ttf"),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextWalletSolBalance,
+                                                Name::new("TextWalletSolBalance"),
+                                            ));
+                                            parent.spawn((
+                                                TextBundle::from_section(
+                                                    &(ore_balance_str + " ORE"),
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load("fonts/FiraSans-Bold.ttf"),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextWalletOreBalance,
+                                                Name::new("TextWalletOreBalance"),
+                                            ));
+                                        });
+                                });
+
+                            parent
+                                .spawn((
+                                    NodeBundle {
+                                        style: Style {
+                                            width: Val::Px(200.0),
+                                            height: Val::Px(110.0),
+                                            align_items: AlignItems::Center,
+                                            flex_direction: FlexDirection::Column,
+                                            justify_content: JustifyContent::Center,
+                                            margin: UiRect {
+                                                top: Val::Px(100.0),
+                                                left: Val::Px(0.0),
+                                                right: Val::Px(160.0),
+                                                bottom: Val::Px(0.0),
+                                            },
+                                            ..default()
+                                        },
+                                        ..default()
+                                    },
+                                    Name::new("ProofAccountNode"),
+                                ))
+                                .with_children(|parent| {
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Proof Account",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTitleProofAccount"),
+                                    ));
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "current hash: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextCurrentHash"),
+                                        TextCurrentHash,
+                                    ));
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "total hashes: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTotalHashes"),
+                                        TextTotalHashes,
+                                    ));
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "total rewards: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTotalRewards"),
+                                        TextTotalRewards,
+                                    ));
+
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "claimable rewards: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextClaimableRewards"),
+                                        TextClaimableRewards,
+                                    ));
+                                });
+                            parent
+                                .spawn((
+                                    ButtonBundle {
+                                        style: Style {
+                                            width: Val::Px(300.0),
+                                            height: Val::Px(30.0),
+                                            margin: UiRect {
+                                                top: Val::Px(0.0),
+                                                right: Val::Px(100.0),
+                                                left: Val::Px(0.0),
+                                                bottom: Val::Px(0.0),
+                                            },
+                                            border: UiRect::all(Val::Px(5.0)),
+                                            // horizontally center child text
+                                            justify_content: JustifyContent::Center,
+                                            // vertically center child text
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        },
+                                        border_color: BorderColor(Color::BLACK),
+                                        background_color: NORMAL_BUTTON.into(),
+                                        ..default()
+                                    },
+                                    //ButtonUpdateSolOreBalances,
+                                    Name::new("ButtonClaimOreRewards"),
+                                ))
+                                .with_children(|parent| {
+                                    parent.spawn(TextBundle::from_section(
+                                        "CLAIM",
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: FONT_SIZE,
+                                            color: Color::rgb(0.9, 0.9, 0.9),
+                                        },
+                                    ));
+                                });
+                            parent
+                                .spawn((
+                                    ButtonBundle {
+                                        style: Style {
+                                            width: Val::Px(300.0),
+                                            height: Val::Px(30.0),
+                                            margin: UiRect {
+                                                top: Val::Px(0.0),
+                                                right: Val::Px(100.0),
+                                                left: Val::Px(0.0),
+                                                bottom: Val::Px(0.0),
+                                            },
+                                            border: UiRect::all(Val::Px(5.0)),
+                                            // horizontally center child text
+                                            justify_content: JustifyContent::Center,
+                                            // vertically center child text
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        },
+                                        border_color: BorderColor(Color::BLACK),
+                                        background_color: NORMAL_BUTTON.into(),
+                                        ..default()
+                                    },
+                                    ButtonUpdateSolOreBalances,
+                                    Name::new("ButtonUpdateSolOreBalances"),
+                                ))
+                                .with_children(|parent| {
+                                    parent.spawn(TextBundle::from_section(
+                                        "Update Sol and Ore balances",
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: FONT_SIZE,
+                                            color: Color::rgb(0.9, 0.9, 0.9),
+                                        },
+                                    ));
+                                });
+                        });
+
+                    // ore logo (flex center)
+                    parent
+                        .spawn(NodeBundle {
+                            style: Style {
+                                width: Val::Percent(100.0),
+                                position_type: PositionType::Absolute,
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::FlexStart,
+                                ..default()
+                            },
                             ..default()
-                        },
+                        })
+                        .with_children(|parent| {
+                            parent
+                                .spawn((
+                                    NodeBundle {
+                                        z_index: ZIndex::Global(-1),
+                                        style: Style {
+                                            width: Val::Px(125.0),
+                                            height: Val::Px(125.0),
+                                            margin: UiRect::top(Val::VMin(5.)),
+                                            ..default()
+                                        },
+                                        // a `NodeBundle` is transparent by default, so to see the image we have to its color to `WHITE`
+                                        background_color: Color::WHITE.into(),
+                                        ..default()
+                                    },
+                                    UiImage::new(asset_server.load("ore-icon.webp")),
+                                ))
+                                .with_children(|parent| {
+                                    // alt text
+                                    // This UI node takes up no space in the layout and the `Text` component is used by the accessibility module
+                                    // and is not rendered.
+                                    parent.spawn((
+                                        NodeBundle {
+                                            style: Style {
+                                                display: Display::None,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        Text::from_section("Ore logo", TextStyle::default()),
+                                    ));
+                                });
+                        });
+                });
+            parent.spawn((
+                NodeBundle {
+                    background_color: Color::GRAY.into(),
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(50.0),
+                        flex_direction: FlexDirection::Column,
                         ..default()
                     },
-                    Name::new("TreasuryAccountNode"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Treasury Account",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTitleTreasury"),
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Balance: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTreasuryBalance"),
-                        TextTreasuryBalance,
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Admin: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTreasuryAdmin"),
-                        TextTreasuryAdmin,
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Difficulty: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTreasuryDifficulty"),
-                        TextTreasuryDifficulty,
-                    ));
-
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Last Reset At: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTreasuryLastResetAt"),
-                        TextTreasuryLastResetAt,
-                    ));
-
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Reward Rate: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTreasuryRewardRate"),
-                        TextTreasuryRewardRate,
-                    ));
-
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Total Claimed Rewards: loading...",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: FONT_SIZE,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                        ),
-                        Name::new("TextTreasuryTotalClaimedRewards"),
-                        TextTreasuryTotalClaimedRewards,
-                    ));
-                });
+                    ..default()
+                },
+                Name::new("Bottom Half"),
+            ));
         });
 }
 
@@ -700,7 +885,7 @@ fn update_app_wallet_ui(
 
     let mut text_ore_balance_query = set.p1();
     let mut text_ore_balance = text_ore_balance_query.single_mut();
-    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " SOL";
+    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORE";
 }
 
 fn update_proof_account_ui(
@@ -783,8 +968,17 @@ fn spawn_copyable_text(
         .spawn((
             NodeBundle {
                 style: Style {
-                    width: Val::Px(300.0),
+                    width: Val::Px(150.0),
                     height: Val::Px(30.0),
+                    justify_content: JustifyContent::SpaceBetween,
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    padding: UiRect {
+                        top: Val::Px(0.0),
+                        left: Val::Px(0.0),
+                        right: Val::Px(10.0),
+                        bottom: Val::Px(0.0),
+                    },
                     border: UiRect::all(Val::Px(5.0)),
                     ..default()
                 },
