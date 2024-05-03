@@ -1,20 +1,18 @@
 use bevy::{prelude::*, tasks::{AsyncComputeTaskPool, IoTaskPool}};
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
-use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
+use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ui::{
         components::MovingScrollPanel,
         layout::{spawn_new_list_item, UiListItem},
-    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, OreAppState, ProofAccountResource, RpcConnection, TaskConfirmTx, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskSendAndConfirmTx, TaskSendTx, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
+    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, OreAppState, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
 };
 
 use std::{
     io::{stdout, Write},
     sync::{atomic::AtomicBool, Arc, Mutex},
-    thread,
-    time::Duration,
 };
 
 use orz::{
@@ -183,19 +181,14 @@ pub fn handle_event_submit_hash_tx(
 ) {
     for ev in ev_submit_hash_tx.read() {
         info!("Submit Hash Tx Event Handler.");
-        // TODO: sign the tx
         let task_handler_entity = query_task_handler.get_single().unwrap();
         let pool = AsyncComputeTaskPool::get();
         let wallet = app_wallet.wallet.insecure_clone();
         let client = rpc_connection.rpc.clone();
 
-        // TODO: spawn the tx sender task
         let (next_hash, nonce) = ev.0;
         let task = pool.spawn(async move {
             let signer = wallet;
-            // start a timer
-            // sign the transaction
-            // send the transaction
             // let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(CU_LIMIT_MINE);
             // let cu_price_ix =
             //     ComputeBudgetInstruction::set_compute_unit_price(self.priority_fee);
@@ -209,17 +202,6 @@ pub fn handle_event_submit_hash_tx(
             tx.sign(&[&signer], hash);
 
             return Some(tx);
-            //let mut i = 0;
-            // loop
-            // loop {
-            //     // based on timer, resend signed tx
-            //     // based on timer, check tx status
-            //     // if blockhash expired, return with FAILED - Blockhash Expired
-            //     i += 1;
-            //     if i > 100 {
-            //         return ("SIGNATURE".to_string(), "SUCCESS".to_string());
-            //     }
-            // }
         });
 
         commands
