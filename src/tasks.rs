@@ -1,8 +1,9 @@
 use bevy::{
     prelude::*, tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task}
 };
+use solana_sdk::transaction::Transaction;
 
-use crate::{AppWallet, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource};
+use crate::{AppWallet, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource};
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
@@ -35,6 +36,11 @@ pub struct TaskSendTx {
 #[derive(Component)]
 pub struct TaskConfirmTx {
     pub task: Task<String>,
+}
+
+#[derive(Component)]
+pub struct TaskRegisterWallet {
+    pub task: Task<Option<Transaction>>,
 }
 
 pub fn task_update_app_wallet_sol_balance(
@@ -79,12 +85,38 @@ pub fn task_send_and_confirm_tx(
     mut query: Query<(Entity, &mut TaskSendAndConfirmTx)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
-        if let Some((_tx_sig, _tx_status)) = block_on(future::poll_once(&mut task.task)) {
-            ev_tx_result.send(EventTxResult);
+        if let Some((sig, status)) = block_on(future::poll_once(&mut task.task)) {
+            ev_tx_result.send(EventTxResult {
+                sig,
+                status
+            });
 
             commands
                 .entity(entity)
                 .remove::<TaskSendAndConfirmTx>();
         }
     }
+}
+
+pub fn task_register_wallet(
+    mut commands: Commands,
+    mut ev_process_tx: EventWriter<EventProcessTx>,
+    mut query: Query<(Entity, &mut TaskRegisterWallet)>,
+) {
+    for (entity, mut task) in &mut query.iter_mut() {
+        if let Some(tx) = block_on(future::poll_once(&mut task.task)) {
+            if let Some(tx) = tx {
+                ev_process_tx.send(EventProcessTx {
+                    tx,
+                });
+            } else {
+                info!("Failed to confirm register wallet tx...");
+            }
+
+            commands
+                .entity(entity)
+                .remove::<TaskRegisterWallet>();
+        }
+    }
+
 }

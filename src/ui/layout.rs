@@ -899,7 +899,15 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
 
 }
 
-pub fn spawn_new_list_item(commands: &mut Commands, asset_server: &Res<AssetServer>, scroll_panel_entity: Entity) {
+pub struct UiListItem {
+    pub id: String,
+    pub sig: String,
+    pub tx_time: String,
+    pub hash_time: String,
+    pub status: String,
+}
+
+pub fn spawn_new_list_item(commands: &mut Commands, asset_server: &Res<AssetServer>, scroll_panel_entity: Entity, item_data: UiListItem) {
         let new_result_item = commands
             .spawn((
                 NodeBundle {
