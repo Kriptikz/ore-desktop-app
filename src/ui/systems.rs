@@ -168,7 +168,7 @@ pub fn update_app_wallet_ui(
 
     let mut text_ore_balance_query = set.p1();
     let mut text_ore_balance = text_ore_balance_query.single_mut();
-    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORE";
+    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORZ";
 }
 
 pub fn update_proof_account_ui(
@@ -261,6 +261,32 @@ pub fn update_miner_status_ui(
     let mut text_2 = text_query_2.single_mut();
     text_2.sections[0].value =
         "RAM Usage: ".to_string() + &res.ram_usage.to_string();
+}
+
+pub fn update_current_tx_ui(
+    res: Res<CurrentTx>,
+    mut set: ParamSet<(
+        Query<&mut Text, With<TextCurrentTxSig>>,
+        Query<&mut Text, With<TextCurrentTxStatus>>,
+        Query<&mut Text, With<TextCurrentTxElapsed>>,
+    )>,
+) {
+    let mut text_query_0 = set.p0();
+    let mut text_0 = text_query_0.single_mut();
+    if let Some((_tx, sig)) = res.tx_sig.clone() {
+        text_0.sections[0].value = "Signature: ".to_string() + &sig.to_string();
+    } else {
+        text_0.sections[0].value = "Signature: ".to_string() + "None";
+    }
+
+    let mut text_query_1 = set.p1();
+    let mut text_1 = text_query_1.single_mut();
+    text_1.sections[0].value = "Status: ".to_string() + &res.status;
+
+    let mut text_query_2 = set.p2();
+    let mut text_2 = text_query_2.single_mut();
+    text_2.sections[0].value =
+        "Elapsed: ".to_string() + &res.elapsed.to_string();
 }
 
 pub fn spawn_copyable_text(

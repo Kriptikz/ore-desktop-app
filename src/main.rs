@@ -87,14 +87,14 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WorldInspectorPlugin::new())
+        //.add_plugins(WorldInspectorPlugin::new())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState { ore_mint })
         .insert_resource(CurrentTx {
             tx_sig: None,
             status: "".to_string(),
             elapsed: 0,
-            interval_timer: Timer::new(Duration::from_secs(5), TimerMode::Once),
+            interval_timer: Timer::new(Duration::from_secs(2), TimerMode::Once),
         })
         .insert_resource(AppWallet {
             wallet,
@@ -145,6 +145,7 @@ fn main() {
         .add_systems(Update, update_proof_account_ui)
         .add_systems(Update, update_treasury_account_ui)
         .add_systems(Update, update_miner_status_ui)
+        .add_systems(Update, update_current_tx_ui)
         .add_systems(Update, process_current_transaction)
         .run();
 }

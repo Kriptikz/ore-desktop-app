@@ -938,6 +938,7 @@ pub fn spawn_ui(
                                                 ..default()
                                             },
                                         ),
+                                        TextCurrentTxSig
                                     ));
                                     parent.spawn((
                                         TextBundle::from_section(
@@ -950,8 +951,9 @@ pub fn spawn_ui(
                                                 ..default()
                                             },
                                         ),
+                                        TextCurrentTxStatus
                                     ));
-                                    parent.spawn((
+                                    let spawn = parent.spawn((
                                         TextBundle::from_section(
                                             format!("Elapsed:"),
                                             TextStyle {
@@ -962,6 +964,7 @@ pub fn spawn_ui(
                                                 ..default()
                                             },
                                         ),
+                                        TextCurrentTxElapsed
                                     ));
                                 });
                         });

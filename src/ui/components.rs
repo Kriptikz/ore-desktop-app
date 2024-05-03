@@ -54,6 +54,15 @@ pub struct TextMinerStatusCpuUsage;
 pub struct TextMinerStatusRamUsage;
 
 #[derive(Component)]
+pub struct TextCurrentTxSig;
+
+#[derive(Component)]
+pub struct TextCurrentTxStatus;
+
+#[derive(Component)]
+pub struct TextCurrentTxElapsed;
+
+#[derive(Component)]
 pub struct ButtonUpdateSolOreBalances;
 
 #[derive(Component)]
