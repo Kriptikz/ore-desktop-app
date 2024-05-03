@@ -1,10 +1,20 @@
-use bevy::{a11y::{accesskit::{NodeBuilder, Role}, AccessibilityNode}, prelude::*};
 use crate::{spawn_copyable_text, AppWallet};
+use bevy::{
+    a11y::{
+        accesskit::{NodeBuilder, Role},
+        AccessibilityNode,
+    },
+    prelude::*,
+};
 use solana_sdk::signature::Signer;
 
-use super::{styles::*, components::*};
+use super::{components::*, styles::*};
 
-pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
+pub fn spawn_ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    app_wallet: Res<AppWallet>,
+) {
     let full_addr = app_wallet.wallet.pubkey().to_string();
     let wallet_str;
     let len = full_addr.len();
@@ -418,7 +428,7 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
                                 position_type: PositionType::Absolute,
                                 margin: UiRect {
                                     top: Val::Px(40.0),
-                                    left: Val::Percent(49.0),
+                                    left: Val::Percent(45.0),
                                     right: Val::Px(0.0),
                                     bottom: Val::Px(0.0),
                                 },
@@ -464,14 +474,17 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
                 parent
                     .spawn((NodeBundle {
                         z_index: ZIndex::Global(10),
+                        border_color: Color::BLUE.into(),
                         style: Style {
                             position_type: PositionType::Absolute,
                             justify_content: JustifyContent::Center,
-                            margin: UiRect {
-                                top: Val::Percent(24.0),
-                                right: Val::Px(0.0),
-                                left: Val::Percent(50.0),
-                                bottom: Val::Px(0.0),
+                            width: Val::Percent(100.0),
+                            height: Val::Percent(100.0),
+                            border: UiRect {
+                                top: Val::Px(1.0),
+                                right: Val::Px(1.0),
+                                left: Val::Px(1.0),
+                                bottom: Val::Px(1.0),
                             },
                             align_items: AlignItems::Center,
                             ..default()
@@ -488,6 +501,12 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
                             width: Val::Px(100.0),
                             height: Val::Px(30.0),
                             border: UiRect::all(Val::Px(5.0)),
+                            margin: UiRect {
+                                top: Val::Percent(0.0),
+                                right: Val::Px(0.0),
+                                left: Val::Px(0.0),
+                                bottom: Val::Px(30.0),
+                            },
                             // horizontally center child text
                             justify_content: JustifyContent::Center,
                             // vertically center child text
@@ -896,7 +915,6 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
                         });
                 });
         });
-
 }
 
 pub struct UiListItem {
@@ -907,70 +925,78 @@ pub struct UiListItem {
     pub status: String,
 }
 
-pub fn spawn_new_list_item(commands: &mut Commands, asset_server: &Res<AssetServer>, scroll_panel_entity: Entity, item_data: UiListItem) {
-        let new_result_item = commands
-            .spawn((
-                NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Row,
-                        width: Val::Percent(100.0),
-                        justify_content: JustifyContent::SpaceAround,
-                        ..default()
-                    },
+pub fn spawn_new_list_item(
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    scroll_panel_entity: Entity,
+    item_data: UiListItem,
+) {
+    let new_result_item = commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    flex_direction: FlexDirection::Row,
+                    width: Val::Percent(100.0),
+                    justify_content: JustifyContent::SpaceAround,
                     ..default()
                 },
-                Name::new("TxResult Item"),
-                AccessibilityNode(NodeBuilder::new(Role::ListItem)),
-            ))
-            .with_children(|parent| {
-                parent.spawn((
-                    TextBundle::from_section(
-                        format!("NEW."),
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 20.,
-                            ..default()
-                        },
-                    ),
-                    Label,
-                ));
-
-                parent.spawn((TextBundle::from_section(
-                    format!("TxnS...s8cs   COPY"),
+                ..default()
+            },
+            Name::new("TxResult Item"),
+            AccessibilityNode(NodeBuilder::new(Role::ListItem)),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                TextBundle::from_section(
+                    format!("NEW."),
                     TextStyle {
                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                         font_size: 20.,
                         ..default()
                     },
-                ),));
+                ),
+                Label,
+            ));
 
-                parent.spawn((TextBundle::from_section(
-                    format!("23s"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
-                        ..default()
-                    },
-                ),));
+            parent.spawn((TextBundle::from_section(
+                format!("TxnS...s8cs   COPY"),
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 20.,
+                    ..default()
+                },
+            ),));
 
-                parent.spawn(TextBundle::from_section(
-                    format!("40s"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
-                        ..default()
-                    },
-                ));
+            parent.spawn((TextBundle::from_section(
+                format!("23s"),
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 20.,
+                    ..default()
+                },
+            ),));
 
-                parent.spawn(TextBundle::from_section(
-                    format!("SUCCESS"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
-                        ..default()
-                    },
-                ));
-            }).id();
+            parent.spawn(TextBundle::from_section(
+                format!("40s"),
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 20.,
+                    ..default()
+                },
+            ));
 
-        commands.entity(scroll_panel_entity).add_child(new_result_item);
+            parent.spawn(TextBundle::from_section(
+                format!("SUCCESS"),
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 20.,
+                    ..default()
+                },
+            ));
+        })
+        .id();
+
+    commands
+        .entity(scroll_panel_entity)
+        .add_child(new_result_item);
 }
