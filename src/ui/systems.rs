@@ -264,7 +264,7 @@ pub fn update_miner_status_ui(
 }
 
 pub fn update_current_tx_ui(
-    res: Res<CurrentTx>,
+    mut res: ResMut<CurrentTx>,
     mut set: ParamSet<(
         Query<&mut Text, With<TextCurrentTxSig>>,
         Query<&mut Text, With<TextCurrentTxStatus>>,
@@ -283,10 +283,13 @@ pub fn update_current_tx_ui(
     let mut text_1 = text_query_1.single_mut();
     text_1.sections[0].value = "Status: ".to_string() + &res.tx_status.status;
 
+    if res.tx_status.status != "SUCCESS" && res.tx_status.status != "FAILED" {
+        res.elapsed_seconds = res.elapsed_instant.elapsed().as_secs();
+    }
     let mut text_query_2 = set.p2();
     let mut text_2 = text_query_2.single_mut();
     text_2.sections[0].value =
-        "Elapsed: ".to_string() + &res.elapsed.to_string();
+        "Elapsed: ".to_string() + &res.elapsed_seconds.to_string();
 }
 
 pub fn spawn_copyable_text(

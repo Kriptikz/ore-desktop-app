@@ -3,7 +3,7 @@ use std::{
     path::Path,
     str::FromStr,
     sync::Arc,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
@@ -96,7 +96,8 @@ fn main() {
                 status: "".to_string(),
                 error: "".to_string()
             },
-            elapsed: 0,
+            elapsed_instant: Instant::now(),
+            elapsed_seconds: 0,
             interval_timer: Timer::new(Duration::from_secs(2), TimerMode::Once),
         })
         .insert_resource(AppWallet {
@@ -255,7 +256,8 @@ pub struct TxStatus {
 pub struct CurrentTx {
     pub tx_sig: Option<(Transaction, Signature)>,
     pub tx_status: TxStatus,
-    pub elapsed: u64,
+    pub elapsed_instant: Instant,
+    pub elapsed_seconds: u64,
     pub interval_timer: Timer,
 }
 

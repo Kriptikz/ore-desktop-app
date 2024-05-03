@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use bevy::{
     prelude::*, tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task}
 };
@@ -182,7 +184,8 @@ pub fn task_update_current_tx(
                 };
                 current_tx.tx_status = new_tx_status;
             }
-            current_tx.elapsed = 0;
+            current_tx.elapsed_instant = Instant::now();
+            current_tx.elapsed_seconds = 0;
             current_tx.interval_timer.reset();
             commands
                 .entity(entity)
