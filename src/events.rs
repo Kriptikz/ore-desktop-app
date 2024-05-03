@@ -1,4 +1,4 @@
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
+use bevy::{prelude::*, tasks::{AsyncComputeTaskPool, IoTaskPool}};
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use spl_associated_token_account::get_associated_token_address;
@@ -262,7 +262,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
         let task_handler_entity = query_task_handler.get_single().unwrap();
         let pubkey = app_wallet.wallet.pubkey();
 
-        let pool = AsyncComputeTaskPool::get();
+        let pool = IoTaskPool::get();
 
         let connection = rpc_connection.rpc.clone();
         let ore_mint = MINT_ADDRESS;
