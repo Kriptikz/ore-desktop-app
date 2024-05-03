@@ -1,4 +1,4 @@
-use crate::{spawn_copyable_text, AppWallet};
+use crate::{shorten_string, spawn_copyable_text, AppWallet};
 use bevy::{
     a11y::{
         accesskit::{NodeBuilder, Role},
@@ -16,17 +16,7 @@ pub fn spawn_ui(
     app_wallet: Res<AppWallet>,
 ) {
     let full_addr = app_wallet.wallet.pubkey().to_string();
-    let wallet_str;
-    let len = full_addr.len();
-    if len > 10 {
-        let prefix = &full_addr[0..5];
-
-        let suffix = &full_addr[len - 5..len];
-
-        wallet_str = format!("{}...{}", prefix, suffix);
-    } else {
-        wallet_str = full_addr;
-    }
+    let wallet_str = shorten_string(full_addr, 10);
     let sol_balance_str = app_wallet.sol_balance.to_string();
     let ore_balance_str = app_wallet.ore_balance.to_string();
     commands
@@ -472,64 +462,126 @@ pub fn spawn_ui(
 
                 });
                 parent
-                    .spawn((NodeBundle {
-                        z_index: ZIndex::Global(10),
-                        border_color: Color::BLUE.into(),
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            justify_content: JustifyContent::Center,
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
-                            border: UiRect {
-                                top: Val::Px(1.0),
-                                right: Val::Px(1.0),
-                                left: Val::Px(1.0),
-                                bottom: Val::Px(1.0),
+                    .spawn((
+                        NodeBundle {
+                            z_index: ZIndex::Global(10),
+                            border_color: Color::BLUE.into(),
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                justify_content: JustifyContent::Center,
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(100.0),
+                                border: UiRect {
+                                    top: Val::Px(1.0),
+                                    right: Val::Px(1.0),
+                                    left: Val::Px(1.0),
+                                    bottom: Val::Px(1.0),
+                                },
+                                align_items: AlignItems::Center,
+                                ..default()
                             },
-                            align_items: AlignItems::Center,
                             ..default()
                         },
-                        ..default()
-                    },
-                    Name::new("ButtonStartMining"),
-                ))
+                        Name::new("Button Reset Treasury"),
+                    ))
                     .with_children(|parent| {
-            parent
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(100.0),
-                            height: Val::Px(30.0),
-                            border: UiRect::all(Val::Px(5.0)),
-                            margin: UiRect {
-                                top: Val::Percent(0.0),
-                                right: Val::Px(0.0),
-                                left: Val::Px(0.0),
-                                bottom: Val::Px(30.0),
+                        parent
+                            .spawn((
+                                ButtonBundle {
+                                    style: Style {
+                                        width: Val::Px(100.0),
+                                        height: Val::Px(30.0),
+                                        border: UiRect::all(Val::Px(5.0)),
+                                        margin: UiRect {
+                                            top: Val::Percent(0.0),
+                                            right: Val::Px(0.0),
+                                            left: Val::Px(0.0),
+                                            bottom: Val::Px(100.0),
+                                        },
+                                        // horizontally center child text
+                                        justify_content: JustifyContent::Center,
+                                        // vertically center child text
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    border_color: BorderColor(Color::BLACK),
+                                    background_color: NORMAL_BUTTON.into(),
+                                    ..default()
+                                },
+                                ButtonResetTreasury,
+                                Name::new("ButtonResetTreasury"),
+                            ))
+                            .with_children(|parent| {
+                                parent.spawn(TextBundle::from_section(
+                                    "RESET TREASURY",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: FONT_SIZE,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                ));
+                            });
+                    });
+                parent
+                    .spawn((
+                        NodeBundle {
+                            z_index: ZIndex::Global(10),
+                            border_color: Color::BLUE.into(),
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                justify_content: JustifyContent::Center,
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(100.0),
+                                border: UiRect {
+                                    top: Val::Px(1.0),
+                                    right: Val::Px(1.0),
+                                    left: Val::Px(1.0),
+                                    bottom: Val::Px(1.0),
+                                },
+                                align_items: AlignItems::Center,
+                                ..default()
                             },
-                            // horizontally center child text
-                            justify_content: JustifyContent::Center,
-                            // vertically center child text
-                            align_items: AlignItems::Center,
                             ..default()
                         },
-                        border_color: BorderColor(Color::BLACK),
-                        background_color: NORMAL_BUTTON.into(),
-                        ..default()
-                    },
-                    ButtonStartStopMining,
-                    Name::new("ButtonStartStopMining"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "START MINING",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: FONT_SIZE,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                        },
-                    ));
-                });
+                        Name::new("ButtonStartMining"),
+                    ))
+                    .with_children(|parent| {
+                        parent
+                            .spawn((
+                                ButtonBundle {
+                                    style: Style {
+                                        width: Val::Px(100.0),
+                                        height: Val::Px(30.0),
+                                        border: UiRect::all(Val::Px(5.0)),
+                                        margin: UiRect {
+                                            top: Val::Percent(0.0),
+                                            right: Val::Px(0.0),
+                                            left: Val::Px(0.0),
+                                            bottom: Val::Px(30.0),
+                                        },
+                                        // horizontally center child text
+                                        justify_content: JustifyContent::Center,
+                                        // vertically center child text
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    border_color: BorderColor(Color::BLACK),
+                                    background_color: NORMAL_BUTTON.into(),
+                                    ..default()
+                                },
+                                ButtonStartStopMining,
+                                Name::new("ButtonStartStopMining"),
+                            ))
+                            .with_children(|parent| {
+                                parent.spawn(TextBundle::from_section(
+                                    "START MINING",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: FONT_SIZE,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                ));
+                            });
                     });
             parent
                 .spawn((
@@ -669,90 +721,90 @@ pub fn spawn_ui(
                                                 ))
                                                 .with_children(|parent| {
                                                     // List items
-                                                    for i in 0..100 {
-                                                        parent.spawn((
-                                                            NodeBundle {
-                                                                style: Style {
-                                                                    flex_direction: FlexDirection::Row,
-                                                                    width: Val::Percent(100.0),
-                                                                    justify_content: JustifyContent::SpaceAround,
-                                                                    ..default()
-                                                                },
-                                                                ..default()
-                                                            },
-                                                            Name::new("TxResult Item"),
-                                                            AccessibilityNode(NodeBuilder::new(
-                                                                Role::ListItem,
-                                                            )),
-                                                        ))
-                                                        .with_children(|parent| {
-                                                            parent.spawn((
-                                                                TextBundle::from_section(
-                                                                    format!("{i}."),
-                                                                    TextStyle {
-                                                                        font: asset_server.load(
-                                                                            "fonts/FiraSans-Bold.ttf",
-                                                                        ),
-                                                                        font_size: 20.,
-                                                                        ..default()
-                                                                    },
-                                                                ),
-                                                                Label,
-                                                            ));
+                                                    // for i in 0..100 {
+                                                    //     parent.spawn((
+                                                    //         NodeBundle {
+                                                    //             style: Style {
+                                                    //                 flex_direction: FlexDirection::Row,
+                                                    //                 width: Val::Percent(100.0),
+                                                    //                 justify_content: JustifyContent::SpaceAround,
+                                                    //                 ..default()
+                                                    //             },
+                                                    //             ..default()
+                                                    //         },
+                                                    //         Name::new("TxResult Item"),
+                                                    //         AccessibilityNode(NodeBuilder::new(
+                                                    //             Role::ListItem,
+                                                    //         )),
+                                                    //     ))
+                                                    //     .with_children(|parent| {
+                                                    //         parent.spawn((
+                                                    //             TextBundle::from_section(
+                                                    //                 format!("{i}."),
+                                                    //                 TextStyle {
+                                                    //                     font: asset_server.load(
+                                                    //                         "fonts/FiraSans-Bold.ttf",
+                                                    //                     ),
+                                                    //                     font_size: 20.,
+                                                    //                     ..default()
+                                                    //                 },
+                                                    //             ),
+                                                    //             Label,
+                                                    //         ));
 
-                                                            parent.spawn((
-                                                                TextBundle::from_section(
-                                                                    format!("TxnS...s8cs   COPY"),
-                                                                    TextStyle {
-                                                                        font: asset_server.load(
-                                                                            "fonts/FiraSans-Bold.ttf",
-                                                                        ),
-                                                                        font_size: 20.,
-                                                                        ..default()
-                                                                    },
-                                                                ),
-                                                            ));
+                                                    //         parent.spawn((
+                                                    //             TextBundle::from_section(
+                                                    //                 format!("TxnS...s8cs   COPY"),
+                                                    //                 TextStyle {
+                                                    //                     font: asset_server.load(
+                                                    //                         "fonts/FiraSans-Bold.ttf",
+                                                    //                     ),
+                                                    //                     font_size: 20.,
+                                                    //                     ..default()
+                                                    //                 },
+                                                    //             ),
+                                                    //         ));
 
-                                                            parent.spawn((
-                                                                TextBundle::from_section(
-                                                                    format!("23s"),
-                                                                    TextStyle {
-                                                                        font: asset_server.load(
-                                                                            "fonts/FiraSans-Bold.ttf",
-                                                                        ),
-                                                                        font_size: 20.,
-                                                                        ..default()
-                                                                    },
-                                                                ),
-                                                            ));
+                                                    //         parent.spawn((
+                                                    //             TextBundle::from_section(
+                                                    //                 format!("23s"),
+                                                    //                 TextStyle {
+                                                    //                     font: asset_server.load(
+                                                    //                         "fonts/FiraSans-Bold.ttf",
+                                                    //                     ),
+                                                    //                     font_size: 20.,
+                                                    //                     ..default()
+                                                    //                 },
+                                                    //             ),
+                                                    //         ));
 
-                                                            parent.spawn((
-                                                                TextBundle::from_section(
-                                                                    format!("40s"),
-                                                                    TextStyle {
-                                                                        font: asset_server.load(
-                                                                            "fonts/FiraSans-Bold.ttf",
-                                                                        ),
-                                                                        font_size: 20.,
-                                                                        ..default()
-                                                                    },
-                                                                ),
-                                                            ));
+                                                    //         parent.spawn((
+                                                    //             TextBundle::from_section(
+                                                    //                 format!("40s"),
+                                                    //                 TextStyle {
+                                                    //                     font: asset_server.load(
+                                                    //                         "fonts/FiraSans-Bold.ttf",
+                                                    //                     ),
+                                                    //                     font_size: 20.,
+                                                    //                     ..default()
+                                                    //                 },
+                                                    //             ),
+                                                    //         ));
 
-                                                            parent.spawn((
-                                                                TextBundle::from_section(
-                                                                    format!("SUCCESS"),
-                                                                    TextStyle {
-                                                                        font: asset_server.load(
-                                                                            "fonts/FiraSans-Bold.ttf",
-                                                                        ),
-                                                                        font_size: 20.,
-                                                                        ..default()
-                                                                    },
-                                                                ),
-                                                            ));
-                                                        });
-                                                    }
+                                                    //         parent.spawn((
+                                                    //             TextBundle::from_section(
+                                                    //                 format!("SUCCESS"),
+                                                    //                 TextStyle {
+                                                    //                     font: asset_server.load(
+                                                    //                         "fonts/FiraSans-Bold.ttf",
+                                                    //                     ),
+                                                    //                     font_size: 20.,
+                                                    //                     ..default()
+                                                    //                 },
+                                                    //             ),
+                                                    //         ));
+                                                    //     });
+                                                    // }
                                                 });
                                         });
                                 });
@@ -931,6 +983,7 @@ pub fn spawn_new_list_item(
     scroll_panel_entity: Entity,
     item_data: UiListItem,
 ) {
+    let sig = shorten_string(item_data.sig.clone(), 10);
     let new_result_item = commands
         .spawn((
             NodeBundle {
@@ -948,7 +1001,7 @@ pub fn spawn_new_list_item(
         .with_children(|parent| {
             parent.spawn((
                 TextBundle::from_section(
-                    format!("NEW."),
+                    item_data.id,
                     TextStyle {
                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                         font_size: 20.,
@@ -957,18 +1010,19 @@ pub fn spawn_new_list_item(
                 ),
                 Label,
             ));
+            spawn_copyable_text(parent, asset_server, item_data.sig.clone(), sig);
+
+            // parent.spawn((TextBundle::from_section(
+            //     sig,
+            //     TextStyle {
+            //         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+            //         font_size: 20.,
+            //         ..default()
+            //     },
+            // ),));
 
             parent.spawn((TextBundle::from_section(
-                format!("TxnS...s8cs   COPY"),
-                TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 20.,
-                    ..default()
-                },
-            ),));
-
-            parent.spawn((TextBundle::from_section(
-                format!("23s"),
+                item_data.tx_time,
                 TextStyle {
                     font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                     font_size: 20.,
@@ -977,7 +1031,7 @@ pub fn spawn_new_list_item(
             ),));
 
             parent.spawn(TextBundle::from_section(
-                format!("40s"),
+                item_data.hash_time,
                 TextStyle {
                     font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                     font_size: 20.,
@@ -986,7 +1040,7 @@ pub fn spawn_new_list_item(
             ));
 
             parent.spawn(TextBundle::from_section(
-                format!("SUCCESS"),
+                item_data.status,
                 TextStyle {
                     font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                     font_size: 20.,

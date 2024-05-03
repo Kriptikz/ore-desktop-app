@@ -1,9 +1,9 @@
 use bevy::{
     prelude::*, tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task}
 };
-use solana_sdk::transaction::Transaction;
+use solana_sdk::{signature::Signature, transaction::Transaction};
 
-use crate::{AppWallet, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource};
+use crate::{AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource};
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
@@ -20,7 +20,7 @@ pub struct TaskUpdateAppWalletSolBalance {
 
 #[derive(Component)]
 pub struct TaskGenerateHash {
-    pub task: Task<String>,
+    pub task: Task<(solana_program::keccak::Hash, u64)>,
 }
 
 #[derive(Component)]
@@ -30,17 +30,32 @@ pub struct TaskSendAndConfirmTx {
 
 #[derive(Component)]
 pub struct TaskSendTx {
-    pub task: Task<String>,
+    pub task: Task<Transaction>,
 }
 
 #[derive(Component)]
 pub struct TaskConfirmTx {
-    pub task: Task<String>,
+    pub task: Task<Signature>,
 }
 
 #[derive(Component)]
 pub struct TaskRegisterWallet {
     pub task: Task<Option<Transaction>>,
+}
+
+#[derive(Component)]
+pub struct TaskProcessTx {
+    pub task: Task<Option<Transaction>>,
+}
+
+#[derive(Component)]
+pub struct TaskUpdateCurrentTx {
+    pub task: Task<Option<(Transaction, Signature)>>,
+}
+
+#[derive(Component)]
+pub struct TaskProcessCurrentTx {
+    pub task: Task<(Option<Signature>, String)>,
 }
 
 pub fn task_update_app_wallet_sol_balance(
@@ -52,6 +67,7 @@ pub fn task_update_app_wallet_sol_balance(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
+            info!("TaskUpdateResources Got Result.");
             app_wallet.sol_balance = result.sol_balance;
             app_wallet.ore_balance = result.ore_balance;
             *proof_account_res = result.proof_account_data;
@@ -116,6 +132,83 @@ pub fn task_register_wallet(
             commands
                 .entity(entity)
                 .remove::<TaskRegisterWallet>();
+        }
+    }
+
+}
+
+pub fn task_process_tx(
+    mut commands: Commands,
+    mut ev_process_tx: EventWriter<EventProcessTx>,
+    mut query: Query<(Entity, &mut TaskProcessTx)>,
+) {
+    for (entity, mut task) in &mut query.iter_mut() {
+        if let Some(tx) = block_on(future::poll_once(&mut task.task)) {
+            if let Some(tx) = tx {
+                ev_process_tx.send(EventProcessTx {
+                    tx,
+                });
+            } else {
+                info!("Failed to confirm register wallet tx...");
+            }
+
+            commands
+                .entity(entity)
+                .remove::<TaskProcessTx>();
+        }
+    }
+
+}
+
+pub fn task_update_current_tx(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut TaskUpdateCurrentTx)>,
+    mut current_tx: ResMut<CurrentTx>
+) {
+    for (entity, mut task) in &mut query.iter_mut() {
+        if let Some(result) = block_on(future::poll_once(&mut task.task)) {
+            if let Some((tx, sig)) = result {
+                current_tx.tx_sig = Some((tx, sig));
+                current_tx.status = "SENDING".to_string();
+            } else {
+                current_tx.tx_sig = None;
+                current_tx.status = "FAILED".to_string();
+            }
+            current_tx.elapsed = 0;
+            current_tx.interval_timer.reset();
+            commands
+                .entity(entity)
+                .remove::<TaskUpdateCurrentTx>();
+        }
+    }
+
+}
+
+pub fn task_process_current_tx(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut TaskProcessCurrentTx)>,
+    mut current_tx: ResMut<CurrentTx>,
+    mut ev_tx_result: EventWriter<EventTxResult>,
+) {
+    for (entity, mut task) in &mut query.iter_mut() {
+        if let Some((sig, status)) = block_on(future::poll_once(&mut task.task)) {
+            if status == "SUCCESS" || status == "FAILED" {
+                let sig = if let Some(s) = sig {
+                    s.to_string()
+                } else {
+                    "FAILED".to_string()
+                };
+                ev_tx_result.send(EventTxResult {
+                    sig,
+                    status: status.clone(),
+                });
+            }
+            current_tx.status = status;
+            current_tx.interval_timer.reset();
+
+            commands
+                .entity(entity)
+                .remove::<TaskProcessCurrentTx>();
         }
     }
 

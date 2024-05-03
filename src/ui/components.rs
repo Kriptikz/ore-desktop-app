@@ -62,6 +62,9 @@ pub struct ButtonCopyText;
 #[derive(Component)]
 pub struct ButtonStartStopMining;
 
+#[derive(Component)]
+pub struct ButtonResetTreasury;
+
 #[derive(Component, Default)]
 pub struct ScrollingList {
     pub position: f32,
