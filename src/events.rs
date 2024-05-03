@@ -1,6 +1,6 @@
-use bevy::{a11y::{accesskit::{NodeBuilder, Role}, AccessibilityNode}, prelude::*};
+use bevy::prelude::*;
 
-use crate::ui::components::MovingScrollPanel;
+use crate::ui::{components::MovingScrollPanel, layout::spawn_new_list_item};
 
 // Events
 #[derive(Event)]
@@ -29,72 +29,6 @@ pub fn handle_event_start_stop_mining_clicked(
     for _ev in ev_start_stop_mining.read() {
         info!("Start/Stop Mining Event Handler.");
         let scroll_panel_entity = query.get_single().unwrap();
-        // TODO: use a function here for spawning.
-        // Moving all of this layout code to layouts.rs and styles.rs
-        let new_result_item = commands
-            .spawn((
-                NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Row,
-                        width: Val::Percent(100.0),
-                        justify_content: JustifyContent::SpaceAround,
-                        ..default()
-                    },
-                    ..default()
-                },
-                Name::new("TxResult Item"),
-                AccessibilityNode(NodeBuilder::new(Role::ListItem)),
-            ))
-            .with_children(|parent| {
-                parent.spawn((
-                    TextBundle::from_section(
-                        format!("NEW."),
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 20.,
-                            ..default()
-                        },
-                    ),
-                    Label,
-                ));
-
-                parent.spawn((TextBundle::from_section(
-                    format!("TxnS...s8cs   COPY"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
-                        ..default()
-                    },
-                ),));
-
-                parent.spawn((TextBundle::from_section(
-                    format!("23s"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
-                        ..default()
-                    },
-                ),));
-
-                parent.spawn(TextBundle::from_section(
-                    format!("40s"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
-                        ..default()
-                    },
-                ));
-
-                parent.spawn(TextBundle::from_section(
-                    format!("SUCCESS"),
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
-                        ..default()
-                    },
-                ));
-            }).id();
-
-        commands.entity(scroll_panel_entity).add_child(new_result_item);
+        spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity);
     }
 }
