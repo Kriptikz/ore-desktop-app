@@ -2,6 +2,7 @@
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
+use chrono::NaiveDateTime;
 use crate::*;
 
 use super::{components::*, styles::*};
@@ -227,8 +228,9 @@ pub fn update_treasury_account_ui(
 
     let mut text_query_3 = set.p3();
     let mut text_3 = text_query_3.single_mut();
+    let date_time = NaiveDateTime::from_timestamp(treasury_account_res.last_reset_at, 0);
     text_3.sections[0].value =
-        "Last Reset At: ".to_string() + &treasury_account_res.last_reset_at.to_string();
+        "Last Reset At: ".to_string() + &date_time.to_string();
 
     let mut text_query_4 = set.p4();
     let mut text_4 = text_query_4.single_mut();
