@@ -547,11 +547,12 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
                                             flex_direction: FlexDirection::Column,
                                             align_items: AlignItems::Center,
                                             padding: UiRect::all(Val::Percent(2.0)),
+                                            min_height: Val::Percent(100.0),
                                             ..default()
                                         },
                                         ..default()
                                     },
-                                    Name::new("ScrollingList Node"),
+                                    Name::new("TxResultList Node"),
                                 ))
                                 .with_children(|parent| {
                                     // Title
@@ -616,17 +617,20 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
                                     // TODO: look into lazy loading items
                                     // TODO: add the scroll bar on the right
                                     parent
-                                        .spawn(NodeBundle {
+                                        .spawn((NodeBundle {
                                             style: Style {
                                                 flex_direction: FlexDirection::Column,
                                                 align_self: AlignSelf::Stretch,
-                                                height: Val::Percent(46.0),
+                                                min_height: Val::Percent(90.0),
+                                                max_height: Val::Percent(90.0),
                                                 overflow: Overflow::clip_y(),
                                                 ..default()
                                             },
                                             background_color: Color::rgb(0.10, 0.10, 0.10).into(),
                                             ..default()
-                                        })
+                                        },
+                                        Name::new("ScrollingList Node"),
+                                    ))
                                         .with_children(|parent| {
                                             // Moving panel
                                             parent
@@ -641,10 +645,12 @@ pub fn spawn_ui(mut commands: Commands, asset_server: Res<AssetServer>, app_wall
                                                     },
                                                     ScrollingList::default(),
                                                     AccessibilityNode(NodeBuilder::new(Role::List)),
+                                                    MovingScrollPanel,
+                                                    Name::new("MovingScrollPanel"),
                                                 ))
                                                 .with_children(|parent| {
                                                     // List items
-                                                    for i in 0..30 {
+                                                    for i in 0..100 {
                                                         parent.spawn((
                                                             NodeBundle {
                                                                 style: Style {
