@@ -4769,6 +4769,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
+ "chrono",
  "cocoon",
  "copypasta",
  "orz-program",
