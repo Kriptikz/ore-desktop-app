@@ -1,105 +1,25 @@
 
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
-use solana_sdk::native_token::LAMPORTS_PER_SOL;
-use spl_associated_token_account::get_associated_token_address;
+use bevy::diagnostic::DiagnosticsStore;
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+use bevy::prelude::*;
 use crate::*;
 
 use super::{components::*, styles::*};
 
 pub fn button_update_sol_balance(
-    mut commands: Commands,
     mut interaction_query: Query<
-        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
+        (&Interaction, &mut BackgroundColor, &mut BorderColor),
         (Changed<Interaction>, With<ButtonUpdateSolOreBalances>),
     >,
-    app_wallet: Res<AppWallet>,
-    ore_app_state: Res<OreAppState>,
-    rpc_connection: ResMut<RpcConnection>,
+    mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
 ) {
-    for (entity, interaction, mut color, mut border_color) in &mut interaction_query {
+    for (interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
-                let pubkey = app_wallet.wallet.pubkey();
 
-                let pool = AsyncComputeTaskPool::get();
-
-                let connection = rpc_connection.rpc.clone();
-                let ore_mint = ore_app_state.ore_mint.clone();
-                let task = pool.spawn(async move {
-                    let balance = connection.get_balance(&pubkey).unwrap();
-                    let sol_balance = balance as f64 / LAMPORTS_PER_SOL as f64;
-                    let token_account = get_associated_token_address(&pubkey, &ore_mint);
-
-                    let ore_balance = connection
-                        .get_token_account_balance(&token_account)
-                        .unwrap()
-                        .ui_amount
-                        .unwrap();
-
-                    let proof_account = get_proof(&connection, pubkey);
-                    let proof_account_res_data;
-                    if let Ok(proof_account) = proof_account {
-                        proof_account_res_data = ProofAccountResource {
-                            current_hash: proof_account.hash.to_string(),
-                            total_hashes: proof_account.total_hashes,
-                            total_rewards: proof_account.total_rewards,
-                            claimable_rewards: proof_account.claimable_rewards,
-                        };
-                    } else {
-                        proof_account_res_data = ProofAccountResource {
-                            current_hash: "Not Found".to_string(),
-                            total_hashes: 0,
-                            total_rewards: 0,
-                            claimable_rewards: 0,
-                        };
-                    }
-
-                    let treasury_ore_balance = connection
-                        .get_token_account_balance(&treasury_tokens_pubkey())
-                        .unwrap()
-                        .ui_amount
-                        .unwrap();
-
-                    let treasury_account = get_treasury(&connection);
-                    let treasury_account_res_data;
-                    if let Ok(treasury_account) = treasury_account {
-                        let reward_rate = (treasury_account.reward_rate as f64)
-                            / 10f64.powf(ore::TOKEN_DECIMALS as f64);
-                        let total_claimed_rewards = (treasury_account.total_claimed_rewards as f64)
-                            / 10f64.powf(ore::TOKEN_DECIMALS as f64);
-
-                        treasury_account_res_data = TreasuryAccountResource {
-                            balance: treasury_ore_balance.to_string(),
-                            admin: treasury_account.admin.to_string(),
-                            difficulty: treasury_account.difficulty.to_string(),
-                            last_reset_at: treasury_account.last_reset_at,
-                            reward_rate,
-                            total_claimed_rewards,
-                        };
-                    } else {
-                        treasury_account_res_data = TreasuryAccountResource {
-                            balance: "Not Found".to_string(),
-                            admin: "".to_string(),
-                            difficulty: "".to_string(),
-                            last_reset_at: 0,
-                            reward_rate: 0.0,
-                            total_claimed_rewards: 0.0,
-                        };
-                    }
-
-                    TaskUpdateAppWalletSolBalanceData {
-                        sol_balance,
-                        ore_balance,
-                        proof_account_data: proof_account_res_data,
-                        treasury_account_data: treasury_account_res_data,
-                    }
-                });
-
-                commands
-                    .entity(entity)
-                    .insert(TaskUpdateAppWalletSolBalance { task });
+                event_writer.send(EventFetchUiDataFromRpc);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -392,9 +312,6 @@ pub fn spawn_copyable_text(
                 });
         });
 }
-
-use bevy::diagnostic::DiagnosticsStore;
-use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 
 /// Marker to find the container entity so we can show/hide the FPS counter
 #[derive(Component)]
