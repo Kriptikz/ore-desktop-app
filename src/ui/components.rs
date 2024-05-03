@@ -66,3 +66,6 @@ pub struct ButtonStartStopMining;
 pub struct ScrollingList {
     pub position: f32,
 }
+
+#[derive(Component)]
+pub struct MovingScrollPanel;

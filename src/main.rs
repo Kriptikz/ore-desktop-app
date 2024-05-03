@@ -6,13 +6,12 @@ use std::{
 };
 
 use bevy::{
-    input::mouse::{MouseScrollUnit, MouseWheel},
-    prelude::*,
-    tasks::{block_on, futures_lite::future, Task},
+    input::mouse::{MouseScrollUnit, MouseWheel}, prelude::*
 };
 use bevy_inspector_egui::{
     inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions,
 };
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use cocoon::Cocoon;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use ore::{
@@ -29,8 +28,12 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use ui::{layout::spawn_ui, systems::*};
+use events::*;
+use tasks::*;
 
 pub mod ui;
+pub mod events;
+pub mod tasks;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -84,7 +87,8 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        //.add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState { ore_mint })
         .insert_resource(AppWallet {
             wallet,
@@ -100,18 +104,30 @@ fn main() {
         .insert_resource(RpcConnection {
             rpc: rpc_connection,
         })
+        .add_event::<EventStartStopMining>()
         .add_systems(Startup, setup)
+        .add_systems(Update, fps_text_update_system)
+        .add_systems(Update, fps_counter_showhide)
         .add_systems(Update, button_update_sol_balance)
         .add_systems(Update, button_copy_text)
         .add_systems(Update, button_start_stop_mining)
+        .add_systems(Update, handle_event_start_stop_mining_clicked)
         .add_systems(Update, task_update_app_wallet_sol_balance)
+        .add_systems(Update, mouse_scroll)
         .add_systems(Update, update_app_wallet_ui)
         .add_systems(Update, update_proof_account_ui)
         .add_systems(Update, update_treasury_account_ui)
         .add_systems(Update, update_miner_status_ui)
-        .add_systems(Update, mouse_scroll)
         .run();
 }
+
+// Startup system
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
+    commands.spawn(Camera2dBundle::default());
+    spawn_ui(commands.reborrow(), asset_server, app_wallet);
+    setup_fps_counter(commands);
+}
+
 
 // Resources
 #[derive(Resource)]
@@ -195,47 +211,7 @@ pub struct OreAppState {
     ore_mint: Pubkey,
 }
 
-
-// Task Components
-// TODO: tasks should return results so errors can be dealt with by the task handler system
-struct TaskUpdateAppWalletSolBalanceData {
-    pub sol_balance: f64,
-    pub ore_balance: f64,
-    pub proof_account_data: ProofAccountResource,
-    pub treasury_account_data: TreasuryAccountResource,
-}
-#[derive(Component)]
-struct TaskUpdateAppWalletSolBalance {
-    pub task: Task<TaskUpdateAppWalletSolBalanceData>,
-}
-
-fn task_update_app_wallet_sol_balance(
-    mut commands: Commands,
-    mut app_wallet: ResMut<AppWallet>,
-    mut proof_account_res: ResMut<ProofAccountResource>,
-    mut treasury_account_res: ResMut<TreasuryAccountResource>,
-    mut query: Query<(Entity, &mut TaskUpdateAppWalletSolBalance)>,
-) {
-    for (entity, mut task) in &mut query.iter_mut() {
-        if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            app_wallet.sol_balance = result.sol_balance;
-            app_wallet.ore_balance = result.ore_balance;
-            *proof_account_res = result.proof_account_data;
-            *treasury_account_res = result.treasury_account_data;
-            commands
-                .entity(entity)
-                .remove::<TaskUpdateAppWalletSolBalance>();
-        }
-    }
-}
-
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
-    commands.spawn(Camera2dBundle::default());
-    spawn_ui(commands, asset_server, app_wallet);
-}
-
-
-
+// ORE Utility Functions
 
 pub fn get_treasury(client: &RpcClient) -> Result<Treasury, ()> {
     let data = client.get_account_data(&TREASURY_ADDRESS);
