@@ -7,7 +7,7 @@ use crate::{
     ui::{
         components::MovingScrollPanel,
         layout::{spawn_new_list_item, UiListItem},
-    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, OreAppState, ProofAccountResource, RpcConnection, TaskConfirmTx, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskSendAndConfirmTx, TaskSendTx, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource
+    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, OreAppState, ProofAccountResource, RpcConnection, TaskConfirmTx, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskSendAndConfirmTx, TaskSendTx, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -54,7 +54,7 @@ pub struct TxResult {
 #[derive(Event)]
 pub struct EventTxResult {
     pub sig: String,
-    pub status: String,
+    pub tx_status: TxStatus,
 }
 
 #[derive(Event)]
@@ -237,12 +237,13 @@ pub fn handle_event_tx_result(
     for ev in ev_tx_result.read() {
         info!("Tx Result Event Handler.");
         let scroll_panel_entity = query.get_single().unwrap();
+        let status = format!("{}  {}", ev.tx_status.status.clone(), ev.tx_status.error.clone());
         let item_data = UiListItem {
             id: "New".to_string(),
             sig: ev.sig.clone(),
             tx_time: 20.to_string(),
             hash_time: 40.to_string(),
-            status: ev.status.clone(),
+            status, 
         };
         spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
     }

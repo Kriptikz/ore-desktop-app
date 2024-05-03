@@ -92,7 +92,10 @@ fn main() {
         .insert_resource(OreAppState { ore_mint })
         .insert_resource(CurrentTx {
             tx_sig: None,
-            status: "".to_string(),
+            tx_status: TxStatus {
+                status: "".to_string(),
+                error: "".to_string()
+            },
             elapsed: 0,
             interval_timer: Timer::new(Duration::from_secs(2), TimerMode::Once),
         })
@@ -135,7 +138,7 @@ fn main() {
         .add_systems(Update, handle_event_mine_for_hash)
         .add_systems(Update, task_update_app_wallet_sol_balance)
         .add_systems(Update, task_generate_hash)
-        .add_systems(Update, task_send_and_confirm_tx)
+        //.add_systems(Update, task_send_and_confirm_tx)
         .add_systems(Update, task_register_wallet)
         .add_systems(Update, task_process_tx)
         .add_systems(Update, task_process_current_tx)
@@ -242,10 +245,16 @@ pub struct RpcConnection {
     rpc: Arc<RpcClient>,
 }
 
+#[derive(Clone, PartialEq)]
+pub struct TxStatus {
+    pub status: String,
+    pub error: String,
+}
+
 #[derive(Resource)]
 pub struct CurrentTx {
     pub tx_sig: Option<(Transaction, Signature)>,
-    pub status: String,
+    pub tx_status: TxStatus,
     pub elapsed: u64,
     pub interval_timer: Timer,
 }
@@ -264,7 +273,7 @@ pub fn process_current_transaction(
     rpc_connection: Res<RpcConnection>,
 ) {
     if let Some((tx, sig)) = current_transaction.tx_sig.clone() {
-        if current_transaction.status != "SUCCESS" && current_transaction.status != "FAILED" {
+        if current_transaction.tx_status.status != "SUCCESS" && current_transaction.tx_status.status != "FAILED" {
             current_transaction.interval_timer.tick(time.delta());
             if current_transaction.interval_timer.just_finished() {
                 let task_handler_entity = query_task_handler.get_single().unwrap();
@@ -283,6 +292,7 @@ pub fn process_current_transaction(
                     };
 
                     let mut status = "SENDING".to_string();
+                    let mut error = "".to_string();
                     let sig = client.send_transaction_with_config(&tx, send_cfg);
                     if let Ok(sig) = sig {
                         let sigs = [sig];
@@ -296,7 +306,19 @@ pub fn process_current_transaction(
                                                 .as_ref()
                                                 .unwrap();
                                             match current_commitment {
-                                                TransactionConfirmationStatus::Processed => {}
+                                                TransactionConfirmationStatus::Processed => {
+                                                    info!("Transaction landed!");
+                                                    info!("STATUS: {:?}", signature_status);
+                                                    match &signature_status.status {
+                                                        Ok(_) => {
+                                                            status = "PROCESSED".to_string();
+                                                        }
+                                                        Err(e) => {
+                                                            status = "FAILED".to_string();
+                                                            error = e.to_string();
+                                                        }
+                                                    }
+                                                }
                                                 TransactionConfirmationStatus::Confirmed
                                                 | TransactionConfirmationStatus::Finalized => {
                                                     info!("Transaction landed!");
@@ -305,8 +327,9 @@ pub fn process_current_transaction(
                                                         Ok(_) => {
                                                             status = "SUCCESS".to_string();
                                                         }
-                                                        Err(_) => {
+                                                        Err(e) => {
                                                             status = "FAILED".to_string();
+                                                            error = e.to_string();
                                                         }
                                                     }
                                                 }
@@ -318,19 +341,25 @@ pub fn process_current_transaction(
 
                             // Handle confirmation errors
                             Err(err) => {
-                                println!("{:?}", err.kind().to_string());
+                                info!("Confirmation Error: {:?}", err.kind().to_string());
                             }
                         }
-                        return (Some(sig), status);
+                        let tx_status = TxStatus {
+                            status,
+                            error,
+                        };
+                        return (Some(sig), tx_status);
                     }
-                    (None, status)
+                    let tx_status = TxStatus {
+                        status,
+                        error,
+                    };
+                    (None, tx_status)
                 });
                 commands
                     .entity(task_handler_entity)
                     .insert(TaskProcessCurrentTx { task });
             }
-            // task send tx
-            // task check tx status
         }
     }
 }

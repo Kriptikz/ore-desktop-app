@@ -281,7 +281,7 @@ pub fn update_current_tx_ui(
 
     let mut text_query_1 = set.p1();
     let mut text_1 = text_query_1.single_mut();
-    text_1.sections[0].value = "Status: ".to_string() + &res.status;
+    text_1.sections[0].value = "Status: ".to_string() + &res.tx_status.status;
 
     let mut text_query_2 = set.p2();
     let mut text_2 = text_query_2.single_mut();
