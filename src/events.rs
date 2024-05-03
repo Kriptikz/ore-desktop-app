@@ -264,17 +264,21 @@ pub fn handle_event_fetch_ui_data_from_rpc(
         let pool = AsyncComputeTaskPool::get();
 
         let connection = rpc_connection.rpc.clone();
-        let ore_mint = ore_app_state.ore_mint.clone();
+        let ore_mint = MINT_ADDRESS;
         let task = pool.spawn(async move {
             let balance = connection.get_balance(&pubkey).unwrap();
             let sol_balance = balance as f64 / LAMPORTS_PER_SOL as f64;
             let token_account = get_associated_token_address(&pubkey, &ore_mint);
 
-            let ore_balance = connection
-                .get_token_account_balance(&token_account)
-                .unwrap()
-                .ui_amount
-                .unwrap();
+            let ore_balance = if let Ok(response) = connection.get_token_account_balance(&token_account) {
+                if let Some(amount) = response.ui_amount {
+                    amount
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            };
 
             let proof_account = get_proof(&connection, pubkey);
             let proof_account_res_data;
