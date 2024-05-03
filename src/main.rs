@@ -105,6 +105,8 @@ fn main() {
             rpc: rpc_connection,
         })
         .add_event::<EventStartStopMining>()
+        .add_event::<EventSubmitHashTx>()
+        .add_event::<EventTxResult>()
         .add_systems(Startup, setup)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -112,7 +114,11 @@ fn main() {
         .add_systems(Update, button_copy_text)
         .add_systems(Update, button_start_stop_mining)
         .add_systems(Update, handle_event_start_stop_mining_clicked)
+        .add_systems(Update, handle_event_submit_hash_tx)
+        .add_systems(Update, handle_event_tx_result)
         .add_systems(Update, task_update_app_wallet_sol_balance)
+        .add_systems(Update, task_generate_hash)
+        .add_systems(Update, task_send_and_confirm_tx)
         .add_systems(Update, mouse_scroll)
         .add_systems(Update, update_app_wallet_ui)
         .add_systems(Update, update_proof_account_ui)
@@ -124,9 +130,14 @@ fn main() {
 // Startup system
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
     commands.spawn(Camera2dBundle::default());
+    commands.spawn(EntityTaskHandler);
     spawn_ui(commands.reborrow(), asset_server, app_wallet);
     setup_fps_counter(commands);
 }
+
+// Components
+#[derive(Component)]
+pub struct EntityTaskHandler;
 
 
 // Resources
