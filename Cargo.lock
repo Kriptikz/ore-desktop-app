@@ -4774,7 +4774,9 @@ dependencies = [
  "ore-program",
  "serde",
  "solana-client",
+ "solana-program",
  "solana-sdk",
+ "solana-transaction-status",
  "spl-associated-token-account",
  "toml 0.8.12",
 ]
