@@ -105,7 +105,7 @@ pub fn button_start_stop_mining(
     }
 }
 
-pub fn button_reset_treasury(
+pub fn button_reset_epoch(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor, &mut BorderColor),
         (Changed<Interaction>, With<ButtonResetEpoch>),
@@ -119,6 +119,33 @@ pub fn button_reset_treasury(
                 border_color.0 = Color::RED;
 
                 event_writer.send(EventResetEpoch);
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+                border_color.0 = Color::WHITE;
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+                border_color.0 = Color::BLACK;
+            }
+        }
+    }
+}
+
+pub fn button_claim_ore_rewards(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor, &mut BorderColor),
+        (Changed<Interaction>, With<ButtonClaimOreRewards>),
+    >,
+    mut event_writer: EventWriter<EventClaimOreRewards>,
+) {
+    for (interaction, mut color, mut border_color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+                border_color.0 = Color::RED;
+
+                event_writer.send(EventClaimOreRewards);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();

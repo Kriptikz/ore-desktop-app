@@ -80,6 +80,9 @@ pub struct ButtonStartStopMining;
 #[derive(Component)]
 pub struct ButtonResetEpoch;
 
+#[derive(Component)]
+pub struct ButtonClaimOreRewards;
+
 #[derive(Component, Default)]
 pub struct ScrollingList {
     pub position: f32,

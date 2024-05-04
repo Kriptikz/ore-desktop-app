@@ -374,7 +374,7 @@ pub fn spawn_ui(
                                         background_color: NORMAL_BUTTON.into(),
                                         ..default()
                                     },
-                                    //ButtonUpdateSolOreBalances,
+                                    ButtonClaimOreRewards,
                                     Name::new("ButtonClaimOreRewards"),
                                 ))
                                 .with_children(|parent| {

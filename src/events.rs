@@ -1,4 +1,7 @@
-use bevy::{prelude::*, tasks::{AsyncComputeTaskPool, IoTaskPool}};
+use bevy::{
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, IoTaskPool},
+};
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
@@ -7,19 +10,35 @@ use crate::{
     ui::{
         components::MovingScrollPanel,
         layout::{spawn_new_list_item, UiListItem},
-    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
+    },
+    AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState,
+    ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet,
+    TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
+    TreasuryAccountResource, TxStatus,
 };
 
 use std::{
     io::{stdout, Write},
-    sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant,
+    sync::{atomic::AtomicBool, Arc, Mutex},
+    time::Instant,
 };
 
 use orz::{
-    self, state::{Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, EPOCH_DURATION, MINT_ADDRESS, PROOF, TREASURY_ADDRESS
+    self,
+    state::{Proof, Treasury},
+    utils::AccountDeserialize,
+    BUS_ADDRESSES, EPOCH_DURATION, MINT_ADDRESS, PROOF, TREASURY_ADDRESS,
 };
 use solana_sdk::{
-    account::ReadableAccount, clock::Clock, commitment_config::CommitmentLevel, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{Keypair, Signer}, sysvar, transaction::Transaction
+    account::ReadableAccount,
+    clock::Clock,
+    commitment_config::CommitmentLevel,
+    keccak::{hashv, Hash as KeccakHash},
+    native_token::LAMPORTS_PER_SOL,
+    pubkey::Pubkey,
+    signature::{Keypair, Signer},
+    sysvar,
+    transaction::Transaction,
 };
 
 // Events
@@ -58,6 +77,9 @@ pub struct EventResetEpoch;
 
 #[derive(Event)]
 pub struct EventRegisterWallet;
+
+#[derive(Event)]
+pub struct EventClaimOreRewards;
 
 #[derive(Event)]
 pub struct EventProcessTx {
@@ -230,13 +252,17 @@ pub fn handle_event_tx_result(
         };
         miner_status.miner_status = "STOPPED".to_string();
         let scroll_panel_entity = query.get_single().unwrap();
-        let status = format!("{}  {}", ev.tx_status.status.clone(), ev.tx_status.error.clone());
+        let status = format!(
+            "{}  {}",
+            ev.tx_status.status.clone(),
+            ev.tx_status.error.clone()
+        );
         let item_data = UiListItem {
             id: ev.tx_type.clone(),
             sig: ev.sig.clone(),
             tx_time: ev.tx_time.to_string(),
             hash_time,
-            status, 
+            status,
         };
         spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
     }
@@ -264,15 +290,16 @@ pub fn handle_event_fetch_ui_data_from_rpc(
             let sol_balance = balance as f64 / LAMPORTS_PER_SOL as f64;
             let token_account = get_associated_token_address(&pubkey, &ore_mint);
 
-            let ore_balance = if let Ok(response) = connection.get_token_account_balance(&token_account) {
-                if let Some(amount) = response.ui_amount {
-                    amount
+            let ore_balance =
+                if let Ok(response) = connection.get_token_account_balance(&token_account) {
+                    if let Some(amount) = response.ui_amount {
+                        amount
+                    } else {
+                        0.0
+                    }
                 } else {
                     0.0
-                }
-            } else {
-                0.0
-            };
+                };
 
             let (proof_account, treasury_account) = get_proof_and_treasury(&connection, pubkey);
 
@@ -309,7 +336,9 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     / 10f64.powf(orz::TOKEN_DECIMALS as f64);
 
                 let clock = get_clock_account(&connection);
-                let threshold = treasury_account.last_reset_at.saturating_add(EPOCH_DURATION);
+                let threshold = treasury_account
+                    .last_reset_at
+                    .saturating_add(EPOCH_DURATION);
 
                 let need_epoch_reset = if clock.unix_timestamp.ge(&threshold) {
                     true
@@ -434,6 +463,65 @@ pub fn handle_event_reset_epoch(
     }
 }
 
+pub fn handle_event_claim_ore_rewards(
+    mut commands: Commands,
+    mut event_reader: EventReader<EventClaimOreRewards>,
+    app_wallet: Res<AppWallet>,
+    rpc_connection: ResMut<RpcConnection>,
+    proof_account: Res<ProofAccountResource>,
+    query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+) {
+    for _ev in event_reader.read() {
+        info!("Claim Ore Rewards Event Handler.");
+        let task_handler_entity = query_task_handler.get_single().unwrap();
+        let pool = AsyncComputeTaskPool::get();
+        let wallet = app_wallet.wallet.insecure_clone();
+        let client = rpc_connection.rpc.clone();
+        let claim_amount = proof_account.claimable_rewards;
+        let task = pool.spawn(async move {
+            // if no ata, make ata transaction first.
+            let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
+                &wallet.pubkey(),
+                &MINT_ADDRESS,
+            );
+
+            // Check if ata already exists
+            if let Ok(Some(_ata)) = client.get_token_account(&token_account_pubkey) {
+                let ix = orz::instruction::claim(wallet.pubkey(), token_account_pubkey, claim_amount);
+
+                let (hash, _slot) = client
+                    .get_latest_blockhash_with_commitment(client.commitment())
+                    .unwrap();
+                let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
+
+                tx.sign(&[&wallet], hash);
+
+                return Some(("Claim".to_string(), tx, None));
+            } else {
+                let ix = spl_associated_token_account::instruction::create_associated_token_account(
+                    &wallet.pubkey(),
+                    &wallet.pubkey(),
+                    &MINT_ADDRESS,
+                    &spl_token::id(),
+                );
+
+                let (hash, _slot) = client
+                    .get_latest_blockhash_with_commitment(client.commitment())
+                    .unwrap();
+                let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
+
+                tx.sign(&[&wallet], hash);
+
+                return Some(("Create ATA".to_string(), tx, None));
+            }
+        });
+
+        commands
+            .entity(task_handler_entity)
+            .insert(TaskProcessTx { task });
+    }
+}
+
 fn find_next_hash_par(
     signer: Keypair,
     hash: KeccakHash,
@@ -537,11 +625,11 @@ pub fn register(signer: Keypair, client: &RpcClient) -> bool {
 }
 
 // ORE Utility Functions
-pub fn get_proof_and_treasury(client: &RpcClient, authority: Pubkey) -> (Result<Proof, ()>, Result<Treasury, ()>) {
-    let account_pubkeys = vec![
-        TREASURY_ADDRESS,
-        proof_pubkey(authority)
-    ];
+pub fn get_proof_and_treasury(
+    client: &RpcClient,
+    authority: Pubkey,
+) -> (Result<Proof, ()>, Result<Treasury, ()>) {
+    let account_pubkeys = vec![TREASURY_ADDRESS, proof_pubkey(authority)];
     let datas = client.get_multiple_accounts(&account_pubkeys);
     if let Ok(datas) = datas {
         let treasury = if let Some(data) = &datas[0] {
