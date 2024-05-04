@@ -42,6 +42,8 @@ pub mod ui;
 pub struct Config {
     pub rpc_url: String,
     pub ore_mint: String,
+    pub fetch_ui_data_from_rpc_interval_ms: u64,
+    pub tx_check_status_and_resend_interval_ms: u64,
 }
 
 fn main() {
@@ -102,7 +104,7 @@ fn main() {
             },
             elapsed_instant: Instant::now(),
             elapsed_seconds: 0,
-            interval_timer: Timer::new(Duration::from_millis(200), TimerMode::Once),
+            interval_timer: Timer::new(Duration::from_millis(config.tx_check_status_and_resend_interval_ms), TimerMode::Once),
         })
         .insert_resource(AppWallet {
             wallet,
@@ -118,7 +120,7 @@ fn main() {
         .register_type::<TreasuryAccountResource>()
         .insert_resource(RpcConnection {
             rpc: rpc_connection,
-            fetch_ui_data_timer: Timer::new(Duration::from_secs(3), TimerMode::Once),
+            fetch_ui_data_timer: Timer::new(Duration::from_millis(config.fetch_ui_data_from_rpc_interval_ms), TimerMode::Once),
         })
         .add_event::<EventStartStopMining>()
         .add_event::<EventSubmitHashTx>()
