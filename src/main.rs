@@ -173,7 +173,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res
     commands.spawn(EntityTaskHandler);
     commands.spawn(EntityTaskFetchUiData);
     spawn_ui(commands.reborrow(), asset_server, app_wallet);
-    setup_fps_counter(commands);
+    //setup_fps_counter(commands);
 }
 
 // Components
