@@ -3,7 +3,7 @@ use std::{
     path::Path,
     str::FromStr,
     sync::Arc,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
@@ -94,6 +94,7 @@ fn main() {
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState { ore_mint })
         .insert_resource(CurrentTx {
+            tx_type: "".to_string(),
             tx_sig: None,
             tx_status: TxStatus {
                 status: "".to_string(),
@@ -101,7 +102,7 @@ fn main() {
             },
             elapsed_instant: Instant::now(),
             elapsed_seconds: 0,
-            interval_timer: Timer::new(Duration::from_secs(2), TimerMode::Once),
+            interval_timer: Timer::new(Duration::from_millis(200), TimerMode::Once),
         })
         .insert_resource(AppWallet {
             wallet,
@@ -117,6 +118,7 @@ fn main() {
         .register_type::<TreasuryAccountResource>()
         .insert_resource(RpcConnection {
             rpc: rpc_connection,
+            fetch_ui_data_timer: Timer::new(Duration::from_secs(3), TimerMode::Once),
         })
         .add_event::<EventStartStopMining>()
         .add_event::<EventSubmitHashTx>()
@@ -125,7 +127,7 @@ fn main() {
         .add_event::<EventMineForHash>()
         .add_event::<EventRegisterWallet>()
         .add_event::<EventProcessTx>()
-        .add_event::<EventResetTreasury>()
+        .add_event::<EventResetEpoch>()
         .add_systems(Startup, setup)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -139,7 +141,7 @@ fn main() {
         .add_systems(Update, handle_event_fetch_ui_data_from_rpc)
         .add_systems(Update, handle_event_register_wallet)
         .add_systems(Update, handle_event_process_tx)
-        .add_systems(Update, handle_event_reset_treasury)
+        .add_systems(Update, handle_event_reset_epoch)
         .add_systems(Update, handle_event_mine_for_hash)
         .add_systems(Update, task_update_app_wallet_sol_balance)
         .add_systems(Update, task_generate_hash)
@@ -155,6 +157,7 @@ fn main() {
         .add_systems(Update, update_miner_status_ui)
         .add_systems(Update, update_current_tx_ui)
         .add_systems(Update, process_current_transaction)
+        .add_systems(Update, trigger_rpc_calls_for_ui)
         .run();
 }
 
@@ -209,6 +212,7 @@ pub struct TreasuryAccountResource {
     admin: String,
     difficulty: String,
     last_reset_at: i64,
+    need_epoch_reset: bool,
     reward_rate: f64,
     total_claimed_rewards: f64,
 }
@@ -220,6 +224,7 @@ impl Default for TreasuryAccountResource {
             admin: "loading...".to_string(),
             difficulty: "loading...".to_string(),
             last_reset_at: 0,
+            need_epoch_reset: false,
             reward_rate: 0.0,
             total_claimed_rewards: 0.0,
         }
@@ -229,8 +234,7 @@ impl Default for TreasuryAccountResource {
 #[derive(Resource)]
 pub struct MinerStatusResource {
     miner_status: String,
-    cpu_usage: u64,
-    ram_usage: f64,
+    current_timestamp: u64,
     sys_refresh_timer: Timer,
     sys_info: sysinfo::System,
 }
@@ -242,8 +246,7 @@ impl Default for MinerStatusResource {
 
         Self {
             miner_status: "STOPPED".to_string(),
-            cpu_usage: Default::default(),
-            ram_usage: Default::default(),
+            current_timestamp: get_unix_timestamp(),
             sys_refresh_timer: Timer::new(Duration::from_secs(1), TimerMode::Once),
             sys_info,
         }
@@ -254,6 +257,7 @@ impl Default for MinerStatusResource {
 pub struct RpcConnection {
     // Cannot use the nonblocking client and await with the bevy tasks because bevy doesn't actually use tokio for async tasks.
     rpc: Arc<RpcClient>,
+    pub fetch_ui_data_timer: Timer,
 }
 
 #[derive(Clone, PartialEq)]
@@ -264,6 +268,7 @@ pub struct TxStatus {
 
 #[derive(Resource)]
 pub struct CurrentTx {
+    pub tx_type: String,
     pub tx_sig: Option<(Transaction, Signature)>,
     pub tx_status: TxStatus,
     pub elapsed_instant: Instant,
@@ -376,6 +381,18 @@ pub fn process_current_transaction(
     }
 }
 
+pub fn trigger_rpc_calls_for_ui(
+    time: Res<Time>,
+    mut rpc_connection: ResMut<RpcConnection>,
+    mut event_fetch_ui_rpc_data: EventWriter<EventFetchUiDataFromRpc>
+) {
+    rpc_connection.fetch_ui_data_timer.tick(time.delta());
+    if rpc_connection.fetch_ui_data_timer.just_finished() {
+        event_fetch_ui_rpc_data.send(EventFetchUiDataFromRpc);
+        rpc_connection.fetch_ui_data_timer.reset();
+    }
+}
+
 pub fn shorten_string(text: String, max_len: usize) -> String {
     let len = text.len();
     if len > max_len {
@@ -387,4 +404,9 @@ pub fn shorten_string(text: String, max_len: usize) -> String {
     } else {
         text
     }
+}
+
+pub fn get_unix_timestamp() -> u64 {
+    let time = SystemTime::now();
+    time.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs()
 }

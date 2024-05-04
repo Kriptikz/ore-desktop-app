@@ -19,7 +19,7 @@ use orz::{
     self, state::{Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, EPOCH_DURATION, MINT_ADDRESS, PROOF, TREASURY_ADDRESS
 };
 use solana_sdk::{
-    clock::Clock, commitment_config::CommitmentLevel, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{Keypair, Signer}, sysvar, transaction::Transaction
+    account::ReadableAccount, clock::Clock, commitment_config::CommitmentLevel, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{Keypair, Signer}, sysvar, transaction::Transaction
 };
 
 // Events
@@ -43,6 +43,7 @@ pub struct TxResult {
 
 #[derive(Event)]
 pub struct EventTxResult {
+    pub tx_type: String,
     pub sig: String,
     pub tx_time: u64,
     pub tx_status: TxStatus,
@@ -52,13 +53,14 @@ pub struct EventTxResult {
 pub struct EventFetchUiDataFromRpc;
 
 #[derive(Event)]
-pub struct EventResetTreasury;
+pub struct EventResetEpoch;
 
 #[derive(Event)]
 pub struct EventRegisterWallet;
 
 #[derive(Event)]
 pub struct EventProcessTx {
+    pub tx_type: String,
     pub tx: Transaction,
 }
 
@@ -139,6 +141,7 @@ pub fn handle_event_process_tx(
         // TODO: MAKE AppWallet Wallet Arc, so can clone properly
         //let wallet = app_wallet.wallet.insecure_clone();
         let client = rpc_connection.rpc.clone();
+        let tx_type = ev.tx_type.clone();
         let tx = ev.tx.clone();
         let task = pool.spawn(async move {
             let send_cfg = RpcSendTransactionConfig {
@@ -152,7 +155,7 @@ pub fn handle_event_process_tx(
             let sig = client.send_transaction_with_config(&tx, send_cfg);
             if sig.is_err() {}
             if let Ok(sig) = sig {
-                return Some((tx, sig));
+                return Some((tx_type, tx, sig));
             } else {
                 info!("Failed to send initial transaction...");
                 return None;
@@ -194,7 +197,7 @@ pub fn handle_event_submit_hash_tx(
 
             tx.sign(&[&signer], hash);
 
-            return Some(tx);
+            return Some(("Mine".to_string(), tx));
         });
 
         commands
@@ -214,7 +217,7 @@ pub fn handle_event_tx_result(
         let scroll_panel_entity = query.get_single().unwrap();
         let status = format!("{}  {}", ev.tx_status.status.clone(), ev.tx_status.error.clone());
         let item_data = UiListItem {
-            id: "i.".to_string(),
+            id: ev.tx_type.clone(),
             sig: ev.sig.clone(),
             tx_time: ev.tx_time.to_string(),
             hash_time: "todo".to_string(),
@@ -256,7 +259,9 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 0.0
             };
 
-            let proof_account = get_proof(&connection, pubkey);
+            let (proof_account, treasury_account) = get_proof_and_treasury(&connection, pubkey);
+
+            //let proof_account = get_proof(&connection, pubkey);
             let proof_account_res_data;
             if let Ok(proof_account) = proof_account {
                 proof_account_res_data = ProofAccountResource {
@@ -280,7 +285,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 .ui_amount
                 .unwrap();
 
-            let treasury_account = get_treasury(&connection);
+            //let treasury_account = get_treasury(&connection);
             let treasury_account_res_data;
             if let Ok(treasury_account) = treasury_account {
                 let reward_rate =
@@ -291,15 +296,18 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 let clock = get_clock_account(&connection);
                 let threshold = treasury_account.last_reset_at.saturating_add(EPOCH_DURATION);
 
-                if clock.unix_timestamp.ge(&threshold) {
-                    info!("EPOCH NEEDS RESET!");
-                }
+                let need_epoch_reset = if clock.unix_timestamp.ge(&threshold) {
+                    true
+                } else {
+                    false
+                };
 
                 treasury_account_res_data = TreasuryAccountResource {
                     balance: treasury_ore_balance.to_string(),
                     admin: treasury_account.admin.to_string(),
                     difficulty: treasury_account.difficulty.to_string(),
                     last_reset_at: treasury_account.last_reset_at,
+                    need_epoch_reset,
                     reward_rate,
                     total_claimed_rewards,
                 };
@@ -309,6 +317,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     admin: "".to_string(),
                     difficulty: "".to_string(),
                     last_reset_at: 0,
+                    need_epoch_reset: false,
                     reward_rate: 0.0,
                     total_claimed_rewards: 0.0,
                 };
@@ -378,9 +387,9 @@ pub fn handle_event_register_wallet(
     }
 }
 
-pub fn handle_event_reset_treasury(
+pub fn handle_event_reset_epoch(
     mut commands: Commands,
-    mut event_reader: EventReader<EventResetTreasury>,
+    mut event_reader: EventReader<EventResetEpoch>,
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
@@ -401,7 +410,7 @@ pub fn handle_event_reset_treasury(
 
             tx.sign(&[&wallet], hash);
 
-            return Some(tx);
+            return Some(("Reset".to_string(), tx));
         });
 
         commands
@@ -513,6 +522,30 @@ pub fn register(signer: Keypair, client: &RpcClient) -> bool {
 }
 
 // ORE Utility Functions
+pub fn get_proof_and_treasury(client: &RpcClient, authority: Pubkey) -> (Result<Proof, ()>, Result<Treasury, ()>) {
+    let account_pubkeys = vec![
+        TREASURY_ADDRESS,
+        proof_pubkey(authority)
+    ];
+    let datas = client.get_multiple_accounts(&account_pubkeys);
+    if let Ok(datas) = datas {
+        let treasury = if let Some(data) = &datas[0] {
+            Ok(*Treasury::try_from_bytes(data.data()).expect("Failed to parse treasury account"))
+        } else {
+            Err(())
+        };
+
+        let proof = if let Some(data) = &datas[1] {
+            Ok(*Proof::try_from_bytes(data.data()).expect("Failed to parse treasury account"))
+        } else {
+            Err(())
+        };
+
+        (proof, treasury)
+    } else {
+        (Err(()), Err(()))
+    }
+}
 
 pub fn get_treasury(client: &RpcClient) -> Result<Treasury, ()> {
     let data = client.get_account_data(&TREASURY_ADDRESS);

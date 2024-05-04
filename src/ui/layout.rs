@@ -1,4 +1,4 @@
-use crate::{shorten_string, spawn_copyable_text, AppWallet};
+use crate::{get_unix_timestamp, shorten_string, spawn_copyable_text, AppWallet};
 use bevy::{
     a11y::{
         accesskit::{NodeBuilder, Role},
@@ -6,6 +6,7 @@ use bevy::{
     },
     prelude::*,
 };
+use chrono::NaiveDateTime;
 use solana_sdk::signature::Signer;
 
 use super::{components::*, styles::*};
@@ -142,6 +143,19 @@ pub fn spawn_ui(
                                         ),
                                         Name::new("TextTreasuryLastResetAt"),
                                         TextTreasuryLastResetAt,
+                                    ));
+
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "Need Epoch Reset: loading...",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        Name::new("TextTreasuryNeedEpochReset"),
+                                        TextTreasuryNeedEpochReset,
                                     ));
 
                                     parent.spawn((
@@ -475,7 +489,7 @@ pub fn spawn_ui(
                             },
                             ..default()
                         },
-                        Name::new("Button Reset Treasury"),
+                        Name::new("Button Reset Epoch"),
                     ))
                     .with_children(|parent| {
                         parent
@@ -501,12 +515,12 @@ pub fn spawn_ui(
                                     background_color: NORMAL_BUTTON.into(),
                                     ..default()
                                 },
-                                ButtonResetTreasury,
-                                Name::new("ButtonResetTreasury"),
+                                ButtonResetEpoch,
+                                Name::new("ButtonResetEpoch"),
                             ))
                             .with_children(|parent| {
                                 parent.spawn(TextBundle::from_section(
-                                    "RESET TREASURY",
+                                    "RESET EPOCH",
                                     TextStyle {
                                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                         font_size: FONT_SIZE,
@@ -636,6 +650,16 @@ pub fn spawn_ui(
                                         Name::new("Tx Status Title"),
                                     ))
                                     .with_children(|parent| {
+                                        parent.spawn((
+                                            TextBundle::from_section(
+                                                "Tx Type",
+                                                TextStyle {
+                                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                    font_size: 25.,
+                                                    ..default()
+                                                },
+                                            ),
+                                        ));
                                         parent.spawn((
                                             TextBundle::from_section(
                                                 "Signature",
@@ -851,6 +875,20 @@ pub fn spawn_ui(
                                             },
                                         ),
                                         TextMinerStatusStatus,
+                                    ));
+
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            format!("Time: Loading..."),
+                                            TextStyle {
+                                                font: asset_server.load(
+                                                    "fonts/FiraSans-Bold.ttf",
+                                                ),
+                                                font_size: 20.,
+                                                ..default()
+                                            },
+                                        ),
+                                        TextMinerStatusTime,
                                     ));
                                     parent.spawn((
                                         TextBundle::from_section(

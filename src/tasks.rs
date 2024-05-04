@@ -47,12 +47,12 @@ pub struct TaskRegisterWallet {
 
 #[derive(Component)]
 pub struct TaskProcessTx {
-    pub task: Task<Option<Transaction>>,
+    pub task: Task<Option<(String, Transaction)>>,
 }
 
 #[derive(Component)]
 pub struct TaskUpdateCurrentTx {
-    pub task: Task<Option<(Transaction, Signature)>>,
+    pub task: Task<Option<(String, Transaction, Signature)>>,
 }
 
 #[derive(Component)]
@@ -125,6 +125,7 @@ pub fn task_register_wallet(
         if let Some(tx) = block_on(future::poll_once(&mut task.task)) {
             if let Some(tx) = tx {
                 ev_process_tx.send(EventProcessTx {
+                    tx_type: "Register".to_string(),
                     tx,
                 });
             } else {
@@ -145,9 +146,10 @@ pub fn task_process_tx(
     mut query: Query<(Entity, &mut TaskProcessTx)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
-        if let Some(tx) = block_on(future::poll_once(&mut task.task)) {
-            if let Some(tx) = tx {
+        if let Some(result) = block_on(future::poll_once(&mut task.task)) {
+            if let Some((tx_type, tx)) = result {
                 ev_process_tx.send(EventProcessTx {
+                    tx_type,
                     tx,
                 });
             } else {
@@ -169,7 +171,8 @@ pub fn task_update_current_tx(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            if let Some((tx, sig)) = result {
+            if let Some((tx_type, tx, sig)) = result {
+                current_tx.tx_type = tx_type;
                 current_tx.tx_sig = Some((tx, sig));
                 let new_tx_status = TxStatus {
                     status: "SENDING".to_string(),
@@ -212,6 +215,7 @@ pub fn task_process_current_tx(
                     "FAILED".to_string()
                 };
                 ev_tx_result.send(EventTxResult {
+                    tx_type: current_tx.tx_type.clone(),
                     sig,
                     tx_time: current_tx.elapsed_seconds,
                     tx_status: tx_status.clone()

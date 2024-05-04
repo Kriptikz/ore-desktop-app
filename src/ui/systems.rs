@@ -108,9 +108,9 @@ pub fn button_start_stop_mining(
 pub fn button_reset_treasury(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ButtonResetTreasury>),
+        (Changed<Interaction>, With<ButtonResetEpoch>),
     >,
-    mut event_writer: EventWriter<EventResetTreasury>,
+    mut event_writer: EventWriter<EventResetEpoch>,
 ) {
     for (interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
@@ -118,7 +118,7 @@ pub fn button_reset_treasury(
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
 
-                event_writer.send(EventResetTreasury);
+                event_writer.send(EventResetEpoch);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -211,6 +211,7 @@ pub fn update_treasury_account_ui(
         Query<&mut Text, With<TextTreasuryLastResetAt>>,
         Query<&mut Text, With<TextTreasuryRewardRate>>,
         Query<&mut Text, With<TextTreasuryTotalClaimedRewards>>,
+        Query<&mut Text, With<TextTreasuryNeedEpochReset>>,
     )>,
 ) {
     let mut text_query_0 = set.p0();
@@ -241,6 +242,17 @@ pub fn update_treasury_account_ui(
     let mut text_5 = text_query_5.single_mut();
     text_5.sections[0].value = "Total Claimed Rewards: ".to_string()
         + &treasury_account_res.total_claimed_rewards.to_string();
+
+    let mut text_query_6 = set.p6();
+    let mut text_6 = text_query_6.single_mut();
+    let needs_reset_string = if treasury_account_res.need_epoch_reset {
+        "TRUE"
+    } else {
+        "FALSE"
+    };
+
+    text_6.sections[0].value = format!("Need Epoch Reset: {}", needs_reset_string);
+        
 }
 
 pub fn update_miner_status_ui(
@@ -249,6 +261,7 @@ pub fn update_miner_status_ui(
         Query<&mut Text, With<TextMinerStatusStatus>>,
         Query<&mut Text, With<TextMinerStatusCpuUsage>>,
         Query<&mut Text, With<TextMinerStatusRamUsage>>,
+        Query<&mut Text, With<TextMinerStatusTime>>,
     )>,
     time: Res<Time>
 ) {
@@ -271,7 +284,7 @@ pub fn update_miner_status_ui(
         cpu_usage += cpu.cpu_usage();
     }
 
-    let cpu_usage = format!("CPU Usage: {}  % / {} %", cpu_usage, res.sys_info.cpus().len() * 100);
+    let cpu_usage = format!("CPU Usage: {:.2}  % / {} %", cpu_usage, res.sys_info.cpus().len() * 100);
     text_1.sections[0].value = cpu_usage;
 
     let mut text_query_2 = set.p2();
@@ -281,6 +294,13 @@ pub fn update_miner_status_ui(
     let ram_usage = format!("RAM Usage: {} / {}", human_bytes(used_memory as f64), human_bytes(total_memory as f64));
 
     text_2.sections[0].value = ram_usage;
+
+    let ts = get_unix_timestamp();
+    let date_time = NaiveDateTime::from_timestamp(ts as i64, 0);
+    let mut text_query_3 = set.p3();
+    let mut text_3 = text_query_3.single_mut();
+
+    text_3.sections[0].value = format!("Time: {}", date_time.to_string());
 }
 
 pub fn update_current_tx_ui(

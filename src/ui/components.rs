@@ -39,6 +39,9 @@ pub struct TextTreasuryDifficulty;
 pub struct TextTreasuryLastResetAt;
 
 #[derive(Component)]
+pub struct TextTreasuryNeedEpochReset;
+
+#[derive(Component)]
 pub struct TextTreasuryRewardRate;
 
 #[derive(Component)]
@@ -46,6 +49,9 @@ pub struct TextTreasuryTotalClaimedRewards;
 
 #[derive(Component)]
 pub struct TextMinerStatusStatus;
+
+#[derive(Component)]
+pub struct TextMinerStatusTime;
 
 #[derive(Component)]
 pub struct TextMinerStatusCpuUsage;
@@ -72,7 +78,7 @@ pub struct ButtonCopyText;
 pub struct ButtonStartStopMining;
 
 #[derive(Component)]
-pub struct ButtonResetTreasury;
+pub struct ButtonResetEpoch;
 
 #[derive(Component, Default)]
 pub struct ScrollingList {
