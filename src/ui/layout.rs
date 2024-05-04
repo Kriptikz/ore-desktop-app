@@ -66,13 +66,14 @@ pub fn spawn_ui(
                                 .spawn((
                                     NodeBundle {
                                         style: Style {
-                                            width: Val::Px(350.0),
+                                            width: Val::Px(550.0),
                                             height: Val::Px(150.0),
                                             align_items: AlignItems::Center,
                                             flex_direction: FlexDirection::Column,
                                             justify_content: JustifyContent::Center,
+                                            row_gap: Val::Px(10.0),
                                             margin: UiRect {
-                                                top: Val::Px(40.0),
+                                                top: Val::Px(80.0),
                                                 left: Val::Px(30.0),
                                                 right: Val::Px(0.0),
                                                 bottom: Val::Px(0.0),
@@ -272,7 +273,7 @@ pub fn spawn_ui(
                                 .spawn((
                                     NodeBundle {
                                         style: Style {
-                                            width: Val::Px(200.0),
+                                            width: Val::Px(550.0),
                                             height: Val::Px(110.0),
                                             align_items: AlignItems::Center,
                                             flex_direction: FlexDirection::Column,
@@ -280,7 +281,7 @@ pub fn spawn_ui(
                                             margin: UiRect {
                                                 top: Val::Px(100.0),
                                                 left: Val::Px(0.0),
-                                                right: Val::Px(160.0),
+                                                right: Val::Px(0.0),
                                                 bottom: Val::Px(0.0),
                                             },
                                             ..default()
@@ -358,7 +359,7 @@ pub fn spawn_ui(
                                             width: Val::Px(300.0),
                                             height: Val::Px(30.0),
                                             margin: UiRect {
-                                                top: Val::Px(20.0),
+                                                top: Val::Px(30.0),
                                                 right: Val::Px(125.0),
                                                 left: Val::Px(0.0),
                                                 bottom: Val::Px(0.0),
@@ -461,13 +462,13 @@ pub fn spawn_ui(
                                 ButtonBundle {
                                     style: Style {
                                         width: Val::Px(100.0),
-                                        height: Val::Px(30.0),
+                                        height: Val::Px(50.0),
                                         border: UiRect::all(Val::Px(5.0)),
                                         margin: UiRect {
                                             top: Val::Percent(0.0),
                                             right: Val::Px(0.0),
                                             left: Val::Px(0.0),
-                                            bottom: Val::Px(100.0),
+                                            bottom: Val::Px(200.0),
                                         },
                                         // horizontally center child text
                                         justify_content: JustifyContent::Center,
@@ -515,13 +516,13 @@ pub fn spawn_ui(
                                 ButtonBundle {
                                     style: Style {
                                         width: Val::Px(100.0),
-                                        height: Val::Px(30.0),
+                                        height: Val::Px(50.0),
                                         border: UiRect::all(Val::Px(5.0)),
                                         margin: UiRect {
                                             top: Val::Percent(0.0),
                                             right: Val::Px(0.0),
                                             left: Val::Px(0.0),
-                                            bottom: Val::Px(30.0),
+                                            bottom: Val::Px(50.0),
                                         },
                                         // horizontally center child text
                                         justify_content: JustifyContent::Center,

@@ -344,8 +344,8 @@ pub fn spawn_copyable_text(
         .spawn((
             NodeBundle {
                 style: Style {
-                    width: Val::Px(150.0),
-                    height: Val::Px(30.0),
+                    width: Val::Px(200.0),
+                    height: Val::Px(40.0),
                     justify_content: JustifyContent::SpaceBetween,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
