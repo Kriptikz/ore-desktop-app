@@ -533,18 +533,11 @@ pub fn spawn_ui(
                     .spawn((
                         NodeBundle {
                             z_index: ZIndex::Global(10),
-                            border_color: Color::BLUE.into(),
                             style: Style {
                                 position_type: PositionType::Absolute,
                                 justify_content: JustifyContent::Center,
                                 width: Val::Percent(100.0),
                                 height: Val::Percent(100.0),
-                                border: UiRect {
-                                    top: Val::Px(1.0),
-                                    right: Val::Px(1.0),
-                                    left: Val::Px(1.0),
-                                    bottom: Val::Px(1.0),
-                                },
                                 align_items: AlignItems::Center,
                                 ..default()
                             },
