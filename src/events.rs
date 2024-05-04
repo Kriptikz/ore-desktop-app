@@ -126,6 +126,7 @@ pub fn handle_event_mine_for_hash(
         let pool = AsyncComputeTaskPool::get();
         let wallet = app_wallet.wallet.insecure_clone();
         let client = rpc_connection.rpc.clone();
+        let threads = miner_status.miner_threads;
         let task = pool.spawn(async move {
             //  get proof account data
             let proof = get_proof(&client, wallet.pubkey())
@@ -139,7 +140,7 @@ pub fn handle_event_mine_for_hash(
 
             let hash_time = Instant::now();
             let (next_hash, nonce) =
-                find_next_hash_par(wallet, proof.hash.into(), treasury.difficulty.into(), 1);
+                find_next_hash_par(wallet, proof.hash.into(), treasury.difficulty.into(), threads);
             info!("NEXT HASH: {}", next_hash.to_string());
             info!("NONCE: {}", nonce.to_string());
 

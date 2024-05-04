@@ -42,6 +42,7 @@ pub mod ui;
 pub struct Config {
     pub rpc_url: String,
     pub ore_mint: String,
+    pub threads: u64,
     pub fetch_ui_data_from_rpc_interval_ms: u64,
     pub tx_check_status_and_resend_interval_ms: u64,
 }
@@ -112,7 +113,10 @@ fn main() {
             sol_balance: 0.0,
             ore_balance: 0.0,
         })
-        .insert_resource(MinerStatusResource::default())
+        .insert_resource(MinerStatusResource {
+            miner_threads: config.threads,
+            ..Default::default()
+        })
         // .init_resource::<MinerStatusResource>()
         // .register_type::<MinerStatusResource>()
         .init_resource::<ProofAccountResource>()
@@ -239,6 +243,7 @@ impl Default for TreasuryAccountResource {
 #[derive(Resource)]
 pub struct MinerStatusResource {
     miner_status: String,
+    miner_threads: u64,
     current_timestamp: u64,
     sys_refresh_timer: Timer,
     sys_info: sysinfo::System,
@@ -251,6 +256,7 @@ impl Default for MinerStatusResource {
 
         Self {
             miner_status: "STOPPED".to_string(),
+            miner_threads: 1,
             current_timestamp: get_unix_timestamp(),
             sys_refresh_timer: Timer::new(Duration::from_secs(1), TimerMode::Once),
             sys_info,

@@ -1,4 +1,5 @@
 rpc_url = "rpc_url_here"
 ore_mint = "oreoN2tQbHXVaZsr3pf66A48miqcBXCDJozganhEJgz"
+threads = 1
 fetch_ui_data_from_rpc_interval_ms = 3000
 tx_check_status_and_resend_interval_ms = 2000
