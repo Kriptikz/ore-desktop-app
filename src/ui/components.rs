@@ -2,6 +2,18 @@ use bevy::prelude::*;
 
 // Components
 #[derive(Component)]
+pub struct BaseScreenNode;
+
+#[derive(Component)]
+pub struct SetupScreenNode;
+
+#[derive(Component)]
+pub struct MiningScreenNode;
+
+#[derive(Component)]
+pub struct LockedScreenNode;
+
+#[derive(Component)]
 pub struct CopyableText {
     pub full_text: String,
 }
@@ -76,6 +88,12 @@ pub struct ButtonStartStopMining;
 
 #[derive(Component)]
 pub struct ButtonResetEpoch;
+
+#[derive(Component)]
+pub struct ButtonUnlock;
+
+#[derive(Component)]
+pub struct ButtonLock;
 
 #[derive(Component)]
 pub struct ButtonClaimOreRewards;
