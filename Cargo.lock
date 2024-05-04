@@ -4769,6 +4769,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
+ "bincode",
  "chrono",
  "cocoon",
  "copypasta",
@@ -4779,6 +4780,7 @@ dependencies = [
  "solana-sdk",
  "solana-transaction-status",
  "spl-associated-token-account",
+ "sysinfo",
  "toml 0.8.12",
 ]
 
@@ -7148,6 +7150,7 @@ dependencies = [
  "libc",
  "ntapi",
  "once_cell",
+ "rayon",
  "windows 0.52.0",
 ]
 
