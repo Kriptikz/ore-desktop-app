@@ -3,6 +3,7 @@ use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use chrono::NaiveDateTime;
+use orz::TOKEN_DECIMALS;
 use crate::*;
 
 use super::{components::*, styles::*};
@@ -220,13 +221,13 @@ pub fn update_proof_account_ui(
 
     let mut text_total_rewards_query = set.p2();
     let mut text_total_rewards = text_total_rewards_query.single_mut();
-    text_total_rewards.sections[0].value =
-        "Total Rewards: ".to_string() + &proof_account_res.total_rewards.to_string();
+    let amount = (proof_account_res.total_rewards as f64) / 10f64.powf(TOKEN_DECIMALS as f64);
+    text_total_rewards.sections[0].value = format!("Total Rewards: {}", amount);
 
     let mut text_claimable_rewards_query = set.p3();
     let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();
-    text_claimable_rewards.sections[0].value =
-        "Claimable Rewards: ".to_string() + &proof_account_res.claimable_rewards.to_string();
+    let amount = (proof_account_res.claimable_rewards as f64) / 10f64.powf(TOKEN_DECIMALS as f64);
+    text_claimable_rewards.sections[0].value = format!("Claimable Rewards: {}", amount);
 }
 
 pub fn update_treasury_account_ui(
@@ -341,7 +342,8 @@ pub fn update_current_tx_ui(
     let mut text_query_0 = set.p0();
     let mut text_0 = text_query_0.single_mut();
     if let Some((_tx, sig)) = res.tx_sig.clone() {
-        text_0.sections[0].value = "Signature: ".to_string() + &sig.to_string();
+
+        text_0.sections[0].value = format!("Signature: {}", shorten_string(sig.to_string(), 10));
     } else {
         text_0.sections[0].value = "Signature: ".to_string() + "None";
     }
