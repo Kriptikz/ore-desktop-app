@@ -213,6 +213,7 @@ pub fn task_process_current_tx(
                 };
                 ev_tx_result.send(EventTxResult {
                     sig,
+                    tx_time: current_tx.elapsed_seconds,
                     tx_status: tx_status.clone()
                 });
             }

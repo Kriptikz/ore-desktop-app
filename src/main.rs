@@ -28,6 +28,9 @@ use solana_sdk::{
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use spl_associated_token_account::get_associated_token_address;
+use sysinfo::{
+    Components, Disks, Networks, System,
+};
 use tasks::*;
 use ui::{layout::spawn_ui, systems::*};
 
@@ -105,8 +108,9 @@ fn main() {
             sol_balance: 0.0,
             ore_balance: 0.0,
         })
-        .init_resource::<MinerStatusResource>()
-        .register_type::<MinerStatusResource>()
+        .insert_resource(MinerStatusResource::default())
+        // .init_resource::<MinerStatusResource>()
+        // .register_type::<MinerStatusResource>()
         .init_resource::<ProofAccountResource>()
         .register_type::<ProofAccountResource>()
         .init_resource::<TreasuryAccountResource>()
@@ -222,20 +226,26 @@ impl Default for TreasuryAccountResource {
     }
 }
 
-#[derive(Reflect, Resource, InspectorOptions)]
-#[reflect(Resource, InspectorOptions)]
+#[derive(Resource)]
 pub struct MinerStatusResource {
     miner_status: String,
     cpu_usage: u64,
     ram_usage: f64,
+    sys_refresh_timer: Timer,
+    sys_info: sysinfo::System,
 }
 
 impl Default for MinerStatusResource {
     fn default() -> Self {
+        let mut sys_info = sysinfo::System::new_all();
+        sys_info.refresh_all();
+
         Self {
             miner_status: "STOPPED".to_string(),
             cpu_usage: Default::default(),
             ram_usage: Default::default(),
+            sys_refresh_timer: Timer::new(Duration::from_secs(1), TimerMode::Once),
+            sys_info,
         }
     }
 }

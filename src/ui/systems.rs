@@ -244,25 +244,43 @@ pub fn update_treasury_account_ui(
 }
 
 pub fn update_miner_status_ui(
-    res: Res<MinerStatusResource>,
+    mut res: ResMut<MinerStatusResource>,
     mut set: ParamSet<(
         Query<&mut Text, With<TextMinerStatusStatus>>,
         Query<&mut Text, With<TextMinerStatusCpuUsage>>,
         Query<&mut Text, With<TextMinerStatusRamUsage>>,
     )>,
+    time: Res<Time>
 ) {
+    res.sys_refresh_timer.tick(time.delta());
+
+    if res.sys_refresh_timer.just_finished() {
+        res.sys_info.refresh_all();
+        res.sys_refresh_timer.reset();
+    }
+
     let mut text_query_0 = set.p0();
     let mut text_0 = text_query_0.single_mut();
     text_0.sections[0].value = "Miner Status: ".to_string() + &res.miner_status.clone();
 
     let mut text_query_1 = set.p1();
     let mut text_1 = text_query_1.single_mut();
-    text_1.sections[0].value = "CPU Usage: ".to_string() + &res.cpu_usage.to_string();
+
+    let mut cpu_usage = 0.0;
+    for (index, cpu) in res.sys_info.cpus().iter().enumerate() {
+        cpu_usage += cpu.cpu_usage();
+    }
+
+    let cpu_usage = format!("CPU Usage: {}  % / {} %", cpu_usage, res.sys_info.cpus().len() * 100);
+    text_1.sections[0].value = cpu_usage;
 
     let mut text_query_2 = set.p2();
     let mut text_2 = text_query_2.single_mut();
-    text_2.sections[0].value =
-        "RAM Usage: ".to_string() + &res.ram_usage.to_string();
+    let total_memory = res.sys_info.total_memory();
+    let used_memory = res.sys_info.used_memory();
+    let ram_usage = format!("RAM Usage: {} / {}", human_bytes(used_memory as f64), human_bytes(total_memory as f64));
+
+    text_2.sections[0].value = ram_usage;
 }
 
 pub fn update_current_tx_ui(
@@ -503,4 +521,26 @@ pub fn fps_counter_showhide(
             _ => Visibility::Hidden,
         };
     }
+}
+
+const SUFFIX: [&str; 9] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"];
+
+const UNIT: f64 = 1024.0;
+
+/// Converts bytes to human-readable values
+pub fn human_bytes<T: Into<f64>>(bytes: T) -> String {
+    let size = bytes.into();
+
+    if size <= 0.0 {
+        return "0 B".to_string();
+    }
+
+    let base = size.log10() / UNIT.log10();
+
+    let result = format!("{:.1}", UNIT.powf(base - base.floor()),)
+        .trim_end_matches(".0")
+        .to_owned();
+
+    // Add suffix
+    [&result, SUFFIX[base.floor() as usize]].join(" ")
 }

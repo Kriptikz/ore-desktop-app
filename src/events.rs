@@ -16,18 +16,10 @@ use std::{
 };
 
 use orz::{
-    self,
-    state::{Proof, Treasury},
-    utils::AccountDeserialize,
-    BUS_ADDRESSES, MINT_ADDRESS, PROOF, TREASURY_ADDRESS,
+    self, state::{Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, EPOCH_DURATION, MINT_ADDRESS, PROOF, TREASURY_ADDRESS
 };
 use solana_sdk::{
-    commitment_config::CommitmentLevel,
-    keccak::{hashv, Hash as KeccakHash},
-    native_token::LAMPORTS_PER_SOL,
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
-    transaction::Transaction,
+    clock::Clock, commitment_config::CommitmentLevel, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{Keypair, Signer}, sysvar, transaction::Transaction
 };
 
 // Events
@@ -52,6 +44,7 @@ pub struct TxResult {
 #[derive(Event)]
 pub struct EventTxResult {
     pub sig: String,
+    pub tx_time: u64,
     pub tx_status: TxStatus,
 }
 
@@ -221,10 +214,10 @@ pub fn handle_event_tx_result(
         let scroll_panel_entity = query.get_single().unwrap();
         let status = format!("{}  {}", ev.tx_status.status.clone(), ev.tx_status.error.clone());
         let item_data = UiListItem {
-            id: "New".to_string(),
+            id: "i.".to_string(),
             sig: ev.sig.clone(),
-            tx_time: 20.to_string(),
-            hash_time: 40.to_string(),
+            tx_time: ev.tx_time.to_string(),
+            hash_time: "todo".to_string(),
             status, 
         };
         spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
@@ -294,6 +287,13 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     (treasury_account.reward_rate as f64) / 10f64.powf(orz::TOKEN_DECIMALS as f64);
                 let total_claimed_rewards = (treasury_account.total_claimed_rewards as f64)
                     / 10f64.powf(orz::TOKEN_DECIMALS as f64);
+
+                let clock = get_clock_account(&connection);
+                let threshold = treasury_account.last_reset_at.saturating_add(EPOCH_DURATION);
+
+                if clock.unix_timestamp.ge(&threshold) {
+                    info!("EPOCH NEEDS RESET!");
+                }
 
                 treasury_account_res_data = TreasuryAccountResource {
                     balance: treasury_ore_balance.to_string(),
@@ -538,4 +538,11 @@ pub fn proof_pubkey(authority: Pubkey) -> Pubkey {
 
 pub fn treasury_tokens_pubkey() -> Pubkey {
     get_associated_token_address(&TREASURY_ADDRESS, &MINT_ADDRESS)
+}
+
+pub fn get_clock_account(client: &RpcClient) -> Clock {
+    let data = client
+        .get_account_data(&sysvar::clock::ID)
+        .expect("Failed to get miner account");
+    bincode::deserialize::<Clock>(&data).expect("Failed to deserialize clock")
 }
