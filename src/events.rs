@@ -7,12 +7,12 @@ use crate::{
     ui::{
         components::MovingScrollPanel,
         layout::{spawn_new_list_item, UiListItem},
-    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, OreAppState, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
+    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
 };
 
 use std::{
     io::{stdout, Write},
-    sync::{atomic::AtomicBool, Arc, Mutex},
+    sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant,
 };
 
 use orz::{
@@ -31,7 +31,7 @@ pub struct EventStartStopMining;
 pub struct EventMineForHash;
 
 #[derive(Event)]
-pub struct EventSubmitHashTx(pub (solana_program::keccak::Hash, u64));
+pub struct EventSubmitHashTx(pub (solana_program::keccak::Hash, u64, u64));
 
 pub struct TxResult {
     pub sig: String,
@@ -46,6 +46,7 @@ pub struct EventTxResult {
     pub tx_type: String,
     pub sig: String,
     pub tx_time: u64,
+    pub hash_time: Option<u64>,
     pub tx_status: TxStatus,
 }
 
@@ -62,6 +63,7 @@ pub struct EventRegisterWallet;
 pub struct EventProcessTx {
     pub tx_type: String,
     pub tx: Transaction,
+    pub hash_time: Option<u64>,
 }
 
 pub fn handle_event_start_stop_mining_clicked(
@@ -93,6 +95,7 @@ pub fn handle_event_mine_for_hash(
     mut event_reader: EventReader<EventMineForHash>,
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
+    mut miner_status: ResMut<MinerStatusResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
 ) {
     for _ev in event_reader.read() {
@@ -112,13 +115,15 @@ pub fn handle_event_mine_for_hash(
             // which results in 0x3 - Hash already submitted. Stale RPC Data...
             info!("\nMining for a valid hash...");
 
+            let hash_time = Instant::now();
             let (next_hash, nonce) =
                 find_next_hash_par(wallet, proof.hash.into(), treasury.difficulty.into(), 1);
             info!("NEXT HASH: {}", next_hash.to_string());
             info!("NONCE: {}", nonce.to_string());
 
-            (next_hash, nonce)
+            (next_hash, nonce, hash_time.elapsed().as_secs())
         });
+        miner_status.miner_status = "MINING".to_string();
 
         commands
             .entity(task_handler_entity)
@@ -129,6 +134,7 @@ pub fn handle_event_mine_for_hash(
 pub fn handle_event_process_tx(
     mut commands: Commands,
     mut ev_submit_hash_tx: EventReader<EventProcessTx>,
+    mut miner_status: ResMut<MinerStatusResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     rpc_connection: Res<RpcConnection>,
 ) {
@@ -143,6 +149,7 @@ pub fn handle_event_process_tx(
         let client = rpc_connection.rpc.clone();
         let tx_type = ev.tx_type.clone();
         let tx = ev.tx.clone();
+        let hash_time = ev.hash_time.clone();
         let task = pool.spawn(async move {
             let send_cfg = RpcSendTransactionConfig {
                 skip_preflight: true,
@@ -155,12 +162,13 @@ pub fn handle_event_process_tx(
             let sig = client.send_transaction_with_config(&tx, send_cfg);
             if sig.is_err() {}
             if let Ok(sig) = sig {
-                return Some((tx_type, tx, sig));
+                return Some((tx_type, tx, sig, hash_time));
             } else {
                 info!("Failed to send initial transaction...");
                 return None;
             }
         });
+        miner_status.miner_status = "PROCESSING".to_string();
 
         commands
             .entity(task_handler_entity)
@@ -182,7 +190,7 @@ pub fn handle_event_submit_hash_tx(
         let wallet = app_wallet.wallet.insecure_clone();
         let client = rpc_connection.rpc.clone();
 
-        let (next_hash, nonce) = ev.0;
+        let (next_hash, nonce, hash_time) = ev.0;
         let task = pool.spawn(async move {
             let signer = wallet;
             // let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(CU_LIMIT_MINE);
@@ -197,7 +205,7 @@ pub fn handle_event_submit_hash_tx(
 
             tx.sign(&[&signer], hash);
 
-            return Some(("Mine".to_string(), tx));
+            return Some(("Mine".to_string(), tx, Some(hash_time)));
         });
 
         commands
@@ -209,18 +217,25 @@ pub fn handle_event_submit_hash_tx(
 pub fn handle_event_tx_result(
     mut commands: Commands,
     mut ev_tx_result: EventReader<EventTxResult>,
+    mut miner_status: ResMut<MinerStatusResource>,
     asset_server: Res<AssetServer>,
     query: Query<Entity, With<MovingScrollPanel>>,
 ) {
     for ev in ev_tx_result.read() {
         info!("Tx Result Event Handler.");
+        let hash_time = if let Some(ht) = ev.hash_time {
+            ht.to_string()
+        } else {
+            "N/A".to_string()
+        };
+        miner_status.miner_status = "STOPPED".to_string();
         let scroll_panel_entity = query.get_single().unwrap();
         let status = format!("{}  {}", ev.tx_status.status.clone(), ev.tx_status.error.clone());
         let item_data = UiListItem {
             id: ev.tx_type.clone(),
             sig: ev.sig.clone(),
             tx_time: ev.tx_time.to_string(),
-            hash_time: "todo".to_string(),
+            hash_time,
             status, 
         };
         spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
@@ -410,7 +425,7 @@ pub fn handle_event_reset_epoch(
 
             tx.sign(&[&wallet], hash);
 
-            return Some(("Reset".to_string(), tx));
+            return Some(("Reset".to_string(), tx, None));
         });
 
         commands

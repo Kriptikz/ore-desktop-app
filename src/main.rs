@@ -102,6 +102,7 @@ fn main() {
                 status: "".to_string(),
                 error: "".to_string()
             },
+            hash_time: None,
             elapsed_instant: Instant::now(),
             elapsed_seconds: 0,
             interval_timer: Timer::new(Duration::from_millis(config.tx_check_status_and_resend_interval_ms), TimerMode::Once),
@@ -273,6 +274,7 @@ pub struct CurrentTx {
     pub tx_type: String,
     pub tx_sig: Option<(Transaction, Signature)>,
     pub tx_status: TxStatus,
+    pub hash_time: Option<u64>,
     pub elapsed_instant: Instant,
     pub elapsed_seconds: u64,
     pub interval_timer: Timer,

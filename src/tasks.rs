@@ -5,7 +5,7 @@ use bevy::{
 };
 use solana_sdk::{signature::Signature, transaction::Transaction};
 
-use crate::{AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource, TxStatus};
+use crate::{AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxStatus};
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
@@ -22,7 +22,7 @@ pub struct TaskUpdateAppWalletSolBalance {
 
 #[derive(Component)]
 pub struct TaskGenerateHash {
-    pub task: Task<(solana_program::keccak::Hash, u64)>,
+    pub task: Task<(solana_program::keccak::Hash, u64, u64)>,
 }
 
 #[derive(Component)]
@@ -47,12 +47,12 @@ pub struct TaskRegisterWallet {
 
 #[derive(Component)]
 pub struct TaskProcessTx {
-    pub task: Task<Option<(String, Transaction)>>,
+    pub task: Task<Option<(String, Transaction, Option<u64>)>>,
 }
 
 #[derive(Component)]
 pub struct TaskUpdateCurrentTx {
-    pub task: Task<Option<(String, Transaction, Signature)>>,
+    pub task: Task<Option<(String, Transaction, Signature, Option<u64>)>>,
 }
 
 #[derive(Component)]
@@ -127,6 +127,7 @@ pub fn task_register_wallet(
                 ev_process_tx.send(EventProcessTx {
                     tx_type: "Register".to_string(),
                     tx,
+                    hash_time: None,
                 });
             } else {
                 info!("Failed to confirm register wallet tx...");
@@ -143,14 +144,16 @@ pub fn task_register_wallet(
 pub fn task_process_tx(
     mut commands: Commands,
     mut ev_process_tx: EventWriter<EventProcessTx>,
+    mut miner_status: ResMut<MinerStatusResource>,
     mut query: Query<(Entity, &mut TaskProcessTx)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            if let Some((tx_type, tx)) = result {
+            if let Some((tx_type, tx, hash_time)) = result {
                 ev_process_tx.send(EventProcessTx {
                     tx_type,
                     tx,
+                    hash_time,
                 });
             } else {
                 info!("Failed to confirm register wallet tx...");
@@ -171,8 +174,9 @@ pub fn task_update_current_tx(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            if let Some((tx_type, tx, sig)) = result {
+            if let Some((tx_type, tx, sig, hash_time)) = result {
                 current_tx.tx_type = tx_type;
+                current_tx.hash_time = hash_time;
                 current_tx.tx_sig = Some((tx, sig));
                 let new_tx_status = TxStatus {
                     status: "SENDING".to_string(),
@@ -217,6 +221,7 @@ pub fn task_process_current_tx(
                 ev_tx_result.send(EventTxResult {
                     tx_type: current_tx.tx_type.clone(),
                     sig,
+                    hash_time: current_tx.hash_time,
                     tx_time: current_tx.elapsed_seconds,
                     tx_status: tx_status.clone()
                 });
