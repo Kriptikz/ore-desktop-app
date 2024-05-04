@@ -358,8 +358,8 @@ pub fn spawn_ui(
                                             width: Val::Px(300.0),
                                             height: Val::Px(30.0),
                                             margin: UiRect {
-                                                top: Val::Px(0.0),
-                                                right: Val::Px(100.0),
+                                                top: Val::Px(20.0),
+                                                right: Val::Px(125.0),
                                                 left: Val::Px(0.0),
                                                 bottom: Val::Px(0.0),
                                             },
@@ -380,42 +380,6 @@ pub fn spawn_ui(
                                 .with_children(|parent| {
                                     parent.spawn(TextBundle::from_section(
                                         "CLAIM",
-                                        TextStyle {
-                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                            font_size: FONT_SIZE,
-                                            color: Color::rgb(0.9, 0.9, 0.9),
-                                        },
-                                    ));
-                                });
-                            parent
-                                .spawn((
-                                    ButtonBundle {
-                                        style: Style {
-                                            width: Val::Px(300.0),
-                                            height: Val::Px(30.0),
-                                            margin: UiRect {
-                                                top: Val::Px(0.0),
-                                                right: Val::Px(100.0),
-                                                left: Val::Px(0.0),
-                                                bottom: Val::Px(0.0),
-                                            },
-                                            border: UiRect::all(Val::Px(5.0)),
-                                            // horizontally center child text
-                                            justify_content: JustifyContent::Center,
-                                            // vertically center child text
-                                            align_items: AlignItems::Center,
-                                            ..default()
-                                        },
-                                        border_color: BorderColor(Color::BLACK),
-                                        background_color: NORMAL_BUTTON.into(),
-                                        ..default()
-                                    },
-                                    ButtonUpdateSolOreBalances,
-                                    Name::new("ButtonUpdateSolOreBalances"),
-                                ))
-                                .with_children(|parent| {
-                                    parent.spawn(TextBundle::from_section(
-                                        "Update Sol and Ore balances",
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: FONT_SIZE,

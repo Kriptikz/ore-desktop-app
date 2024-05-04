@@ -8,33 +8,6 @@ use crate::*;
 
 use super::{components::*, styles::*};
 
-pub fn button_update_sol_balance(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ButtonUpdateSolOreBalances>),
-    >,
-    mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
-) {
-    for (interaction, mut color, mut border_color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-                border_color.0 = Color::RED;
-
-                event_writer.send(EventFetchUiDataFromRpc);
-            }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-                border_color.0 = Color::WHITE;
-            }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                border_color.0 = Color::BLACK;
-            }
-        }
-    }
-}
-
 pub fn button_copy_text(
     mut interaction_query: Query<
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),

@@ -135,7 +135,6 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
-        .add_systems(Update, button_update_sol_balance)
         .add_systems(Update, button_copy_text)
         .add_systems(Update, button_start_stop_mining)
         .add_systems(Update, button_reset_epoch)

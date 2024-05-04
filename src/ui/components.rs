@@ -69,9 +69,6 @@ pub struct TextCurrentTxStatus;
 pub struct TextCurrentTxElapsed;
 
 #[derive(Component)]
-pub struct ButtonUpdateSolOreBalances;
-
-#[derive(Component)]
 pub struct ButtonCopyText;
 
 #[derive(Component)]
