@@ -1,22 +1,34 @@
-use orz::{state::{Hash, Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, MINT_ADDRESS, PROOF, TREASURY_ADDRESS};
+use orz::{instruction, state::{Hash, Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF, TOKEN_DECIMALS, TREASURY_ADDRESS};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{account::ReadableAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, sysvar};
 use spl_associated_token_account::get_associated_token_address;
 
 pub fn get_mine_ix(signer: Pubkey, next_hash: Hash, nonce: u64) -> Instruction {
-    orz::instruction::mine(signer, BUS_ADDRESSES[0], next_hash.into(), nonce)
+    instruction::mine(signer, BUS_ADDRESSES[0], next_hash.into(), nonce)
 }
 
 pub fn get_register_ix(signer: Pubkey) -> Instruction {
-    orz::instruction::register(signer)
+    instruction::register(signer)
 }
 
 pub fn get_reset_ix(signer: Pubkey) -> Instruction {
-    orz::instruction::reset(signer)
+    instruction::reset(signer)
 }
 
 pub fn get_claim_ix(signer: Pubkey, beneficiary: Pubkey, claim_amount: u64) -> Instruction {
-    orz::instruction::claim(signer, beneficiary, claim_amount)
+    instruction::claim(signer, beneficiary, claim_amount)
+}
+
+pub fn get_ore_mint() -> Pubkey {
+    MINT_ADDRESS
+}
+
+pub fn get_ore_epoch_duration() -> i64 {
+    EPOCH_DURATION
+}
+
+pub fn get_ore_decimals() -> u8 {
+    TOKEN_DECIMALS
 }
 
 pub fn get_proof_and_treasury(
@@ -63,7 +75,7 @@ pub fn get_proof(client: &RpcClient, authority: Pubkey) -> Result<Proof, String>
 }
 
 pub fn proof_pubkey(authority: Pubkey) -> Pubkey {
-    Pubkey::find_program_address(&[PROOF, authority.as_ref()], &orz::ID).0
+    Pubkey::find_program_address(&[PROOF, authority.as_ref()], &ORE_ID).0
 }
 
 pub fn treasury_tokens_pubkey() -> Pubkey {

@@ -5,14 +5,39 @@ use bevy::input::mouse::MouseScrollUnit;
 use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 use chrono::DateTime;
-use orz::TOKEN_DECIMALS;
-use crate::*;
 
-use self::utils::get_unix_timestamp;
-use self::utils::human_bytes;
-use self::utils::shorten_string;
+use crate::ore_utils::get_ore_decimals;
+use crate::utils::{get_unix_timestamp, human_bytes, shorten_string};
+use crate::AppWallet;
+use crate::CurrentTx;
+use crate::MinerStatusResource;
+use crate::ProofAccountResource;
+use crate::TreasuryAccountResource;
 
-use super::components::*;
+use super::components::FpsRoot;
+use super::components::FpsText;
+use super::components::ScrollingList;
+use super::components::TextClaimableRewards;
+use super::components::TextCurrentHash;
+use super::components::TextCurrentTxElapsed;
+use super::components::TextCurrentTxSig;
+use super::components::TextCurrentTxStatus;
+use super::components::TextInput;
+use super::components::TextMinerStatusCpuUsage;
+use super::components::TextMinerStatusRamUsage;
+use super::components::TextMinerStatusStatus;
+use super::components::TextMinerStatusTime;
+use super::components::TextTotalHashes;
+use super::components::TextTotalRewards;
+use super::components::TextTreasuryAdmin;
+use super::components::TextTreasuryBalance;
+use super::components::TextTreasuryDifficulty;
+use super::components::TextTreasuryLastResetAt;
+use super::components::TextTreasuryNeedEpochReset;
+use super::components::TextTreasuryRewardRate;
+use super::components::TextTreasuryTotalClaimedRewards;
+use super::components::TextWalletOreBalance;
+use super::components::TextWalletSolBalance;
 
 
 pub fn mouse_scroll(
@@ -76,12 +101,12 @@ pub fn update_proof_account_ui(
 
     let mut text_total_rewards_query = set.p2();
     let mut text_total_rewards = text_total_rewards_query.single_mut();
-    let amount = (proof_account_res.total_rewards as f64) / 10f64.powf(TOKEN_DECIMALS as f64);
+    let amount = (proof_account_res.total_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
     text_total_rewards.sections[0].value = format!("Total Rewards: {}", amount);
 
     let mut text_claimable_rewards_query = set.p3();
     let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();
-    let amount = (proof_account_res.claimable_rewards as f64) / 10f64.powf(TOKEN_DECIMALS as f64);
+    let amount = (proof_account_res.claimable_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
     text_claimable_rewards.sections[0].value = format!("Claimable Rewards: {}", amount);
 }
 

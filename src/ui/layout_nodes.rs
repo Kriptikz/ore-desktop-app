@@ -51,16 +51,8 @@ pub fn spawn_new_list_item(
                 ),
                 Label,
             ));
-            spawn_copyable_text(parent, asset_server, item_data.sig.clone(), sig);
 
-            // parent.spawn((TextBundle::from_section(
-            //     sig,
-            //     TextStyle {
-            //         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-            //         font_size: 20.,
-            //         ..default()
-            //     },
-            // ),));
+            spawn_copyable_text(parent, asset_server, item_data.sig.clone(), sig);
 
             parent.spawn((TextBundle::from_section(
                 item_data.tx_time,

@@ -10,11 +10,22 @@ use bevy::{
 use solana_sdk::signer::Signer;
 
 use crate::{
-    utils::shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, RpcConnection, TxStatus
+    utils::shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler,
+    MinerStatusResource, OreAppState, RpcConnection, TxStatus,
 };
 
 use super::{
-    components::*,
+    components::{
+        BaseScreenNode, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonLock,
+        ButtonResetEpoch, ButtonStartStopMining, ButtonUnlock, InitialSetupScreenNode,
+        LockedScreenNode, MovingScrollPanel, ScrollingList, TextClaimableRewards, TextCurrentHash,
+        TextCurrentTxElapsed, TextCurrentTxSig, TextCurrentTxStatus, TextInput,
+        TextMinerStatusCpuUsage, TextMinerStatusRamUsage, TextMinerStatusStatus,
+        TextMinerStatusTime, TextPasswordInput, TextPasswordLabel, TextTotalHashes,
+        TextTotalRewards, TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryDifficulty,
+        TextTreasuryLastResetAt, TextTreasuryNeedEpochReset, TextTreasuryRewardRate,
+        TextTreasuryTotalClaimedRewards, TextWalletOreBalance, TextWalletSolBalance,
+    },
     layout_nodes::spawn_copyable_text,
     styles::{FONT_SIZE, NORMAL_BUTTON},
 };
@@ -99,7 +110,10 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
         });
 }
 
-pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer>) -> Option<Entity> {
+pub fn spawn_locked_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) -> Option<Entity> {
     let mut password_text_entity = None;
     commands
         .spawn((
@@ -180,77 +194,82 @@ pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer
                                     Name::new("ButtonCaptureText"),
                                 ))
                                 .with_children(|parent| {
-                                    password_text_entity = Some(parent.spawn((
-                                        TextBundle::from_section(
-                                            "",
-                                            TextStyle {
-                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                                font_size: FONT_SIZE,
-                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                            },
-                                        ),
-                                        TextInput {
-                                            hidden: true,
-                                            text: "".to_string(),
-                                        },
-                                        TextPasswordInput
-                                    )).id());
+                                    password_text_entity = Some(
+                                        parent
+                                            .spawn((
+                                                TextBundle::from_section(
+                                                    "",
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load("fonts/FiraSans-Bold.ttf"),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextInput {
+                                                    hidden: true,
+                                                    text: "".to_string(),
+                                                },
+                                                TextPasswordInput,
+                                            ))
+                                            .id(),
+                                    );
                                 });
                         });
                 });
-                parent
-                    .spawn((
-                        NodeBundle {
-                            style: Style {
-                                justify_content: JustifyContent::Center,
-                                align_items: AlignItems::Center,
-                                ..default()
-                            },
+            parent
+                .spawn((
+                    NodeBundle {
+                        style: Style {
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
                             ..default()
                         },
-                        Name::new("Button Unlock Node"),
-                    ))
-                    .with_children(|parent| {
-                        parent
-                            .spawn((
-                                ButtonBundle {
-                                    style: Style {
-                                        width: Val::Px(100.0),
-                                        height: Val::Px(50.0),
-                                        border: UiRect::all(Val::Px(5.0)),
-                                        margin: UiRect {
-                                            top: Val::Percent(0.0),
-                                            right: Val::Px(0.0),
-                                            left: Val::Px(0.0),
-                                            bottom: Val::Px(0.0),
-                                        },
-                                        // horizontally center child text
-                                        justify_content: JustifyContent::Center,
-                                        // vertically center child text
-                                        align_items: AlignItems::Center,
-                                        ..default()
+                        ..default()
+                    },
+                    Name::new("Button Unlock Node"),
+                ))
+                .with_children(|parent| {
+                    parent
+                        .spawn((
+                            ButtonBundle {
+                                style: Style {
+                                    width: Val::Px(100.0),
+                                    height: Val::Px(50.0),
+                                    border: UiRect::all(Val::Px(5.0)),
+                                    margin: UiRect {
+                                        top: Val::Percent(0.0),
+                                        right: Val::Px(0.0),
+                                        left: Val::Px(0.0),
+                                        bottom: Val::Px(0.0),
                                     },
-                                    border_color: BorderColor(Color::BLACK),
-                                    background_color: NORMAL_BUTTON.into(),
+                                    // horizontally center child text
+                                    justify_content: JustifyContent::Center,
+                                    // vertically center child text
+                                    align_items: AlignItems::Center,
                                     ..default()
                                 },
-                                ButtonUnlock,
-                                Name::new("ButtonUnlock"),
-                            ))
-                            .with_children(|parent| {
-                                parent.spawn(TextBundle::from_section(
-                                    "UNLOCK",
-                                    TextStyle {
-                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                        font_size: FONT_SIZE,
-                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                    },
-                                ));
-                            });
-                    });
+                                border_color: BorderColor(Color::BLACK),
+                                background_color: NORMAL_BUTTON.into(),
+                                ..default()
+                            },
+                            ButtonUnlock,
+                            Name::new("ButtonUnlock"),
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle::from_section(
+                                "UNLOCK",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: FONT_SIZE,
+                                    color: Color::rgb(0.9, 0.9, 0.9),
+                                },
+                            ));
+                        });
+                });
         });
 
-        password_text_entity
+    password_text_entity
 }
 
 pub fn spawn_mining_screen(
@@ -972,108 +991,20 @@ pub fn spawn_mining_screen(
                                         ))
                                         .with_children(|parent| {
                                             // Moving panel
-                                            parent
-                                                .spawn((
-                                                    NodeBundle {
-                                                        style: Style {
-                                                            flex_direction: FlexDirection::Column,
-                                                            align_items: AlignItems::Center,
-                                                            ..default()
-                                                        },
+                                            parent.spawn((
+                                                NodeBundle {
+                                                    style: Style {
+                                                        flex_direction: FlexDirection::Column,
+                                                        align_items: AlignItems::Center,
                                                         ..default()
                                                     },
-                                                    ScrollingList::default(),
-                                                    AccessibilityNode(NodeBuilder::new(Role::List)),
-                                                    MovingScrollPanel,
-                                                    Name::new("MovingScrollPanel"),
-                                                ))
-                                                .with_children(|_parent| {
-                                                    // List items
-                                                    // for i in 0..100 {
-                                                    //     parent.spawn((
-                                                    //         NodeBundle {
-                                                    //             style: Style {
-                                                    //                 flex_direction: FlexDirection::Row,
-                                                    //                 width: Val::Percent(100.0),
-                                                    //                 justify_content: JustifyContent::SpaceAround,
-                                                    //                 ..default()
-                                                    //             },
-                                                    //             ..default()
-                                                    //         },
-                                                    //         Name::new("TxResult Item"),
-                                                    //         AccessibilityNode(NodeBuilder::new(
-                                                    //             Role::ListItem,
-                                                    //         )),
-                                                    //     ))
-                                                    //     .with_children(|parent| {
-                                                    //         parent.spawn((
-                                                    //             TextBundle::from_section(
-                                                    //                 format!("{i}."),
-                                                    //                 TextStyle {
-                                                    //                     font: asset_server.load(
-                                                    //                         "fonts/FiraSans-Bold.ttf",
-                                                    //                     ),
-                                                    //                     font_size: 20.,
-                                                    //                     ..default()
-                                                    //                 },
-                                                    //             ),
-                                                    //             Label,
-                                                    //         ));
-
-                                                    //         parent.spawn((
-                                                    //             TextBundle::from_section(
-                                                    //                 format!("TxnS...s8cs   COPY"),
-                                                    //                 TextStyle {
-                                                    //                     font: asset_server.load(
-                                                    //                         "fonts/FiraSans-Bold.ttf",
-                                                    //                     ),
-                                                    //                     font_size: 20.,
-                                                    //                     ..default()
-                                                    //                 },
-                                                    //             ),
-                                                    //         ));
-
-                                                    //         parent.spawn((
-                                                    //             TextBundle::from_section(
-                                                    //                 format!("23s"),
-                                                    //                 TextStyle {
-                                                    //                     font: asset_server.load(
-                                                    //                         "fonts/FiraSans-Bold.ttf",
-                                                    //                     ),
-                                                    //                     font_size: 20.,
-                                                    //                     ..default()
-                                                    //                 },
-                                                    //             ),
-                                                    //         ));
-
-                                                    //         parent.spawn((
-                                                    //             TextBundle::from_section(
-                                                    //                 format!("40s"),
-                                                    //                 TextStyle {
-                                                    //                     font: asset_server.load(
-                                                    //                         "fonts/FiraSans-Bold.ttf",
-                                                    //                     ),
-                                                    //                     font_size: 20.,
-                                                    //                     ..default()
-                                                    //                 },
-                                                    //             ),
-                                                    //         ));
-
-                                                    //         parent.spawn((
-                                                    //             TextBundle::from_section(
-                                                    //                 format!("SUCCESS"),
-                                                    //                 TextStyle {
-                                                    //                     font: asset_server.load(
-                                                    //                         "fonts/FiraSans-Bold.ttf",
-                                                    //                     ),
-                                                    //                     font_size: 20.,
-                                                    //                     ..default()
-                                                    //                 },
-                                                    //             ),
-                                                    //         ));
-                                                    //     });
-                                                    // }
-                                                });
+                                                    ..default()
+                                                },
+                                                ScrollingList::default(),
+                                                AccessibilityNode(NodeBuilder::new(Role::List)),
+                                                MovingScrollPanel,
+                                                Name::new("MovingScrollPanel"),
+                                            ));
                                         });
                                 });
                         });

@@ -88,7 +88,6 @@ pub fn task_generate_hash(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            // Build unsigned tx
             ev_submit_hash_tx.send(EventSubmitHashTx(result));
             commands
                 .entity(entity)
@@ -96,25 +95,6 @@ pub fn task_generate_hash(
         }
     }
 }
-
-// pub fn task_send_and_confirm_tx(
-//     mut commands: Commands,
-//     mut ev_tx_result: EventWriter<EventTxResult>,
-//     mut query: Query<(Entity, &mut TaskSendAndConfirmTx)>,
-// ) {
-//     for (entity, mut task) in &mut query.iter_mut() {
-//         if let Some((sig, status)) = block_on(future::poll_once(&mut task.task)) {
-//             ev_tx_result.send(EventTxResult {
-//                 sig,
-//                 status
-//             });
-
-//             commands
-//                 .entity(entity)
-//                 .remove::<TaskSendAndConfirmTx>();
-//         }
-//     }
-// }
 
 pub fn task_register_wallet(
     mut commands: Commands,
@@ -144,7 +124,6 @@ pub fn task_register_wallet(
 pub fn task_process_tx(
     mut commands: Commands,
     mut ev_process_tx: EventWriter<EventProcessTx>,
-    //mut miner_status: ResMut<MinerStatusResource>,
     mut query: Query<(Entity, &mut TaskProcessTx)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {

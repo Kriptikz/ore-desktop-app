@@ -7,7 +7,6 @@ use std::{
 
 use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
-use copypasta::{ClipboardContext, ClipboardProvider};
 use events::*;
 use serde::Deserialize;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
@@ -17,15 +16,23 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
-use tasks::*;
+use tasks::{
+    task_generate_hash, task_process_current_tx, task_process_tx, task_register_wallet,
+    task_update_app_wallet_sol_balance, task_update_current_tx, TaskProcessCurrentTx,
+};
 use ui::{
     components::{TextInput, TextPasswordInput},
     screens::{
         despawn_initial_setup_screen, despawn_locked_screen, despawn_mining_screen,
         spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
     },
-    ui_button_systems::*,
-    ui_sync_systems::*,
+    ui_button_systems::{
+        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock,
+        button_reset_epoch, button_start_stop_mining, button_unlock,
+    },
+    ui_sync_systems::{
+        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_app_wallet_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
+    },
 };
 
 pub mod events;
@@ -60,30 +67,12 @@ fn main() {
                 starting_state = GameState::Locked;
                 Some(d)
             }
-            Err(_) =>  None,
+            Err(_) => None,
         };
         config
     } else {
         None
     };
-    // let wallet: Keypair;
-    // let wallet_path = Path::new("save.data");
-
-    // let cocoon = Cocoon::new(b"secret password");
-
-    // if wallet_path.exists() {
-    //     let mut file = File::open(wallet_path).unwrap();
-    //     let encoded = cocoon.parse(&mut file).unwrap();
-    //     wallet = Keypair::from_bytes(&encoded).unwrap();
-    // } else {
-    //     let new_wallet = Keypair::new();
-    //     let wallet_bytes = new_wallet.to_bytes();
-
-    //     let mut file = File::create(wallet_path).unwrap();
-
-    //     let _ = cocoon.dump(wallet_bytes.to_vec(), &mut file).unwrap();
-    //     wallet = new_wallet;
-    // }
 
     let config = config.unwrap_or(Config {
         rpc_url: "".to_string(),
@@ -91,7 +80,6 @@ fn main() {
         fetch_ui_data_from_rpc_interval_ms: 3000,
         tx_check_status_and_resend_interval_ms: 10000,
     });
-
 
     let tx_send_interval = config.tx_check_status_and_resend_interval_ms;
     let threads = config.threads;
@@ -155,11 +143,7 @@ fn main() {
         .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
         .add_systems(
             Update,
-            (
-                button_unlock,
-                handle_event_unlock,
-                text_password_input,
-            )
+            (button_unlock, handle_event_unlock, text_password_input)
                 .run_if(in_state(GameState::Locked)),
         )
         .add_systems(
@@ -211,18 +195,12 @@ fn main() {
         .run();
 }
 
-// Startup system
 fn setup_camera(mut commands: Commands) {
-    // TODO: does camera need to be respawned?
     commands.spawn(Camera2dBundle::default());
     //setup_fps_counter(commands);
 }
 
-fn setup_initial_setup_screen(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    //app_wallet: Res<AppWallet>,
-) {
+fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     spawn_initial_setup_screen(commands.reborrow(), asset_server);
 }
 
@@ -254,10 +232,8 @@ fn setup_locked_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut app_state: ResMut<OreAppState>,
-    //app_wallet: Res<AppWallet>,
 ) {
     let pass_text_entity = spawn_locked_screen(commands.reborrow(), asset_server);
-
     app_state.active_input_node = pass_text_entity;
 }
 
@@ -368,7 +344,6 @@ pub struct CurrentTx {
     pub interval_timer: Timer,
 }
 
-// TODO: use real AppState for this
 #[derive(Resource)]
 pub struct OreAppState {
     config: Config,
@@ -504,18 +479,12 @@ pub fn text_password_input(
     mut event_writer: EventWriter<EventUnlock>,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
-        for (active_text_entity, mut text_input) in
-            active_text_query.iter_mut()
-        {
+        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
             if active_text_entity == app_state_active_text_entity {
                 if kbd.just_pressed(KeyCode::Enter) {
-                    // println!("Text input: {}", &*string);
-                    // string.clear();
                     event_writer.send(EventUnlock);
                 }
                 if kbd.just_pressed(KeyCode::Home) {
-                    // println!("Text input: {}", &*string);
-                    // string.clear();
                     text_input.hidden = !text_input.hidden;
                 }
                 if kbd.just_pressed(KeyCode::Backspace) {

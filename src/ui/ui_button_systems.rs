@@ -1,6 +1,18 @@
 use bevy::prelude::*;
-use crate::*;
-use super::{components::*, styles::*};
+use copypasta::{ClipboardContext, ClipboardProvider};
+
+use crate::{
+    EventClaimOreRewards, EventLock, EventResetEpoch, EventStartStopMining, EventUnlock,
+    OreAppState,
+};
+
+use super::{
+    components::{
+        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonLock,
+        ButtonResetEpoch, ButtonStartStopMining, ButtonUnlock, CopyableText, TextInput,
+    },
+    styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
+};
 
 pub fn button_copy_text(
     mut interaction_query: Query<
@@ -58,7 +70,7 @@ pub fn button_start_stop_mining(
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
-                
+
                 ev_start_stop_mining.send(EventStartStopMining);
             }
             Interaction::Hovered => {
@@ -183,11 +195,17 @@ pub fn button_unlock(
 
 pub fn button_capture_text(
     mut interaction_query: Query<
-        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor, &Children),
+        (
+            Entity,
+            &Interaction,
+            &mut BackgroundColor,
+            &mut BorderColor,
+            &Children,
+        ),
         (Changed<Interaction>, With<ButtonCaptureTextInput>),
     >,
     mut ore_app_state: ResMut<OreAppState>,
-    child_text_query: Query<Entity, With<TextInput>>
+    child_text_query: Query<Entity, With<TextInput>>,
 ) {
     for (_entity, interaction, mut color, mut border_color, children) in &mut interaction_query {
         match *interaction {
@@ -199,7 +217,6 @@ pub fn button_capture_text(
                         }
                     }
                 }
-
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
