@@ -7,14 +7,10 @@ use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
-    ui::{
+    ore_utils::{get_claim_ix, get_clock_account, get_mine_ix, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey}, ui::{
         components::MovingScrollPanel,
         layout_nodes::{spawn_new_list_item, UiListItem},
-    },
-    AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource,
-    ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet,
-    TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
-    TreasuryAccountResource, TxStatus,
+    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -25,19 +21,13 @@ use std::{
 
 use orz::{
     self,
-    state::{Proof, Treasury},
-    utils::AccountDeserialize,
-    BUS_ADDRESSES, EPOCH_DURATION, MINT_ADDRESS, PROOF, TREASURY_ADDRESS,
+    BUS_ADDRESSES, EPOCH_DURATION, MINT_ADDRESS,
 };
 use solana_sdk::{
-    account::ReadableAccount,
-    clock::Clock,
     commitment_config::CommitmentLevel,
     keccak::{hashv, Hash as KeccakHash},
     native_token::LAMPORTS_PER_SOL,
-    pubkey::Pubkey,
     signature::{Keypair, Signer},
-    sysvar,
     transaction::Transaction,
 };
 
@@ -88,6 +78,9 @@ pub struct EventProcessTx {
     pub hash_time: Option<u64>,
 }
 
+#[derive(Event)]
+pub struct EventUnlock;
+
 pub fn handle_event_start_stop_mining_clicked(
     mut ev_start_stop_mining: EventReader<EventStartStopMining>,
     mut event_writer: EventWriter<EventMineForHash>,
@@ -128,6 +121,7 @@ pub fn handle_event_mine_for_hash(
         let client = rpc_connection.rpc.clone();
         let threads = miner_status.miner_threads;
         let task = pool.spawn(async move {
+            // TODO: use proof resource cached proof. May need LatestHash Resource to ensure a new proof if loaded before mining.
             //  get proof account data
             let proof = get_proof(&client, wallet.pubkey())
                 .expect("Should have succesfully got proof account");
@@ -219,8 +213,7 @@ pub fn handle_event_submit_hash_tx(
             // let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(CU_LIMIT_MINE);
             // let cu_price_ix =
             //     ComputeBudgetInstruction::set_compute_unit_price(self.priority_fee);
-            let ix_mine =
-                orz::instruction::mine(signer.pubkey(), BUS_ADDRESSES[0], next_hash.into(), nonce);
+            let ix_mine = get_mine_ix(signer.pubkey(), next_hash.into(), nonce);
             let (hash, _slot) = client
                 .get_latest_blockhash_with_commitment(client.commitment())
                 .unwrap();
@@ -413,7 +406,7 @@ pub fn handle_event_register_wallet(
                     return None;
                 }
 
-                let ix = orz::instruction::register(signer.pubkey());
+                let ix = get_register_ix(signer.pubkey());
                 // Build tx
                 let (hash, _slot) = client
                     .get_latest_blockhash_with_commitment(client.commitment())
@@ -446,7 +439,7 @@ pub fn handle_event_reset_epoch(
         let wallet = app_wallet.wallet.insecure_clone();
         let client = rpc_connection.rpc.clone();
         let task = pool.spawn(async move {
-            let ix = orz::instruction::reset(wallet.pubkey());
+            let ix = get_reset_ix(wallet.pubkey());
             // Build tx
             let (hash, _slot) = client
                 .get_latest_blockhash_with_commitment(client.commitment())
@@ -488,7 +481,7 @@ pub fn handle_event_claim_ore_rewards(
 
             // Check if ata already exists
             if let Ok(Some(_ata)) = client.get_token_account(&token_account_pubkey) {
-                let ix = orz::instruction::claim(wallet.pubkey(), token_account_pubkey, claim_amount);
+                let ix = get_claim_ix(wallet.pubkey(), token_account_pubkey, claim_amount);
 
                 let (hash, _slot) = client
                     .get_latest_blockhash_with_commitment(client.commitment())
@@ -599,7 +592,7 @@ pub fn register(signer: Keypair, client: &RpcClient) -> bool {
         return false;
     }
 
-    let ix = orz::instruction::register(signer.pubkey());
+    let ix = get_register_ix(signer.pubkey());
     // Build tx
     let (hash, _slot) = client
         .get_latest_blockhash_with_commitment(client.commitment())
@@ -623,63 +616,4 @@ pub fn register(signer: Keypair, client: &RpcClient) -> bool {
     }
 
     return false;
-}
-
-// ORE Utility Functions
-pub fn get_proof_and_treasury(
-    client: &RpcClient,
-    authority: Pubkey,
-) -> (Result<Proof, ()>, Result<Treasury, ()>) {
-    let account_pubkeys = vec![TREASURY_ADDRESS, proof_pubkey(authority)];
-    let datas = client.get_multiple_accounts(&account_pubkeys);
-    if let Ok(datas) = datas {
-        let treasury = if let Some(data) = &datas[0] {
-            Ok(*Treasury::try_from_bytes(data.data()).expect("Failed to parse treasury account"))
-        } else {
-            Err(())
-        };
-
-        let proof = if let Some(data) = &datas[1] {
-            Ok(*Proof::try_from_bytes(data.data()).expect("Failed to parse treasury account"))
-        } else {
-            Err(())
-        };
-
-        (proof, treasury)
-    } else {
-        (Err(()), Err(()))
-    }
-}
-
-pub fn get_treasury(client: &RpcClient) -> Result<Treasury, ()> {
-    let data = client.get_account_data(&TREASURY_ADDRESS);
-    if let Ok(data) = data {
-        Ok(*Treasury::try_from_bytes(&data).expect("Failed to parse treasury account"))
-    } else {
-        Err(())
-    }
-}
-
-pub fn get_proof(client: &RpcClient, authority: Pubkey) -> Result<Proof, String> {
-    let proof_address = proof_pubkey(authority);
-    let data = client.get_account_data(&proof_address);
-    match data {
-        Ok(data) => return Ok(*Proof::try_from_bytes(&data).unwrap()),
-        Err(_) => return Err("Failed to get miner account".to_string()),
-    }
-}
-
-pub fn proof_pubkey(authority: Pubkey) -> Pubkey {
-    Pubkey::find_program_address(&[PROOF, authority.as_ref()], &orz::ID).0
-}
-
-pub fn treasury_tokens_pubkey() -> Pubkey {
-    get_associated_token_address(&TREASURY_ADDRESS, &MINT_ADDRESS)
-}
-
-pub fn get_clock_account(client: &RpcClient) -> Clock {
-    let data = client
-        .get_account_data(&sysvar::clock::ID)
-        .expect("Failed to get miner account");
-    bincode::deserialize::<Clock>(&data).expect("Failed to deserialize clock")
 }

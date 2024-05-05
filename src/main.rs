@@ -32,6 +32,7 @@ pub mod events;
 pub mod tasks;
 pub mod ui;
 pub mod utils;
+pub mod ore_utils;
 
 #[derive(Deserialize)]
 pub struct Config {
