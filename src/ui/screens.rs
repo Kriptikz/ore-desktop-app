@@ -1,13 +1,26 @@
 use std::time::{Duration, Instant};
 
-use bevy::{a11y::{accesskit::{NodeBuilder, Role}, AccessibilityNode}, prelude::*};
+use bevy::{
+    a11y::{
+        accesskit::{NodeBuilder, Role},
+        AccessibilityNode,
+    },
+    prelude::*,
+};
 use solana_sdk::signer::Signer;
 
-use crate::{utils::shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, TxStatus};
+use crate::{
+    utils::shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler,
+    MinerStatusResource, OreAppState, TxStatus,
+};
 
-use super::{components::*, layout_nodes::spawn_copyable_text, styles::{FONT_SIZE, NORMAL_BUTTON}};
+use super::{
+    components::*,
+    layout_nodes::spawn_copyable_text,
+    styles::{FONT_SIZE, NORMAL_BUTTON},
+};
 
-pub fn spawn_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn((
             NodeBundle {
@@ -21,7 +34,7 @@ pub fn spawn_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>
             },
             Name::new("Screen Node"),
             BaseScreenNode,
-            SetupScreenNode,
+            InitialSetupScreenNode,
         ))
         .with_children(|parent| {
             parent
@@ -64,28 +77,27 @@ pub fn spawn_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>
                                 background_color: NORMAL_BUTTON.into(),
                                 ..default()
                             },
-                            ButtonUnlock,
-                            Name::new("ButtonUnlock"),
+                            ButtonCaptureTextInput,
+                            Name::new("ButtonCaptureText"),
                         ))
                         .with_children(|parent| {
-                            parent.spawn(TextBundle::from_section(
-                                "UNLOCK",
-                                TextStyle {
-                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                    font_size: FONT_SIZE,
-                                    color: Color::rgb(0.9, 0.9, 0.9),
-                                },
+                            parent.spawn((
+                                TextBundle::from_section(
+                                    "Click to Edit",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: FONT_SIZE,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                ),
+                                TextInput,
                             ));
                         });
                 });
         });
 }
 
-
-pub fn spawn_locked_screen(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn((
             NodeBundle {
@@ -93,6 +105,8 @@ pub fn spawn_locked_screen(
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
                     ..default()
                 },
                 ..default()
@@ -107,55 +121,127 @@ pub fn spawn_locked_screen(
                     NodeBundle {
                         z_index: ZIndex::Global(10),
                         style: Style {
-                            position_type: PositionType::Absolute,
                             justify_content: JustifyContent::Center,
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
                             align_items: AlignItems::Center,
                             ..default()
                         },
                         ..default()
                     },
-                    Name::new("Button Unlock"),
+                    Name::new("Button Capture Text Node"),
                 ))
                 .with_children(|parent| {
                     parent
                         .spawn((
-                            ButtonBundle {
+                            NodeBundle {
+                                border_color: Color::BLUE.into(),
                                 style: Style {
-                                    width: Val::Px(100.0),
-                                    height: Val::Px(50.0),
-                                    border: UiRect::all(Val::Px(5.0)),
-                                    margin: UiRect {
-                                        top: Val::Percent(0.0),
-                                        right: Val::Px(0.0),
-                                        left: Val::Px(0.0),
-                                        bottom: Val::Px(200.0),
-                                    },
-                                    // horizontally center child text
+                                    border: UiRect::all(Val::Px(2.5)),
                                     justify_content: JustifyContent::Center,
-                                    // vertically center child text
                                     align_items: AlignItems::Center,
+                                    flex_direction: FlexDirection::Row,
                                     ..default()
                                 },
-                                border_color: BorderColor(Color::BLACK),
-                                background_color: NORMAL_BUTTON.into(),
                                 ..default()
                             },
-                            ButtonUnlock,
-                            Name::new("ButtonUnlock"),
+                            Name::new("Password Input Field"),
                         ))
                         .with_children(|parent| {
-                            parent.spawn(TextBundle::from_section(
-                                "UNLOCK",
-                                TextStyle {
-                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                    font_size: FONT_SIZE,
-                                    color: Color::rgb(0.9, 0.9, 0.9),
-                                },
+                            parent.spawn((
+                                TextBundle::from_section(
+                                    "Password: ",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: FONT_SIZE,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                ),
+                                TextPasswordLabel,
                             ));
+                            parent
+                                .spawn((
+                                    ButtonBundle {
+                                        style: Style {
+                                            width: Val::Px(150.0),
+                                            height: Val::Px(50.0),
+                                            border: UiRect::all(Val::Px(2.5)),
+                                            // horizontally center child text
+                                            justify_content: JustifyContent::Center,
+                                            // vertically center child text
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        },
+                                        border_color: BorderColor(Color::BLACK),
+                                        background_color: NORMAL_BUTTON.into(),
+                                        ..default()
+                                    },
+                                    ButtonCaptureTextInput,
+                                    Name::new("ButtonCaptureText"),
+                                ))
+                                .with_children(|parent| {
+                                    parent.spawn((
+                                        TextBundle::from_section(
+                                            "",
+                                            TextStyle {
+                                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                                font_size: FONT_SIZE,
+                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                            },
+                                        ),
+                                        TextInput,
+                                    ));
+                                });
                         });
                 });
+                parent
+                    .spawn((
+                        NodeBundle {
+                            style: Style {
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Name::new("Button Unlock Node"),
+                    ))
+                    .with_children(|parent| {
+                        parent
+                            .spawn((
+                                ButtonBundle {
+                                    style: Style {
+                                        width: Val::Px(100.0),
+                                        height: Val::Px(50.0),
+                                        border: UiRect::all(Val::Px(5.0)),
+                                        margin: UiRect {
+                                            top: Val::Percent(0.0),
+                                            right: Val::Px(0.0),
+                                            left: Val::Px(0.0),
+                                            bottom: Val::Px(0.0),
+                                        },
+                                        // horizontally center child text
+                                        justify_content: JustifyContent::Center,
+                                        // vertically center child text
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    border_color: BorderColor(Color::BLACK),
+                                    background_color: NORMAL_BUTTON.into(),
+                                    ..default()
+                                },
+                                ButtonUnlock,
+                                Name::new("ButtonUnlock"),
+                            ))
+                            .with_children(|parent| {
+                                parent.spawn(TextBundle::from_section(
+                                    "UNLOCK",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: FONT_SIZE,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                ));
+                            });
+                    });
         });
 }
 
@@ -1141,10 +1227,16 @@ pub fn spawn_mining_screen(
         });
 }
 
-pub fn despawn_locked_screen(
+pub fn despawn_initial_setup_screen(
     mut commands: Commands,
-    query: Query<Entity, With<LockedScreenNode>>
+    query: Query<Entity, With<InitialSetupScreenNode>>,
 ) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+pub fn despawn_locked_screen(mut commands: Commands, query: Query<Entity, With<LockedScreenNode>>) {
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
     }
@@ -1157,7 +1249,7 @@ pub fn despawn_mining_screen(
     mut miner_status: ResMut<MinerStatusResource>,
     query: Query<Entity, With<BaseScreenNode>>,
     query_task_miner_entity: Query<Entity, With<EntityTaskHandler>>,
-    query_task_fetch_ui_data_entity: Query<Entity, With<EntityTaskFetchUiData>>
+    query_task_fetch_ui_data_entity: Query<Entity, With<EntityTaskFetchUiData>>,
 ) {
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
@@ -1171,19 +1263,28 @@ pub fn despawn_mining_screen(
         tx_sig: None,
         tx_status: TxStatus {
             status: "".to_string(),
-            error: "".to_string()
+            error: "".to_string(),
         },
         hash_time: None,
         elapsed_instant: Instant::now(),
         elapsed_seconds: 0,
-        interval_timer: Timer::new(Duration::from_millis(config.tx_check_status_and_resend_interval_ms), TimerMode::Once),
+        interval_timer: Timer::new(
+            Duration::from_millis(config.tx_check_status_and_resend_interval_ms),
+            TimerMode::Once,
+        ),
     };
 
     *current_tx = reset_current_tx;
 
-    let entity_task_miner = query_task_miner_entity.get_single().expect("Should only have a single task miner entity");
-    let entity_task_fetch_ui_data = query_task_fetch_ui_data_entity.get_single().expect("Should only have a single fetch ui data entity");
+    let entity_task_miner = query_task_miner_entity
+        .get_single()
+        .expect("Should only have a single task miner entity");
+    let entity_task_fetch_ui_data = query_task_fetch_ui_data_entity
+        .get_single()
+        .expect("Should only have a single fetch ui data entity");
 
     commands.entity(entity_task_miner).despawn_recursive();
-    commands.entity(entity_task_fetch_ui_data).despawn_recursive();
+    commands
+        .entity(entity_task_fetch_ui_data)
+        .despawn_recursive();
 }

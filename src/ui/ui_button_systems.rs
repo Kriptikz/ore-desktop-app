@@ -180,3 +180,35 @@ pub fn button_unlock(
         }
     }
 }
+
+pub fn button_capture_text(
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor, &Children),
+        (Changed<Interaction>, With<ButtonCaptureTextInput>),
+    >,
+    mut ore_app_state: ResMut<OreAppState>,
+    child_text_query: Query<Entity, With<TextInput>>
+) {
+    for (_entity, interaction, mut color, mut border_color, children) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                for button_child in children.iter() {
+                    for child_text in child_text_query.iter() {
+                        if child_text == *button_child {
+                            ore_app_state.active_input_node = Some(child_text);
+                        }
+                    }
+                }
+
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+                border_color.0 = Color::WHITE;
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+                border_color.0 = Color::BLACK;
+            }
+        }
+    }
+}

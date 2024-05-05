@@ -1,12 +1,9 @@
 use std::{
-    fs::{self, File},
-    path::Path,
-    sync::Arc,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    fs::{self, File}, path::Path, sync::Arc, time::{Duration, Instant}
 };
 
 use bevy::{
-    input::mouse::{MouseScrollUnit, MouseWheel},
+    input::{keyboard::KeyboardInput, mouse::{MouseScrollUnit, MouseWheel}},
     prelude::*,
     tasks::AsyncComputeTaskPool,
 };
@@ -26,11 +23,9 @@ use solana_sdk::{
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::*;
 use ui::{
-    screens::{
-        despawn_locked_screen, despawn_mining_screen, spawn_locked_screen, spawn_mining_screen,
-    },
-    ui_button_systems::*,
-    ui_sync_systems::*,
+    components::TextInput, screens::{
+        despawn_initial_setup_screen, despawn_locked_screen, despawn_mining_screen, spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen
+    }, ui_button_systems::*, ui_sync_systems::*
 };
 
 pub mod events;
@@ -102,7 +97,10 @@ fn main() {
         .add_plugins(DefaultPlugins)
         //.add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
-        .insert_resource(OreAppState { config })
+        .insert_resource(OreAppState {
+            config,
+            active_input_node: None
+        })
         .insert_resource(CurrentTx {
             tx_type: "".to_string(),
             tx_sig: None,
@@ -149,6 +147,11 @@ fn main() {
         .add_systems(Startup, setup_camera)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
+        .add_systems(Update, text_input)
+        .add_systems(Update, button_capture_text)
+        .add_systems(OnEnter(GameState::InitialSetup), setup_initial_setup_screen)
+        .add_systems(OnExit(GameState::InitialSetup), despawn_initial_setup_screen)
+        .add_systems(OnExit(GameState::InitialSetup), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Locked), setup_locked_screen)
         .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
@@ -208,6 +211,14 @@ fn setup_camera(mut commands: Commands) {
     //setup_fps_counter(commands);
 }
 
+fn setup_initial_setup_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    //app_wallet: Res<AppWallet>,
+) {
+    spawn_initial_setup_screen(commands.reborrow(), asset_server);
+}
+
 fn setup_mining_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -225,6 +236,7 @@ fn setup_locked_screen(
 ) {
     spawn_locked_screen(commands.reborrow(), asset_server);
 }
+
 
 // Components
 #[derive(Component)]
@@ -337,6 +349,7 @@ pub struct CurrentTx {
 #[derive(Resource)]
 pub struct OreAppState {
     config: Config,
+    active_input_node: Option<Entity>
 }
 
 pub fn process_current_transaction(
@@ -444,5 +457,60 @@ pub fn trigger_rpc_calls_for_ui(
     if rpc_connection.fetch_ui_data_timer.just_finished() {
         event_fetch_ui_rpc_data.send(EventFetchUiDataFromRpc);
         rpc_connection.fetch_ui_data_timer.reset();
+    }
+}
+
+pub struct BackspaceTimer {
+    pub timer: Timer
+}
+
+impl Default for BackspaceTimer {
+    fn default() -> Self {
+        Self { timer: Timer::from_seconds(0.25, TimerMode::Once) }
+    }
+}
+
+pub fn text_input(
+    mut evr_char: EventReader<ReceivedCharacter>,
+    kbd: Res<ButtonInput<KeyCode>>,
+    app_state: Res<OreAppState>,
+    mut backspace_timer: Local<BackspaceTimer>,
+    time: Res<Time>,
+    mut active_text_query: Query<(Entity, &mut Text), With<TextInput>>
+) {
+    if let Some(app_state_active_text_entity) = app_state.active_input_node {
+        for (active_text_entity, mut active_text_text) in active_text_query.iter_mut() {
+            if active_text_entity == app_state_active_text_entity {
+                if kbd.just_pressed(KeyCode::Enter) {
+                    // println!("Text input: {}", &*string);
+                    // string.clear();
+                }
+                if kbd.just_pressed(KeyCode::Backspace) {
+                        active_text_text.sections[0].value.pop();
+                        // reset, to ensure multiple presses aren't going to result in multiple backspaces
+                        backspace_timer.timer.reset();
+                } else if kbd.pressed(KeyCode::Backspace) {
+                    backspace_timer.timer.tick(time.delta());
+                    if backspace_timer.timer.just_finished() {
+                        active_text_text.sections[0].value.pop();
+                        backspace_timer.timer.reset();
+                    }
+
+                }
+                for ev in evr_char.read() {
+                    let mut cs = ev.char.chars();
+
+                    let c = cs.next();
+                    if let Some(char) = c {
+                        if !char.is_control() {
+                            active_text_text.sections[0].value.push_str(ev.char.as_str());
+
+                        }
+                    }
+                }
+
+            }
+
+        }
     }
 }

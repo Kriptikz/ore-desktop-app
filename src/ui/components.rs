@@ -21,7 +21,7 @@ pub struct FpsText;
 pub struct BaseScreenNode;
 
 #[derive(Component)]
-pub struct SetupScreenNode;
+pub struct InitialSetupScreenNode;
 
 #[derive(Component)]
 pub struct MiningScreenNode;
@@ -33,6 +33,12 @@ pub struct LockedScreenNode;
 pub struct CopyableText {
     pub full_text: String,
 }
+
+#[derive(Component)]
+pub struct TextInput;
+
+#[derive(Component)]
+pub struct TextPasswordLabel;
 
 #[derive(Component)]
 pub struct TextWalletPubkey;
@@ -113,3 +119,6 @@ pub struct ButtonLock;
 
 #[derive(Component)]
 pub struct ButtonClaimOreRewards;
+
+#[derive(Component)]
+pub struct ButtonCaptureTextInput;
