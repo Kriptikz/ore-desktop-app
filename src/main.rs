@@ -1,14 +1,12 @@
 use std::{
-    fs::{self}, path::Path, sync::Arc, time::{Duration, Instant}
+    fs::{self},
+    path::Path,
+    sync::Arc,
+    time::{Duration, Instant},
 };
 
-use bevy::{
-    prelude::*,
-    tasks::AsyncComputeTaskPool,
-};
-use bevy_inspector_egui::{
-    inspector_options::ReflectInspectorOptions, InspectorOptions,
-};
+use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use events::*;
 use serde::Deserialize;
@@ -21,16 +19,20 @@ use solana_sdk::{
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::*;
 use ui::{
-    components::{TextInput, TextPasswordInput}, screens::{
-        despawn_initial_setup_screen, despawn_locked_screen, despawn_mining_screen, spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen
-    }, ui_button_systems::*, ui_sync_systems::*
+    components::{TextInput, TextPasswordInput},
+    screens::{
+        despawn_initial_setup_screen, despawn_locked_screen, despawn_mining_screen,
+        spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
+    },
+    ui_button_systems::*,
+    ui_sync_systems::*,
 };
 
 pub mod events;
+pub mod ore_utils;
 pub mod tasks;
 pub mod ui;
 pub mod utils;
-pub mod ore_utils;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -49,25 +51,21 @@ pub enum GameState {
 
 fn main() {
     // TODO: put rpc_url in save.data and let user input from UI.
-    let config: Config;
+    let mut starting_state = GameState::InitialSetup;
     let config_path = Path::new("config.toml");
-    if config_path.exists() {
+    let config: Option<Config> = if config_path.exists() {
         let config_string = fs::read_to_string(config_path).unwrap();
-        config = match toml::from_str(&config_string) {
-            Ok(d) => d,
-            Err(_) => {
-                panic!("Failed to read config string.");
+        let config = match toml::from_str(&config_string) {
+            Ok(d) => {
+                starting_state = GameState::Locked;
+                Some(d)
             }
+            Err(_) =>  None,
         };
+        config
     } else {
-        panic!("Please create a config.toml with the rpc_url.");
-    }
-
-    let rpc_connection = Arc::new(RpcClient::new_with_commitment(
-        config.rpc_url.clone(),
-        CommitmentConfig::confirmed(),
-    ));
-
+        None
+    };
     // let wallet: Keypair;
     // let wallet_path = Path::new("save.data");
 
@@ -87,17 +85,24 @@ fn main() {
     //     wallet = new_wallet;
     // }
 
+    let config = config.unwrap_or(Config {
+        rpc_url: "".to_string(),
+        threads: 1,
+        fetch_ui_data_from_rpc_interval_ms: 3000,
+        tx_check_status_and_resend_interval_ms: 10000,
+    });
+
+
     let tx_send_interval = config.tx_check_status_and_resend_interval_ms;
-    let rpc_ui_data_fetch_interval = config.fetch_ui_data_from_rpc_interval_ms;
     let threads = config.threads;
     App::new()
-        .insert_state(GameState::Locked)
+        .insert_state(starting_state)
         .add_plugins(DefaultPlugins)
         //.add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
-            active_input_node: None
+            active_input_node: None,
         })
         .insert_resource(CurrentTx {
             tx_type: "".to_string(),
@@ -121,13 +126,6 @@ fn main() {
         .register_type::<ProofAccountResource>()
         .init_resource::<TreasuryAccountResource>()
         .register_type::<TreasuryAccountResource>()
-        .insert_resource(RpcConnection {
-            rpc: rpc_connection,
-            fetch_ui_data_timer: Timer::new(
-                Duration::from_millis(rpc_ui_data_fetch_interval),
-                TimerMode::Once,
-            ),
-        })
         .add_event::<EventStartStopMining>()
         .add_event::<EventSubmitHashTx>()
         .add_event::<EventTxResult>()
@@ -145,18 +143,25 @@ fn main() {
         .add_systems(Update, text_input)
         .add_systems(Update, button_capture_text)
         .add_systems(OnEnter(GameState::InitialSetup), setup_initial_setup_screen)
-        .add_systems(OnExit(GameState::InitialSetup), despawn_initial_setup_screen)
+        .add_systems(
+            OnExit(GameState::InitialSetup),
+            despawn_initial_setup_screen,
+        )
         .add_systems(OnExit(GameState::InitialSetup), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Locked), setup_locked_screen)
         .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
         .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
-        .add_systems(Update, (
-            button_unlock,
-            handle_event_unlock,
-            update_password_ui,
-            text_password_input
-        ).run_if(in_state(GameState::Locked)))
+        .add_systems(
+            Update,
+            (
+                button_unlock,
+                handle_event_unlock,
+                update_password_ui,
+                text_password_input,
+            )
+                .run_if(in_state(GameState::Locked)),
+        )
         .add_systems(
             Update,
             (
@@ -225,9 +230,23 @@ fn setup_mining_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     app_wallet: Res<AppWallet>,
+    app_state: Res<OreAppState>,
 ) {
     commands.spawn(EntityTaskHandler);
     commands.spawn(EntityTaskFetchUiData);
+    let config = &app_state.config;
+
+    let rpc_connection = Arc::new(RpcClient::new_with_commitment(
+        config.rpc_url.clone(),
+        CommitmentConfig::confirmed(),
+    ));
+    commands.insert_resource(RpcConnection {
+        rpc: rpc_connection,
+        fetch_ui_data_timer: Timer::new(
+            Duration::from_millis(config.fetch_ui_data_from_rpc_interval_ms),
+            TimerMode::Once,
+        ),
+    });
     spawn_mining_screen(commands.reborrow(), asset_server, app_wallet);
 }
 
@@ -241,7 +260,6 @@ fn setup_locked_screen(
 
     app_state.active_input_node = pass_text_entity;
 }
-
 
 // Components
 #[derive(Component)]
@@ -354,7 +372,7 @@ pub struct CurrentTx {
 #[derive(Resource)]
 pub struct OreAppState {
     config: Config,
-    active_input_node: Option<Entity>
+    active_input_node: Option<Entity>,
 }
 
 pub fn process_current_transaction(
@@ -375,7 +393,6 @@ pub fn process_current_transaction(
                 let pool = AsyncComputeTaskPool::get();
                 let client = rpc_connection.rpc.clone();
                 let task = pool.spawn(async move {
-                    // start a timer
                     info!("SendAndConfirmTransaction....");
 
                     let send_cfg = RpcSendTransactionConfig {
@@ -466,12 +483,14 @@ pub fn trigger_rpc_calls_for_ui(
 }
 
 pub struct BackspaceTimer {
-    pub timer: Timer
+    pub timer: Timer,
 }
 
 impl Default for BackspaceTimer {
     fn default() -> Self {
-        Self { timer: Timer::from_seconds(0.1, TimerMode::Once) }
+        Self {
+            timer: Timer::from_seconds(0.1, TimerMode::Once),
+        }
     }
 }
 
@@ -481,11 +500,13 @@ pub fn text_password_input(
     app_state: Res<OreAppState>,
     mut backspace_timer: Local<BackspaceTimer>,
     time: Res<Time>,
-    mut active_text_query: Query<(Entity, &mut Text, &mut TextPasswordInput)>,
+    mut active_text_query: Query<(Entity, &mut TextPasswordInput)>,
     mut event_writer: EventWriter<EventUnlock>,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
-        for (active_text_entity, mut active_text_text, mut text_password_input) in active_text_query.iter_mut() {
+        for (active_text_entity, mut text_password_input) in
+            active_text_query.iter_mut()
+        {
             if active_text_entity == app_state_active_text_entity {
                 if kbd.just_pressed(KeyCode::Enter) {
                     // println!("Text input: {}", &*string);
@@ -493,9 +514,9 @@ pub fn text_password_input(
                     event_writer.send(EventUnlock);
                 }
                 if kbd.just_pressed(KeyCode::Backspace) {
-                        text_password_input.0.pop();
-                        // reset, to ensure multiple presses aren't going to result in multiple backspaces
-                        backspace_timer.timer.reset();
+                    text_password_input.0.pop();
+                    // reset, to ensure multiple presses aren't going to result in multiple backspaces
+                    backspace_timer.timer.reset();
                 } else if kbd.pressed(KeyCode::Backspace) {
                     backspace_timer.timer.tick(time.delta());
                     if backspace_timer.timer.just_finished() {
@@ -513,9 +534,7 @@ pub fn text_password_input(
                         }
                     }
                 }
-
             }
-
         }
     }
 }
@@ -526,7 +545,10 @@ pub fn text_input(
     app_state: Res<OreAppState>,
     mut backspace_timer: Local<BackspaceTimer>,
     time: Res<Time>,
-    mut active_text_query: Query<(Entity, &mut Text), (With<TextInput>, Without<TextPasswordInput>)>
+    mut active_text_query: Query<
+        (Entity, &mut Text),
+        (With<TextInput>, Without<TextPasswordInput>),
+    >,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
         for (active_text_entity, mut active_text_text) in active_text_query.iter_mut() {
@@ -536,16 +558,15 @@ pub fn text_input(
                     // string.clear();
                 }
                 if kbd.just_pressed(KeyCode::Backspace) {
-                        active_text_text.sections[0].value.pop();
-                        // reset, to ensure multiple presses aren't going to result in multiple backspaces
-                        backspace_timer.timer.reset();
+                    active_text_text.sections[0].value.pop();
+                    // reset, to ensure multiple presses aren't going to result in multiple backspaces
+                    backspace_timer.timer.reset();
                 } else if kbd.pressed(KeyCode::Backspace) {
                     backspace_timer.timer.tick(time.delta());
                     if backspace_timer.timer.just_finished() {
                         active_text_text.sections[0].value.pop();
                         backspace_timer.timer.reset();
                     }
-
                 }
                 for ev in evr_char.read() {
                     let mut cs = ev.char.chars();
@@ -553,14 +574,13 @@ pub fn text_input(
                     let c = cs.next();
                     if let Some(char) = c {
                         if !char.is_control() {
-                            active_text_text.sections[0].value.push_str(ev.char.as_str());
-
+                            active_text_text.sections[0]
+                                .value
+                                .push_str(ev.char.as_str());
                         }
                     }
                 }
-
             }
-
         }
     }
 }

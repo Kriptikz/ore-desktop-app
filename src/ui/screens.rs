@@ -10,8 +10,7 @@ use bevy::{
 use solana_sdk::signer::Signer;
 
 use crate::{
-    utils::shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler,
-    MinerStatusResource, OreAppState, TxStatus,
+    utils::shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, RpcConnection, TxStatus
 };
 
 use super::{
@@ -1285,6 +1284,8 @@ pub fn despawn_mining_screen(
     let entity_task_fetch_ui_data = query_task_fetch_ui_data_entity
         .get_single()
         .expect("Should only have a single fetch ui data entity");
+
+    commands.remove_resource::<RpcConnection>();
 
     commands.entity(entity_task_miner).despawn_recursive();
     commands
