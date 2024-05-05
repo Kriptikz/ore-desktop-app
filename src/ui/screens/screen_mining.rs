@@ -485,7 +485,7 @@ pub fn spawn_mining_screen(
                                         background_color: Color::WHITE.into(),
                                         ..default()
                                     },
-                                    UiImage::new(asset_server.load("ore-icon.webp")),
+                                    UiImage::new(asset_server.load("icons/ore-icon.webp")),
                                 ))
                                 .with_children(|parent| {
                                     // alt text
