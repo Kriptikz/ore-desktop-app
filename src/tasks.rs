@@ -1,11 +1,11 @@
 use std::time::Instant;
 
 use bevy::{
-    prelude::*, tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task}
+    prelude::*, tasks::{block_on, futures_lite::future, Task}
 };
 use solana_sdk::{signature::Signature, transaction::Transaction};
 
-use crate::{AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxStatus};
+use crate::{AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource, TxStatus};
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
@@ -144,7 +144,7 @@ pub fn task_register_wallet(
 pub fn task_process_tx(
     mut commands: Commands,
     mut ev_process_tx: EventWriter<EventProcessTx>,
-    mut miner_status: ResMut<MinerStatusResource>,
+    //mut miner_status: ResMut<MinerStatusResource>,
     mut query: Query<(Entity, &mut TaskProcessTx)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {

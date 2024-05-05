@@ -1,19 +1,17 @@
 use std::{
     fs::{self, File},
     path::Path,
-    str::FromStr,
     sync::Arc,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
     prelude::*,
     tasks::AsyncComputeTaskPool,
 };
 use bevy_inspector_egui::{
-    inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions,
+    inspector_options::ReflectInspectorOptions, InspectorOptions,
 };
 use cocoon::Cocoon;
 use copypasta::{ClipboardContext, ClipboardProvider};
@@ -22,17 +20,23 @@ use serde::Deserialize;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
-    pubkey::Pubkey,
-    signature::{Keypair, Signature, Signer},
+    signature::{Keypair, Signature},
     transaction::Transaction,
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::*;
-use ui::{components::{BaseScreenNode, LockedScreenNode}, screens::{despawn_locked_screen, spawn_mining_screen, despawn_mining_screen, spawn_locked_screen}, ui_systems::*};
+use ui::{
+    screens::{
+        despawn_locked_screen, despawn_mining_screen, spawn_locked_screen, spawn_mining_screen,
+    },
+    ui_button_systems::*,
+    ui_sync_systems::*,
+};
 
 pub mod events;
 pub mod tasks;
 pub mod ui;
+pub mod utils;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -46,7 +50,7 @@ pub struct Config {
 pub enum GameState {
     InitialSetup,
     Locked,
-    Mining
+    Mining,
 }
 
 fn main() {
@@ -90,7 +94,6 @@ fn main() {
         wallet = new_wallet;
     }
 
-
     let tx_send_interval = config.tx_check_status_and_resend_interval_ms;
     let rpc_ui_data_fetch_interval = config.fetch_ui_data_from_rpc_interval_ms;
     let threads = config.threads;
@@ -105,7 +108,7 @@ fn main() {
             tx_sig: None,
             tx_status: TxStatus {
                 status: "".to_string(),
-                error: "".to_string()
+                error: "".to_string(),
             },
             hash_time: None,
             elapsed_instant: Instant::now(),
@@ -129,7 +132,10 @@ fn main() {
         .register_type::<TreasuryAccountResource>()
         .insert_resource(RpcConnection {
             rpc: rpc_connection,
-            fetch_ui_data_timer: Timer::new(Duration::from_millis(rpc_ui_data_fetch_interval), TimerMode::Once),
+            fetch_ui_data_timer: Timer::new(
+                Duration::from_millis(rpc_ui_data_fetch_interval),
+                TimerMode::Once,
+            ),
         })
         .add_event::<EventStartStopMining>()
         .add_event::<EventSubmitHashTx>()
@@ -147,49 +153,51 @@ fn main() {
         .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
         .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
-        .add_systems(Update,(
-                button_unlock,
-        ).run_if(in_state(GameState::Locked)))
-        .add_systems(Update,(
+        .add_systems(Update, (button_unlock,).run_if(in_state(GameState::Locked)))
+        .add_systems(
+            Update,
             (
-                button_lock,
-                button_copy_text,
-                button_start_stop_mining,
-                button_reset_epoch,
-                button_claim_ore_rewards,
-            ),
-            (
-                handle_event_start_stop_mining_clicked,
-                handle_event_submit_hash_tx,
-                handle_event_tx_result,
-                handle_event_fetch_ui_data_from_rpc,
-                handle_event_register_wallet,
-                handle_event_process_tx,
-                handle_event_reset_epoch,
-                handle_event_mine_for_hash,
-                handle_event_claim_ore_rewards,
-            ),
-            (
-                task_update_app_wallet_sol_balance,
-                task_generate_hash,
-                task_register_wallet,
-                task_process_tx,
-                task_process_current_tx,
-                task_update_current_tx,
-            ),
-            (
-                update_app_wallet_ui,
-                update_proof_account_ui,
-                update_treasury_account_ui,
-                update_miner_status_ui,
-                update_current_tx_ui,
-            ),
-            (
-                mouse_scroll,
-                process_current_transaction,
-                trigger_rpc_calls_for_ui,
-            ),
-        ).run_if(in_state(GameState::Mining)))
+                (
+                    button_lock,
+                    button_copy_text,
+                    button_start_stop_mining,
+                    button_reset_epoch,
+                    button_claim_ore_rewards,
+                ),
+                (
+                    handle_event_start_stop_mining_clicked,
+                    handle_event_submit_hash_tx,
+                    handle_event_tx_result,
+                    handle_event_fetch_ui_data_from_rpc,
+                    handle_event_register_wallet,
+                    handle_event_process_tx,
+                    handle_event_reset_epoch,
+                    handle_event_mine_for_hash,
+                    handle_event_claim_ore_rewards,
+                ),
+                (
+                    task_update_app_wallet_sol_balance,
+                    task_generate_hash,
+                    task_register_wallet,
+                    task_process_tx,
+                    task_process_current_tx,
+                    task_update_current_tx,
+                ),
+                (
+                    update_app_wallet_ui,
+                    update_proof_account_ui,
+                    update_treasury_account_ui,
+                    update_miner_status_ui,
+                    update_current_tx_ui,
+                ),
+                (
+                    mouse_scroll,
+                    process_current_transaction,
+                    trigger_rpc_calls_for_ui,
+                ),
+            )
+                .run_if(in_state(GameState::Mining)),
+        )
         .run();
 }
 
@@ -200,16 +208,23 @@ fn setup_camera(mut commands: Commands) {
     //setup_fps_counter(commands);
 }
 
-fn setup_mining_screen(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
+fn setup_mining_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    app_wallet: Res<AppWallet>,
+) {
     commands.spawn(EntityTaskHandler);
     commands.spawn(EntityTaskFetchUiData);
     spawn_mining_screen(commands.reborrow(), asset_server, app_wallet);
 }
 
-fn setup_locked_screen(mut commands: Commands, asset_server: Res<AssetServer>, app_wallet: Res<AppWallet>) {
-    spawn_locked_screen(commands.reborrow(), asset_server, app_wallet);
+fn setup_locked_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    //app_wallet: Res<AppWallet>,
+) {
+    spawn_locked_screen(commands.reborrow(), asset_server);
 }
-
 
 // Components
 #[derive(Component)]
@@ -276,7 +291,6 @@ impl Default for TreasuryAccountResource {
 pub struct MinerStatusResource {
     miner_status: String,
     miner_threads: u64,
-    current_timestamp: u64,
     sys_refresh_timer: Timer,
     sys_info: sysinfo::System,
 }
@@ -289,7 +303,6 @@ impl Default for MinerStatusResource {
         Self {
             miner_status: "STOPPED".to_string(),
             miner_threads: 1,
-            current_timestamp: get_unix_timestamp(),
             sys_refresh_timer: Timer::new(Duration::from_secs(1), TimerMode::Once),
             sys_info,
         }
@@ -333,10 +346,10 @@ pub fn process_current_transaction(
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     rpc_connection: Res<RpcConnection>,
 ) {
-    if let Some((tx, sig)) = current_transaction.tx_sig.clone() {
-        if current_transaction.tx_status.status != "SUCCESS" &&
-            current_transaction.tx_status.status != "FAILED" &&
-            current_transaction.tx_status.status != "INTERRUPTED" 
+    if let Some((tx, _sig)) = current_transaction.tx_sig.clone() {
+        if current_transaction.tx_status.status != "SUCCESS"
+            && current_transaction.tx_status.status != "FAILED"
+            && current_transaction.tx_status.status != "INTERRUPTED"
         {
             current_transaction.interval_timer.tick(time.delta());
             if current_transaction.interval_timer.just_finished() {
@@ -408,16 +421,10 @@ pub fn process_current_transaction(
                                 info!("Confirmation Error: {:?}", err.kind().to_string());
                             }
                         }
-                        let tx_status = TxStatus {
-                            status,
-                            error,
-                        };
+                        let tx_status = TxStatus { status, error };
                         return (Some(sig), tx_status);
                     }
-                    let tx_status = TxStatus {
-                        status,
-                        error,
-                    };
+                    let tx_status = TxStatus { status, error };
                     (None, tx_status)
                 });
                 commands
@@ -431,7 +438,7 @@ pub fn process_current_transaction(
 pub fn trigger_rpc_calls_for_ui(
     time: Res<Time>,
     mut rpc_connection: ResMut<RpcConnection>,
-    mut event_fetch_ui_rpc_data: EventWriter<EventFetchUiDataFromRpc>
+    mut event_fetch_ui_rpc_data: EventWriter<EventFetchUiDataFromRpc>,
 ) {
     rpc_connection.fetch_ui_data_timer.tick(time.delta());
     if rpc_connection.fetch_ui_data_timer.just_finished() {
@@ -455,5 +462,7 @@ pub fn shorten_string(text: String, max_len: usize) -> String {
 
 pub fn get_unix_timestamp() -> u64 {
     let time = SystemTime::now();
-    time.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs()
+    time.duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs()
 }

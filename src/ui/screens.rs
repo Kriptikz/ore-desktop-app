@@ -3,9 +3,9 @@ use std::time::{Duration, Instant};
 use bevy::{a11y::{accesskit::{NodeBuilder, Role}, AccessibilityNode}, prelude::*};
 use solana_sdk::signer::Signer;
 
-use crate::{shorten_string, spawn_copyable_text, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, TxStatus};
+use crate::{shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, TxStatus};
 
-use super::{components::*, styles::{FONT_SIZE, NORMAL_BUTTON}};
+use super::{components::*, layout_nodes::spawn_copyable_text, styles::{FONT_SIZE, NORMAL_BUTTON}};
 
 pub fn spawn_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
@@ -85,7 +85,6 @@ pub fn spawn_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>
 pub fn spawn_locked_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    app_wallet: Res<AppWallet>,
 ) {
     commands
         .spawn((
@@ -894,7 +893,7 @@ pub fn spawn_mining_screen(
                                                     MovingScrollPanel,
                                                     Name::new("MovingScrollPanel"),
                                                 ))
-                                                .with_children(|parent| {
+                                                .with_children(|_parent| {
                                                     // List items
                                                     // for i in 0..100 {
                                                     //     parent.spawn((

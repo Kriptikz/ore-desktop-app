@@ -9,9 +9,9 @@ use spl_associated_token_account::get_associated_token_address;
 use crate::{
     ui::{
         components::MovingScrollPanel,
-        layout::{spawn_new_list_item, UiListItem},
+        layout_nodes::{spawn_new_list_item, UiListItem},
     },
-    AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState,
+    AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource,
     ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet,
     TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
     TreasuryAccountResource, TxStatus,
@@ -272,7 +272,7 @@ pub fn handle_event_tx_result(
 pub fn handle_event_fetch_ui_data_from_rpc(
     mut commands: Commands,
     app_wallet: Res<AppWallet>,
-    ore_app_state: Res<OreAppState>,
+    //ore_app_state: Res<OreAppState>,
     rpc_connection: ResMut<RpcConnection>,
     mut event_reader: EventReader<EventFetchUiDataFromRpc>,
     query_task_handler: Query<Entity, With<EntityTaskFetchUiData>>,
