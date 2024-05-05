@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use bevy::{a11y::{accesskit::{NodeBuilder, Role}, AccessibilityNode}, prelude::*};
 use solana_sdk::signer::Signer;
 
-use crate::{shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, TxStatus};
+use crate::{utils::shorten_string, AppWallet, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, OreAppState, TxStatus};
 
 use super::{components::*, layout_nodes::spawn_copyable_text, styles::{FONT_SIZE, NORMAL_BUTTON}};
 

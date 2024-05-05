@@ -1,4 +1,4 @@
-use crate::shorten_string;
+use crate::utils::shorten_string;
 use bevy::{
     a11y::{
         accesskit::{NodeBuilder, Role},

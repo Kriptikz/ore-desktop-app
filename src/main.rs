@@ -446,23 +446,3 @@ pub fn trigger_rpc_calls_for_ui(
         rpc_connection.fetch_ui_data_timer.reset();
     }
 }
-
-pub fn shorten_string(text: String, max_len: usize) -> String {
-    let len = text.len();
-    if len > max_len {
-        let prefix = &text[0..5];
-
-        let suffix = &text[len - 5..len];
-
-        format!("{}...{}", prefix, suffix)
-    } else {
-        text
-    }
-}
-
-pub fn get_unix_timestamp() -> u64 {
-    let time = SystemTime::now();
-    time.duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_secs()
-}
