@@ -3,3 +3,4 @@
 *.data
 config.toml
 
+backup_config.toml
