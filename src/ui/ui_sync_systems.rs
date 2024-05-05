@@ -1,6 +1,8 @@
 
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+use bevy::input::mouse::MouseScrollUnit;
+use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 use chrono::DateTime;
 use orz::TOKEN_DECIMALS;
@@ -221,6 +223,21 @@ pub fn update_current_tx_ui(
     let mut text_2 = text_query_2.single_mut();
     text_2.sections[0].value =
         "Elapsed: ".to_string() + &res.elapsed_seconds.to_string();
+}
+
+pub fn update_password_ui(
+    mut active_text_query: Query<(&mut Text, &TextPasswordInput)>
+) {
+
+    for (mut active_text_text, text_password_input) in active_text_query.iter_mut() {
+        let pass_len = text_password_input.0.len();
+        let mut displayed_password = String::with_capacity(pass_len);
+        for _ in 0..pass_len {
+            displayed_password.push('*');
+        }
+        active_text_text.sections[0].value = displayed_password;
+    }
+
 }
 
 

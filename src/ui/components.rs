@@ -38,6 +38,9 @@ pub struct CopyableText {
 pub struct TextInput;
 
 #[derive(Component)]
+pub struct TextPasswordInput(pub String);
+
+#[derive(Component)]
 pub struct TextPasswordLabel;
 
 #[derive(Component)]

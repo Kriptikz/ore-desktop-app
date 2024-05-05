@@ -97,7 +97,8 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
         });
 }
 
-pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer>) -> Option<Entity> {
+    let mut password_text_entity = None;
     commands
         .spawn((
             NodeBundle {
@@ -105,6 +106,7 @@ pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(10.0),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()
@@ -176,7 +178,7 @@ pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer
                                     Name::new("ButtonCaptureText"),
                                 ))
                                 .with_children(|parent| {
-                                    parent.spawn((
+                                    password_text_entity = Some(parent.spawn((
                                         TextBundle::from_section(
                                             "",
                                             TextStyle {
@@ -186,7 +188,8 @@ pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer
                                             },
                                         ),
                                         TextInput,
-                                    ));
+                                        TextPasswordInput("".to_string()),
+                                    )).id());
                                 });
                         });
                 });
@@ -241,6 +244,8 @@ pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer
                             });
                     });
         });
+
+        password_text_entity
 }
 
 pub fn spawn_mining_screen(

@@ -132,7 +132,7 @@ pub fn button_lock(
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
         (Changed<Interaction>, With<ButtonLock>),
     >,
-     mut next_state: ResMut<NextState<GameState>>,
+    mut event_writer: EventWriter<EventLock>,
 ) {
     for (_entity, interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
@@ -140,7 +140,7 @@ pub fn button_lock(
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
 
-                next_state.set(GameState::Locked);
+                event_writer.send(EventLock);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -159,7 +159,7 @@ pub fn button_unlock(
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
         (Changed<Interaction>, With<ButtonUnlock>),
     >,
-     mut next_state: ResMut<NextState<GameState>>,
+    mut event_writer: EventWriter<EventUnlock>,
 ) {
     for (_entity, interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
@@ -167,7 +167,7 @@ pub fn button_unlock(
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
 
-                next_state.set(GameState::Mining);
+                event_writer.send(EventUnlock);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();

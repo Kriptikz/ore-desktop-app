@@ -1,16 +1,14 @@
 use std::{
-    fs::{self, File}, path::Path, sync::Arc, time::{Duration, Instant}
+    fs::{self}, path::Path, sync::Arc, time::{Duration, Instant}
 };
 
 use bevy::{
-    input::{keyboard::KeyboardInput, mouse::{MouseScrollUnit, MouseWheel}},
     prelude::*,
     tasks::AsyncComputeTaskPool,
 };
 use bevy_inspector_egui::{
     inspector_options::ReflectInspectorOptions, InspectorOptions,
 };
-use cocoon::Cocoon;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use events::*;
 use serde::Deserialize;
@@ -23,7 +21,7 @@ use solana_sdk::{
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::*;
 use ui::{
-    components::TextInput, screens::{
+    components::{TextInput, TextPasswordInput}, screens::{
         despawn_initial_setup_screen, despawn_locked_screen, despawn_mining_screen, spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen
     }, ui_button_systems::*, ui_sync_systems::*
 };
@@ -70,25 +68,24 @@ fn main() {
         CommitmentConfig::confirmed(),
     ));
 
-    let wallet: Keypair;
-    let wallet_path = Path::new("save.data");
+    // let wallet: Keypair;
+    // let wallet_path = Path::new("save.data");
 
-    // TODO: get password from user with UI.
-    let cocoon = Cocoon::new(b"secret password");
+    // let cocoon = Cocoon::new(b"secret password");
 
-    if wallet_path.exists() {
-        let mut file = File::open(wallet_path).unwrap();
-        let encoded = cocoon.parse(&mut file).unwrap();
-        wallet = Keypair::from_bytes(&encoded).unwrap();
-    } else {
-        let new_wallet = Keypair::new();
-        let wallet_bytes = new_wallet.to_bytes();
+    // if wallet_path.exists() {
+    //     let mut file = File::open(wallet_path).unwrap();
+    //     let encoded = cocoon.parse(&mut file).unwrap();
+    //     wallet = Keypair::from_bytes(&encoded).unwrap();
+    // } else {
+    //     let new_wallet = Keypair::new();
+    //     let wallet_bytes = new_wallet.to_bytes();
 
-        let mut file = File::create(wallet_path).unwrap();
+    //     let mut file = File::create(wallet_path).unwrap();
 
-        let _ = cocoon.dump(wallet_bytes.to_vec(), &mut file).unwrap();
-        wallet = new_wallet;
-    }
+    //     let _ = cocoon.dump(wallet_bytes.to_vec(), &mut file).unwrap();
+    //     wallet = new_wallet;
+    // }
 
     let tx_send_interval = config.tx_check_status_and_resend_interval_ms;
     let rpc_ui_data_fetch_interval = config.fetch_ui_data_from_rpc_interval_ms;
@@ -113,11 +110,6 @@ fn main() {
             elapsed_instant: Instant::now(),
             elapsed_seconds: 0,
             interval_timer: Timer::new(Duration::from_millis(tx_send_interval), TimerMode::Once),
-        })
-        .insert_resource(AppWallet {
-            wallet,
-            sol_balance: 0.0,
-            ore_balance: 0.0,
         })
         .insert_resource(MinerStatusResource {
             miner_threads: threads,
@@ -145,6 +137,8 @@ fn main() {
         .add_event::<EventProcessTx>()
         .add_event::<EventResetEpoch>()
         .add_event::<EventClaimOreRewards>()
+        .add_event::<EventUnlock>()
+        .add_event::<EventLock>()
         .add_systems(Startup, setup_camera)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -157,10 +151,16 @@ fn main() {
         .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
         .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
-        .add_systems(Update, (button_unlock,).run_if(in_state(GameState::Locked)))
+        .add_systems(Update, (
+            button_unlock,
+            handle_event_unlock,
+            update_password_ui,
+            text_password_input
+        ).run_if(in_state(GameState::Locked)))
         .add_systems(
             Update,
             (
+                // individual tuple max size is 12
                 (
                     button_lock,
                     button_copy_text,
@@ -178,6 +178,7 @@ fn main() {
                     handle_event_reset_epoch,
                     handle_event_mine_for_hash,
                     handle_event_claim_ore_rewards,
+                    handle_event_lock,
                 ),
                 (
                     task_update_app_wallet_sol_balance,
@@ -233,9 +234,12 @@ fn setup_mining_screen(
 fn setup_locked_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut app_state: ResMut<OreAppState>,
     //app_wallet: Res<AppWallet>,
 ) {
-    spawn_locked_screen(commands.reborrow(), asset_server);
+    let pass_text_entity = spawn_locked_screen(commands.reborrow(), asset_server);
+
+    app_state.active_input_node = pass_text_entity;
 }
 
 
@@ -249,7 +253,7 @@ pub struct EntityTaskFetchUiData;
 // Resources
 #[derive(Resource)]
 pub struct AppWallet {
-    wallet: Keypair,
+    wallet: Arc<Keypair>,
     sol_balance: f64,
     ore_balance: f64,
 }
@@ -467,7 +471,52 @@ pub struct BackspaceTimer {
 
 impl Default for BackspaceTimer {
     fn default() -> Self {
-        Self { timer: Timer::from_seconds(0.25, TimerMode::Once) }
+        Self { timer: Timer::from_seconds(0.1, TimerMode::Once) }
+    }
+}
+
+pub fn text_password_input(
+    mut evr_char: EventReader<ReceivedCharacter>,
+    kbd: Res<ButtonInput<KeyCode>>,
+    app_state: Res<OreAppState>,
+    mut backspace_timer: Local<BackspaceTimer>,
+    time: Res<Time>,
+    mut active_text_query: Query<(Entity, &mut Text, &mut TextPasswordInput)>,
+    mut event_writer: EventWriter<EventUnlock>,
+) {
+    if let Some(app_state_active_text_entity) = app_state.active_input_node {
+        for (active_text_entity, mut active_text_text, mut text_password_input) in active_text_query.iter_mut() {
+            if active_text_entity == app_state_active_text_entity {
+                if kbd.just_pressed(KeyCode::Enter) {
+                    // println!("Text input: {}", &*string);
+                    // string.clear();
+                    event_writer.send(EventUnlock);
+                }
+                if kbd.just_pressed(KeyCode::Backspace) {
+                        text_password_input.0.pop();
+                        // reset, to ensure multiple presses aren't going to result in multiple backspaces
+                        backspace_timer.timer.reset();
+                } else if kbd.pressed(KeyCode::Backspace) {
+                    backspace_timer.timer.tick(time.delta());
+                    if backspace_timer.timer.just_finished() {
+                        text_password_input.0.pop();
+                        backspace_timer.timer.reset();
+                    }
+                }
+                for ev in evr_char.read() {
+                    let mut cs = ev.char.chars();
+
+                    let c = cs.next();
+                    if let Some(char) = c {
+                        if !char.is_control() {
+                            text_password_input.0.push_str(ev.char.as_str());
+                        }
+                    }
+                }
+
+            }
+
+        }
     }
 }
 
@@ -477,7 +526,7 @@ pub fn text_input(
     app_state: Res<OreAppState>,
     mut backspace_timer: Local<BackspaceTimer>,
     time: Res<Time>,
-    mut active_text_query: Query<(Entity, &mut Text), With<TextInput>>
+    mut active_text_query: Query<(Entity, &mut Text), (With<TextInput>, Without<TextPasswordInput>)>
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
         for (active_text_entity, mut active_text_text) in active_text_query.iter_mut() {

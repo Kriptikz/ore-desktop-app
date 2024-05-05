@@ -2,21 +2,20 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, IoTaskPool},
 };
+use cocoon::Cocoon;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{get_claim_ix, get_clock_account, get_mine_ix, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey}, ui::{
-        components::MovingScrollPanel,
+        components::{MovingScrollPanel, TextPasswordInput},
         layout_nodes::{spawn_new_list_item, UiListItem},
-    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, MinerStatusResource, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
+    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
 };
 
 use std::{
-    io::{stdout, Write},
-    sync::{atomic::AtomicBool, Arc, Mutex},
-    time::Instant,
+    fs::File, io::{stdout, Write}, path::Path, sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant
 };
 
 use orz::{
@@ -79,6 +78,9 @@ pub struct EventProcessTx {
 }
 
 #[derive(Event)]
+pub struct EventLock;
+
+#[derive(Event)]
 pub struct EventUnlock;
 
 pub fn handle_event_start_stop_mining_clicked(
@@ -117,7 +119,7 @@ pub fn handle_event_mine_for_hash(
         info!("Mine For Hash Event Handler.");
         let task_handler_entity = query_task_handler.get_single().unwrap();
         let pool = AsyncComputeTaskPool::get();
-        let wallet = app_wallet.wallet.insecure_clone();
+        let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
         let threads = miner_status.miner_threads;
         let task = pool.spawn(async move {
@@ -162,7 +164,7 @@ pub fn handle_event_process_tx(
 
         // TODO: spawn the tx sender task
         // TODO: MAKE AppWallet Wallet Arc, so can clone properly
-        //let wallet = app_wallet.wallet.insecure_clone();
+        //let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
         let tx_type = ev.tx_type.clone();
         let tx = ev.tx.clone();
@@ -204,7 +206,7 @@ pub fn handle_event_submit_hash_tx(
         info!("Submit Hash Tx Event Handler.");
         let task_handler_entity = query_task_handler.get_single().unwrap();
         let pool = AsyncComputeTaskPool::get();
-        let wallet = app_wallet.wallet.insecure_clone();
+        let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
 
         let (next_hash, nonce, hash_time) = ev.0;
@@ -386,7 +388,7 @@ pub fn handle_event_register_wallet(
         info!("RegisterWallet Event Handler.");
         let task_handler_entity = query_task_handler.get_single().unwrap();
         let pool = AsyncComputeTaskPool::get();
-        let wallet = app_wallet.wallet.insecure_clone();
+        let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
         let task = pool.spawn(async move {
             //  get proof account data
@@ -436,7 +438,7 @@ pub fn handle_event_reset_epoch(
         info!("Reset Treasury Event Handler.");
         let task_handler_entity = query_task_handler.get_single().unwrap();
         let pool = AsyncComputeTaskPool::get();
-        let wallet = app_wallet.wallet.insecure_clone();
+        let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
         let task = pool.spawn(async move {
             let ix = get_reset_ix(wallet.pubkey());
@@ -469,7 +471,7 @@ pub fn handle_event_claim_ore_rewards(
         info!("Claim Ore Rewards Event Handler.");
         let task_handler_entity = query_task_handler.get_single().unwrap();
         let pool = AsyncComputeTaskPool::get();
-        let wallet = app_wallet.wallet.insecure_clone();
+        let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
         let claim_amount = proof_account.claimable_rewards;
         let task = pool.spawn(async move {
@@ -516,8 +518,63 @@ pub fn handle_event_claim_ore_rewards(
     }
 }
 
+pub fn handle_event_lock(
+    mut commands: Commands,
+    mut event_reader: EventReader<EventLock>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for _ev in event_reader.read() {
+        info!("Lock Event Handler.");
+        commands.remove_resource::<AppWallet>();
+        next_state.set(GameState::Locked);
+    }
+}
+
+pub fn handle_event_unlock(
+    mut commands: Commands,
+    mut event_reader: EventReader<EventUnlock>,
+    query: Query<&TextPasswordInput>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for _ev in event_reader.read() {
+        info!("Unlock Event Handler.");
+        let text = query.get_single();
+        if let Ok(text) = text {
+            let password = text.0.clone();
+
+            // TODO: use const path?
+            let wallet_path = Path::new("save.data");
+
+            let cocoon = Cocoon::new(password.as_bytes());
+            let mut file = File::open(wallet_path).unwrap();
+            let encoded = cocoon.parse(&mut file);
+            if let Ok(encoded) = encoded {
+                let wallet = Keypair::from_bytes(&encoded);
+                if let Ok(wallet) = wallet {
+                    let wallet = Arc::new(wallet);
+                    commands.insert_resource(AppWallet {
+                        wallet,
+                        sol_balance: 0.0,
+                        ore_balance: 0.0,
+                    });
+                    info!("Successfully loaded wallet!");
+                    next_state.set(GameState::Mining);
+                } else {
+                    info!("Failed to parse keypair from bytes. (events.rs: handle_event_unlock)");
+                }
+
+            } else {
+                info!("Failed to decrypt file. (events.rs: handle_event_unlock)");
+            }
+
+        } else {
+            info!("Failed to get_single on TextPasswordInput (events.rs: handle_event_unlock)");
+        }
+    }
+}
+
 fn find_next_hash_par(
-    signer: Keypair,
+    signer: Arc<Keypair>,
     hash: KeccakHash,
     difficulty: KeccakHash,
     threads: u64,
