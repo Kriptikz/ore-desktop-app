@@ -1,11 +1,15 @@
 use std::time::Instant;
 
 use bevy::{
-    prelude::*, tasks::{block_on, futures_lite::future, Task}
+    prelude::*,
+    tasks::{block_on, futures_lite::future, Task},
 };
 use solana_sdk::{signature::Signature, transaction::Transaction};
 
-use crate::{AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource, TxStatus};
+use crate::{
+    AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource,
+    TreasuryAccountResource, TxStatus,
+};
 
 // Task Components
 // TODO: tasks should return results so errors can be dealt with by the task handler system
@@ -89,9 +93,7 @@ pub fn task_generate_hash(
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
             ev_submit_hash_tx.send(EventSubmitHashTx(result));
-            commands
-                .entity(entity)
-                .remove::<TaskGenerateHash>();
+            commands.entity(entity).remove::<TaskGenerateHash>();
         }
     }
 }
@@ -113,12 +115,9 @@ pub fn task_register_wallet(
                 info!("Failed to confirm register wallet tx...");
             }
 
-            commands
-                .entity(entity)
-                .remove::<TaskRegisterWallet>();
+            commands.entity(entity).remove::<TaskRegisterWallet>();
         }
     }
-
 }
 
 pub fn task_process_tx(
@@ -138,18 +137,15 @@ pub fn task_process_tx(
                 info!("Failed to confirm register wallet tx...");
             }
 
-            commands
-                .entity(entity)
-                .remove::<TaskProcessTx>();
+            commands.entity(entity).remove::<TaskProcessTx>();
         }
     }
-
 }
 
 pub fn task_update_current_tx(
     mut commands: Commands,
     mut query: Query<(Entity, &mut TaskUpdateCurrentTx)>,
-    mut current_tx: ResMut<CurrentTx>
+    mut current_tx: ResMut<CurrentTx>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
@@ -159,26 +155,23 @@ pub fn task_update_current_tx(
                 current_tx.tx_sig = Some((tx, sig));
                 let new_tx_status = TxStatus {
                     status: "SENDING".to_string(),
-                    error: "".to_string()
+                    error: "".to_string(),
                 };
                 current_tx.tx_status = new_tx_status;
             } else {
                 current_tx.tx_sig = None;
                 let new_tx_status = TxStatus {
                     status: "FAILED".to_string(),
-                    error: "".to_string()
+                    error: "".to_string(),
                 };
                 current_tx.tx_status = new_tx_status;
             }
             current_tx.elapsed_instant = Instant::now();
             current_tx.elapsed_seconds = 0;
             current_tx.interval_timer.reset();
-            commands
-                .entity(entity)
-                .remove::<TaskUpdateCurrentTx>();
+            commands.entity(entity).remove::<TaskUpdateCurrentTx>();
         }
     }
-
 }
 
 pub fn task_process_current_tx(
@@ -189,7 +182,6 @@ pub fn task_process_current_tx(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some((sig, tx_status)) = block_on(future::poll_once(&mut task.task)) {
-
             let status = tx_status.status.clone();
             if status == "SUCCESS" || status == "FAILED" {
                 let sig = if let Some(s) = sig {
@@ -202,16 +194,13 @@ pub fn task_process_current_tx(
                     sig,
                     hash_time: current_tx.hash_time,
                     tx_time: current_tx.elapsed_seconds,
-                    tx_status: tx_status.clone()
+                    tx_status: tx_status.clone(),
                 });
             }
             current_tx.tx_status = tx_status;
             current_tx.interval_timer.reset();
 
-            commands
-                .entity(entity)
-                .remove::<TaskProcessCurrentTx>();
+            commands.entity(entity).remove::<TaskProcessCurrentTx>();
         }
     }
-
 }

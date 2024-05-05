@@ -31,7 +31,9 @@ use ui::{
         button_reset_epoch, button_start_stop_mining, button_unlock,
     },
     ui_sync_systems::{
-        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_app_wallet_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
+        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_app_wallet_ui,
+        update_current_tx_ui, update_miner_status_ui, update_proof_account_ui,
+        update_text_input_ui, update_treasury_account_ui,
     },
 };
 

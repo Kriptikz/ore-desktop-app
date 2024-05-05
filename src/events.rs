@@ -8,14 +8,29 @@ use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
-    ore_utils::{get_claim_ix, get_clock_account, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey}, tasks::{TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx}, ui::{
+    ore_utils::{
+        get_claim_ix, get_clock_account, get_mine_ix, get_ore_epoch_duration, get_ore_mint,
+        get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury,
+        proof_pubkey, treasury_tokens_pubkey,
+    },
+    tasks::{
+        TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
+        TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
+    },
+    ui::{
         components::{MovingScrollPanel, TextInput, TextPasswordInput},
         layout_nodes::{spawn_new_list_item, UiListItem},
-    }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
+    },
+    AppWallet, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource,
+    ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus,
 };
 
 use std::{
-    fs::File, io::{stdout, Write}, path::Path, sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant
+    fs::File,
+    io::{stdout, Write},
+    path::Path,
+    sync::{atomic::AtomicBool, Arc, Mutex},
+    time::Instant,
 };
 
 use solana_sdk::{
@@ -129,8 +144,12 @@ pub fn handle_event_mine_for_hash(
             info!("\nMining for a valid hash...");
 
             let hash_time = Instant::now();
-            let (next_hash, nonce) =
-                find_next_hash_par(wallet, proof.hash.into(), treasury.difficulty.into(), threads);
+            let (next_hash, nonce) = find_next_hash_par(
+                wallet,
+                proof.hash.into(),
+                treasury.difficulty.into(),
+                threads,
+            );
             info!("NEXT HASH: {}", next_hash.to_string());
             info!("NONCE: {}", nonce.to_string());
 
@@ -288,7 +307,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     0.0
                 };
 
-            // TODO: condense as many solana accounts into one rpc get_multiple_accounts call as possible 
+            // TODO: condense as many solana accounts into one rpc get_multiple_accounts call as possible
             let (proof_account, treasury_account) = get_proof_and_treasury(&connection, pubkey);
 
             let proof_account_res_data;
@@ -547,11 +566,9 @@ pub fn handle_event_unlock(
                 } else {
                     info!("Failed to parse keypair from bytes. (events.rs: handle_event_unlock)");
                 }
-
             } else {
                 info!("Failed to decrypt file. (events.rs: handle_event_unlock)");
             }
-
         } else {
             info!("Failed to get_single on TextPasswordInput (events.rs: handle_event_unlock)");
         }

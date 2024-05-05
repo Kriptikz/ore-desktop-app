@@ -1,4 +1,3 @@
-
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::input::mouse::MouseScrollUnit;
@@ -38,7 +37,6 @@ use super::components::TextTreasuryRewardRate;
 use super::components::TextTreasuryTotalClaimedRewards;
 use super::components::TextWalletOreBalance;
 use super::components::TextWalletSolBalance;
-
 
 pub fn mouse_scroll(
     mut mouse_wheel_events: EventReader<MouseWheel>,
@@ -106,7 +104,8 @@ pub fn update_proof_account_ui(
 
     let mut text_claimable_rewards_query = set.p3();
     let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();
-    let amount = (proof_account_res.claimable_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
+    let amount =
+        (proof_account_res.claimable_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
     text_claimable_rewards.sections[0].value = format!("Claimable Rewards: {}", amount);
 }
 
@@ -137,11 +136,12 @@ pub fn update_treasury_account_ui(
 
     let mut text_query_3 = set.p3();
     let mut text_3 = text_query_3.single_mut();
-    let date_time = if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
-        dt.to_string()
-    } else {
-        "Err".to_string()
-    };
+    let date_time =
+        if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
+            dt.to_string()
+        } else {
+            "Err".to_string()
+        };
 
     text_3.sections[0].value = format!("Last Reset At: {}", date_time);
 
@@ -164,7 +164,6 @@ pub fn update_treasury_account_ui(
     };
 
     text_6.sections[0].value = format!("Need Epoch Reset: {}", needs_reset_string);
-        
 }
 
 pub fn update_miner_status_ui(
@@ -175,7 +174,7 @@ pub fn update_miner_status_ui(
         Query<&mut Text, With<TextMinerStatusRamUsage>>,
         Query<&mut Text, With<TextMinerStatusTime>>,
     )>,
-    time: Res<Time>
+    time: Res<Time>,
 ) {
     res.sys_refresh_timer.tick(time.delta());
 
@@ -196,14 +195,22 @@ pub fn update_miner_status_ui(
         cpu_usage += cpu.cpu_usage();
     }
 
-    let cpu_usage = format!("CPU Usage: {:.2}  % / {} %", cpu_usage, res.sys_info.cpus().len() * 100);
+    let cpu_usage = format!(
+        "CPU Usage: {:.2}  % / {} %",
+        cpu_usage,
+        res.sys_info.cpus().len() * 100
+    );
     text_1.sections[0].value = cpu_usage;
 
     let mut text_query_2 = set.p2();
     let mut text_2 = text_query_2.single_mut();
     let total_memory = res.sys_info.total_memory();
     let used_memory = res.sys_info.used_memory();
-    let ram_usage = format!("RAM Usage: {} / {}", human_bytes(used_memory as f64), human_bytes(total_memory as f64));
+    let ram_usage = format!(
+        "RAM Usage: {} / {}",
+        human_bytes(used_memory as f64),
+        human_bytes(total_memory as f64)
+    );
 
     text_2.sections[0].value = ram_usage;
 
@@ -231,7 +238,6 @@ pub fn update_current_tx_ui(
     let mut text_query_0 = set.p0();
     let mut text_0 = text_query_0.single_mut();
     if let Some((_tx, sig)) = res.tx_sig.clone() {
-
         text_0.sections[0].value = format!("Signature: {}", shorten_string(sig.to_string(), 10));
     } else {
         text_0.sections[0].value = "Signature: ".to_string() + "None";
@@ -246,13 +252,10 @@ pub fn update_current_tx_ui(
     }
     let mut text_query_2 = set.p2();
     let mut text_2 = text_query_2.single_mut();
-    text_2.sections[0].value =
-        "Elapsed: ".to_string() + &res.elapsed_seconds.to_string();
+    text_2.sections[0].value = "Elapsed: ".to_string() + &res.elapsed_seconds.to_string();
 }
 
-pub fn update_text_input_ui(
-    mut active_text_query: Query<(&mut Text, &TextInput)>
-) {
+pub fn update_text_input_ui(mut active_text_query: Query<(&mut Text, &TextInput)>) {
     for (mut active_text_text, text_input) in active_text_query.iter_mut() {
         if text_input.hidden {
             let text_len = text_input.text.len();
@@ -265,10 +268,7 @@ pub fn update_text_input_ui(
             active_text_text.sections[0].value = text_input.text.clone();
         }
     }
-
 }
-
-
 
 pub fn fps_text_update_system(
     diagnostics: Res<DiagnosticsStore>,
@@ -292,18 +292,10 @@ pub fn fps_text_update_system(
                 Color::rgb(0.0, 1.0, 0.0)
             } else if value >= 60.0 {
                 // Between 60-120 FPS, gradually transition from yellow to green
-                Color::rgb(
-                    (1.0 - (value - 60.0) / (120.0 - 60.0)) as f32,
-                    1.0,
-                    0.0,
-                )
+                Color::rgb((1.0 - (value - 60.0) / (120.0 - 60.0)) as f32, 1.0, 0.0)
             } else if value >= 30.0 {
                 // Between 30-60 FPS, gradually transition from red to yellow
-                Color::rgb(
-                    1.0,
-                    ((value - 30.0) / (60.0 - 30.0)) as f32,
-                    0.0,
-                )
+                Color::rgb(1.0, ((value - 30.0) / (60.0 - 30.0)) as f32, 0.0)
             } else {
                 // Below 30 FPS, use red color
                 Color::rgb(1.0, 0.0, 0.0)
@@ -330,4 +322,3 @@ pub fn fps_counter_showhide(
         };
     }
 }
-

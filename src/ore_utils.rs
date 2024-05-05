@@ -1,6 +1,14 @@
-use orz::{instruction, state::{Hash, Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF, TOKEN_DECIMALS, TREASURY_ADDRESS};
+use orz::{
+    instruction,
+    state::{Hash, Proof, Treasury},
+    utils::AccountDeserialize,
+    BUS_ADDRESSES, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF, TOKEN_DECIMALS,
+    TREASURY_ADDRESS,
+};
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{account::ReadableAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, sysvar};
+use solana_sdk::{
+    account::ReadableAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, sysvar,
+};
 use spl_associated_token_account::get_associated_token_address;
 
 pub fn get_mine_ix(signer: Pubkey, next_hash: Hash, nonce: u64) -> Instruction {
