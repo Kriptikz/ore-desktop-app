@@ -133,9 +133,7 @@ pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer
                     parent
                         .spawn((
                             NodeBundle {
-                                border_color: Color::BLUE.into(),
                                 style: Style {
-                                    border: UiRect::all(Val::Px(2.5)),
                                     justify_content: JustifyContent::Center,
                                     align_items: AlignItems::Center,
                                     flex_direction: FlexDirection::Row,
