@@ -9,7 +9,7 @@ use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{get_claim_ix, get_clock_account, get_mine_ix, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey}, ui::{
-        components::{MovingScrollPanel, TextPasswordInput},
+        components::{MovingScrollPanel, TextInput, TextPasswordInput},
         layout_nodes::{spawn_new_list_item, UiListItem},
     }, AppWallet, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx, TreasuryAccountResource, TxStatus
 };
@@ -533,14 +533,14 @@ pub fn handle_event_lock(
 pub fn handle_event_unlock(
     mut commands: Commands,
     mut event_reader: EventReader<EventUnlock>,
-    query: Query<&TextPasswordInput>,
+    query: Query<&TextInput, With<TextPasswordInput>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for _ev in event_reader.read() {
         info!("Unlock Event Handler.");
         let text = query.get_single();
-        if let Ok(text) = text {
-            let password = text.0.clone();
+        if let Ok(text_input) = text {
+            let password = text_input.text.clone();
 
             // TODO: use const path?
             let wallet_path = Path::new("save.data");

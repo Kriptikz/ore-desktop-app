@@ -35,10 +35,13 @@ pub struct CopyableText {
 }
 
 #[derive(Component)]
-pub struct TextInput;
+pub struct TextInput {
+    pub hidden: bool,
+    pub text: String,
+}
 
 #[derive(Component)]
-pub struct TextPasswordInput(pub String);
+pub struct TextPasswordInput;
 
 #[derive(Component)]
 pub struct TextPasswordLabel;

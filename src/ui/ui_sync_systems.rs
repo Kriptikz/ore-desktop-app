@@ -225,17 +225,20 @@ pub fn update_current_tx_ui(
         "Elapsed: ".to_string() + &res.elapsed_seconds.to_string();
 }
 
-pub fn update_password_ui(
-    mut active_text_query: Query<(&mut Text, &TextPasswordInput)>
+pub fn update_text_input_ui(
+    mut active_text_query: Query<(&mut Text, &TextInput)>
 ) {
-
-    for (mut active_text_text, text_password_input) in active_text_query.iter_mut() {
-        let pass_len = text_password_input.0.len();
-        let mut displayed_password = String::with_capacity(pass_len);
-        for _ in 0..pass_len {
-            displayed_password.push('*');
+    for (mut active_text_text, text_input) in active_text_query.iter_mut() {
+        if text_input.hidden {
+            let text_len = text_input.text.len();
+            let mut displayed_text = String::with_capacity(text_len);
+            for _ in 0..text_len {
+                displayed_text.push('*');
+            }
+            active_text_text.sections[0].value = displayed_text;
+        } else {
+            active_text_text.sections[0].value = text_input.text.clone();
         }
-        active_text_text.sections[0].value = displayed_password;
     }
 
 }

@@ -50,7 +50,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                         },
                         ..default()
                     },
-                    Name::new("Button Unlock"),
+                    Name::new("Button Capture Text Node"),
                 ))
                 .with_children(|parent| {
                     parent
@@ -82,14 +82,17 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle::from_section(
-                                    "Click to Edit",
+                                    "",
                                     TextStyle {
                                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                         font_size: FONT_SIZE,
                                         color: Color::rgb(0.9, 0.9, 0.9),
                                     },
                                 ),
-                                TextInput,
+                                TextInput {
+                                    hidden: false,
+                                    text: "Click to Edit".to_string(),
+                                },
                             ));
                         });
                 });
@@ -186,8 +189,11 @@ pub fn spawn_locked_screen(mut commands: Commands, asset_server: Res<AssetServer
                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                             },
                                         ),
-                                        TextInput,
-                                        TextPasswordInput("".to_string()),
+                                        TextInput {
+                                            hidden: true,
+                                            text: "".to_string(),
+                                        },
+                                        TextPasswordInput
                                     )).id());
                                 });
                         });

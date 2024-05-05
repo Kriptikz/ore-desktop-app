@@ -141,6 +141,7 @@ fn main() {
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
         .add_systems(Update, text_input)
+        .add_systems(Update, update_text_input_ui)
         .add_systems(Update, button_capture_text)
         .add_systems(OnEnter(GameState::InitialSetup), setup_initial_setup_screen)
         .add_systems(
@@ -157,7 +158,6 @@ fn main() {
             (
                 button_unlock,
                 handle_event_unlock,
-                update_password_ui,
                 text_password_input,
             )
                 .run_if(in_state(GameState::Locked)),
@@ -500,11 +500,11 @@ pub fn text_password_input(
     app_state: Res<OreAppState>,
     mut backspace_timer: Local<BackspaceTimer>,
     time: Res<Time>,
-    mut active_text_query: Query<(Entity, &mut TextPasswordInput)>,
+    mut active_text_query: Query<(Entity, &mut TextInput), With<TextPasswordInput>>,
     mut event_writer: EventWriter<EventUnlock>,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
-        for (active_text_entity, mut text_password_input) in
+        for (active_text_entity, mut text_input) in
             active_text_query.iter_mut()
         {
             if active_text_entity == app_state_active_text_entity {
@@ -514,13 +514,13 @@ pub fn text_password_input(
                     event_writer.send(EventUnlock);
                 }
                 if kbd.just_pressed(KeyCode::Backspace) {
-                    text_password_input.0.pop();
+                    text_input.text.pop();
                     // reset, to ensure multiple presses aren't going to result in multiple backspaces
                     backspace_timer.timer.reset();
                 } else if kbd.pressed(KeyCode::Backspace) {
                     backspace_timer.timer.tick(time.delta());
                     if backspace_timer.timer.just_finished() {
-                        text_password_input.0.pop();
+                        text_input.text.pop();
                         backspace_timer.timer.reset();
                     }
                 }
@@ -530,7 +530,7 @@ pub fn text_password_input(
                     let c = cs.next();
                     if let Some(char) = c {
                         if !char.is_control() {
-                            text_password_input.0.push_str(ev.char.as_str());
+                            text_input.text.push_str(ev.char.as_str());
                         }
                     }
                 }
