@@ -19,7 +19,7 @@ use crate::{
     },
     ui::{
         components::{MovingScrollPanel, TextInput, TextPasswordInput},
-        layout_nodes::{spawn_new_list_item, UiListItem},
+        spawn_utils::{spawn_new_list_item, UiListItem},
     },
     AppWallet, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource,
     ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus,

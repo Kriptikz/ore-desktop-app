@@ -26,7 +26,7 @@ use super::{
         TextTreasuryLastResetAt, TextTreasuryNeedEpochReset, TextTreasuryRewardRate,
         TextTreasuryTotalClaimedRewards, TextWalletOreBalance, TextWalletSolBalance,
     },
-    layout_nodes::spawn_copyable_text,
+    spawn_utils::spawn_copyable_text,
     styles::{FONT_SIZE, NORMAL_BUTTON},
 };
 
