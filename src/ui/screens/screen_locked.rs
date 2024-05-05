@@ -1,0 +1,171 @@
+use bevy::prelude::*;
+
+use crate::ui::{
+    components::{
+        BaseScreenNode, ButtonCaptureTextInput, ButtonUnlock, LockedScreenNode, TextInput,
+        TextPasswordInput, TextPasswordLabel,
+    },
+    styles::{FONT_SIZE, NORMAL_BUTTON},
+};
+
+pub fn spawn_locked_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) -> Option<Entity> {
+    let mut password_text_entity = None;
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(10.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                ..default()
+            },
+            Name::new("Screen Node"),
+            BaseScreenNode,
+            LockedScreenNode,
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    NodeBundle {
+                        z_index: ZIndex::Global(10),
+                        style: Style {
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    Name::new("Button Capture Text Node"),
+                ))
+                .with_children(|parent| {
+                    parent
+                        .spawn((
+                            NodeBundle {
+                                style: Style {
+                                    justify_content: JustifyContent::Center,
+                                    align_items: AlignItems::Center,
+                                    flex_direction: FlexDirection::Row,
+                                    ..default()
+                                },
+                                ..default()
+                            },
+                            Name::new("Password Input Field"),
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                TextBundle::from_section(
+                                    "Password: ",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: FONT_SIZE,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                ),
+                                TextPasswordLabel,
+                            ));
+                            parent
+                                .spawn((
+                                    ButtonBundle {
+                                        style: Style {
+                                            width: Val::Px(150.0),
+                                            height: Val::Px(50.0),
+                                            border: UiRect::all(Val::Px(2.5)),
+                                            // horizontally center child text
+                                            justify_content: JustifyContent::Center,
+                                            // vertically center child text
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        },
+                                        border_color: BorderColor(Color::BLACK),
+                                        background_color: NORMAL_BUTTON.into(),
+                                        ..default()
+                                    },
+                                    ButtonCaptureTextInput,
+                                    Name::new("ButtonCaptureText"),
+                                ))
+                                .with_children(|parent| {
+                                    password_text_entity = Some(
+                                        parent
+                                            .spawn((
+                                                TextBundle::from_section(
+                                                    "",
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load("fonts/FiraSans-Bold.ttf"),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextInput {
+                                                    hidden: true,
+                                                    text: "".to_string(),
+                                                },
+                                                TextPasswordInput,
+                                            ))
+                                            .id(),
+                                    );
+                                });
+                        });
+                });
+            parent
+                .spawn((
+                    NodeBundle {
+                        style: Style {
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    Name::new("Button Unlock Node"),
+                ))
+                .with_children(|parent| {
+                    parent
+                        .spawn((
+                            ButtonBundle {
+                                style: Style {
+                                    width: Val::Px(100.0),
+                                    height: Val::Px(50.0),
+                                    border: UiRect::all(Val::Px(5.0)),
+                                    margin: UiRect {
+                                        top: Val::Percent(0.0),
+                                        right: Val::Px(0.0),
+                                        left: Val::Px(0.0),
+                                        bottom: Val::Px(0.0),
+                                    },
+                                    // horizontally center child text
+                                    justify_content: JustifyContent::Center,
+                                    // vertically center child text
+                                    align_items: AlignItems::Center,
+                                    ..default()
+                                },
+                                border_color: BorderColor(Color::BLACK),
+                                background_color: NORMAL_BUTTON.into(),
+                                ..default()
+                            },
+                            ButtonUnlock,
+                            Name::new("ButtonUnlock"),
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle::from_section(
+                                "UNLOCK",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: FONT_SIZE,
+                                    color: Color::rgb(0.9, 0.9, 0.9),
+                                },
+                            ));
+                        });
+                });
+        });
+
+    password_text_entity
+}

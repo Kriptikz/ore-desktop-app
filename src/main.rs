@@ -22,10 +22,10 @@ use tasks::{
 };
 use ui::{
     components::{TextInput, TextPasswordInput},
-    screens::{
-        despawn_initial_setup_screen, despawn_locked_screen, despawn_mining_screen,
-        spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
-    },
+    screens::{screen_despawners::{
+        despawn_initial_setup_screen, despawn_locked_screen,
+        despawn_mining_screen, 
+    }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen},
     ui_button_systems::{
         button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock,
         button_reset_epoch, button_start_stop_mining, button_unlock,
@@ -36,6 +36,10 @@ use ui::{
         update_text_input_ui, update_treasury_account_ui,
     },
 };
+
+// screens::{
+//     spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
+// },
 
 pub mod events;
 pub mod ore_utils;
