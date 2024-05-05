@@ -1,4 +1,5 @@
 /target
 
-save.data
+*.data
 config.toml
+

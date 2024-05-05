@@ -28,7 +28,7 @@ use solana_sdk::{
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::*;
-use ui::{components::{BaseScreenNode, LockedScreenNode}, screens::{despawn_locked_screen, spawn_mining_screen, despawn_mining_screen, spawn_locked_screen}, systems::*};
+use ui::{components::{BaseScreenNode, LockedScreenNode}, screens::{despawn_locked_screen, spawn_mining_screen, despawn_mining_screen, spawn_locked_screen}, ui_systems::*};
 
 pub mod events;
 pub mod tasks;
@@ -37,7 +37,6 @@ pub mod ui;
 #[derive(Deserialize)]
 pub struct Config {
     pub rpc_url: String,
-    pub ore_mint: String,
     pub threads: u64,
     pub fetch_ui_data_from_rpc_interval_ms: u64,
     pub tx_check_status_and_resend_interval_ms: u64,
@@ -45,6 +44,7 @@ pub struct Config {
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum GameState {
+    InitialSetup,
     Locked,
     Mining
 }
@@ -89,9 +89,6 @@ fn main() {
         let _ = cocoon.dump(wallet_bytes.to_vec(), &mut file).unwrap();
         wallet = new_wallet;
     }
-
-    let _ =
-        Pubkey::from_str(&config.ore_mint).expect("Config ore_mint is not a valid pubkey");
 
 
     let tx_send_interval = config.tx_check_status_and_resend_interval_ms;
