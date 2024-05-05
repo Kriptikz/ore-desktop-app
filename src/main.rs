@@ -513,6 +513,11 @@ pub fn text_password_input(
                     // string.clear();
                     event_writer.send(EventUnlock);
                 }
+                if kbd.just_pressed(KeyCode::Home) {
+                    // println!("Text input: {}", &*string);
+                    // string.clear();
+                    text_input.hidden = !text_input.hidden;
+                }
                 if kbd.just_pressed(KeyCode::Backspace) {
                     text_input.text.pop();
                     // reset, to ensure multiple presses aren't going to result in multiple backspaces
