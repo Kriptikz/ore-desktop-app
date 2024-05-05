@@ -9,7 +9,7 @@ use crate::{
 use super::{
     components::{
         ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonLock,
-        ButtonResetEpoch, ButtonStartStopMining, ButtonUnlock, CopyableText, TextInput,
+        ButtonResetEpoch, ButtonStartStopMining, ButtonTest, ButtonUnlock, CopyableText, TextInput,
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -218,13 +218,37 @@ pub fn button_capture_text(
                     }
                 }
             }
+            Interaction::Hovered => {}
+            Interaction::None => {}
+        }
+    }
+}
+
+pub fn button_test(
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut UiImage, &Children),
+        (Changed<Interaction>, With<ButtonTest>),
+    >,
+) {
+    for (_entity, interaction, mut ui_image, children) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                info!("pressed");
+                if !ui_image.flip_y {
+                    ui_image.flip_y = true;
+                }
+            }
             Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-                border_color.0 = Color::WHITE;
+                info!("hovered");
+                if ui_image.flip_y {
+                    ui_image.flip_y = false;
+                }
             }
             Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                border_color.0 = Color::BLACK;
+                info!("none");
+                if ui_image.flip_y {
+                    ui_image.flip_y = false;
+                }
             }
         }
     }

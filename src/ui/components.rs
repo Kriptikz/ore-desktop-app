@@ -128,3 +128,6 @@ pub struct ButtonClaimOreRewards;
 
 #[derive(Component)]
 pub struct ButtonCaptureTextInput;
+
+#[derive(Component)]
+pub struct ButtonTest;

@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
-use crate::ui::{components::{
-    BaseScreenNode, ButtonCaptureTextInput,
-    InitialSetupScreenNode, TextInput,
-}, styles::{FONT_SIZE, NORMAL_BUTTON}};
-
+use crate::ui::{
+    components::{
+        BaseScreenNode, ButtonCaptureTextInput, ButtonTest, InitialSetupScreenNode,
+        TextInput,
+    },
+    styles::{FONT_REGULAR, FONT_SIZE, MENU_BACKGROUND, SCREEN_BACKGROUND_1},
+};
 
 pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
@@ -14,13 +16,17 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
                     ..default()
                 },
+                background_color: Color::WHITE.into(),
                 ..default()
             },
             Name::new("Screen Node"),
             BaseScreenNode,
             InitialSetupScreenNode,
+            UiImage::new(asset_server.load(SCREEN_BACKGROUND_1)),
         ))
         .with_children(|parent| {
             parent
@@ -28,25 +34,26 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                     NodeBundle {
                         z_index: ZIndex::Global(10),
                         style: Style {
-                            position_type: PositionType::Absolute,
                             justify_content: JustifyContent::Center,
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
+                            width: Val::Percent(50.0),
+                            height: Val::Percent(80.0),
                             align_items: AlignItems::Center,
                             ..default()
                         },
+                        background_color: Color::WHITE.into(),
                         ..default()
                     },
-                    Name::new("Button Capture Text Node"),
+                    UiImage::new(asset_server.load(MENU_BACKGROUND)),
+                    Name::new("Config Setup Node"),
                 ))
                 .with_children(|parent| {
                     parent
                         .spawn((
                             ButtonBundle {
+                                //background_color: Color::WHITE.into(),
                                 style: Style {
-                                    width: Val::Px(100.0),
+                                    width: Val::Px(200.0),
                                     height: Val::Px(50.0),
-                                    border: UiRect::all(Val::Px(5.0)),
                                     margin: UiRect {
                                         top: Val::Percent(0.0),
                                         right: Val::Px(0.0),
@@ -59,19 +66,20 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                     align_items: AlignItems::Center,
                                     ..default()
                                 },
-                                border_color: BorderColor(Color::BLACK),
-                                background_color: NORMAL_BUTTON.into(),
+                                image: UiImage::new(asset_server.load("button.png")),
+                                //border_color: BorderColor(Color::BLACK),
                                 ..default()
                             },
                             ButtonCaptureTextInput,
-                            Name::new("ButtonCaptureText"),
+                            ButtonTest,
+                            Name::new("ButtonTest"),
                         ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle::from_section(
                                     "",
                                     TextStyle {
-                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font: asset_server.load(FONT_REGULAR),
                                         font_size: FONT_SIZE,
                                         color: Color::rgb(0.9, 0.9, 0.9),
                                     },

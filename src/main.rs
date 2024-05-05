@@ -6,7 +6,7 @@ use std::{
 };
 
 use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
-use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use events::*;
 use serde::Deserialize;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
@@ -27,8 +27,7 @@ use ui::{
         despawn_mining_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen},
     ui_button_systems::{
-        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock,
-        button_reset_epoch, button_start_stop_mining, button_unlock,
+        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_start_stop_mining, button_test, button_unlock
     },
     ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_app_wallet_ui,
@@ -92,7 +91,7 @@ fn main() {
     App::new()
         .insert_state(starting_state)
         .add_plugins(DefaultPlugins)
-        //.add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -147,6 +146,11 @@ fn main() {
         .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
         .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
+        .add_systems(
+            Update,
+            (button_test)
+                .run_if(in_state(GameState::InitialSetup)),
+        )
         .add_systems(
             Update,
             (button_unlock, handle_event_unlock, text_password_input)
@@ -526,25 +530,24 @@ pub fn text_input(
     mut backspace_timer: Local<BackspaceTimer>,
     time: Res<Time>,
     mut active_text_query: Query<
-        (Entity, &mut Text),
-        (With<TextInput>, Without<TextPasswordInput>),
+        (Entity, &mut TextInput),
+        Without<TextPasswordInput>,
     >,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
-        for (active_text_entity, mut active_text_text) in active_text_query.iter_mut() {
+        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
             if active_text_entity == app_state_active_text_entity {
                 if kbd.just_pressed(KeyCode::Enter) {
-                    // println!("Text input: {}", &*string);
-                    // string.clear();
+                    // TODO: give TextInput some event for enter key
                 }
                 if kbd.just_pressed(KeyCode::Backspace) {
-                    active_text_text.sections[0].value.pop();
+                    text_input.text.pop();
                     // reset, to ensure multiple presses aren't going to result in multiple backspaces
                     backspace_timer.timer.reset();
                 } else if kbd.pressed(KeyCode::Backspace) {
                     backspace_timer.timer.tick(time.delta());
                     if backspace_timer.timer.just_finished() {
-                        active_text_text.sections[0].value.pop();
+                        text_input.text.pop();
                         backspace_timer.timer.reset();
                     }
                 }
@@ -554,9 +557,7 @@ pub fn text_input(
                     let c = cs.next();
                     if let Some(char) = c {
                         if !char.is_control() {
-                            active_text_text.sections[0]
-                                .value
-                                .push_str(ev.char.as_str());
+                            text_input.text.push_str(ev.char.as_str());
                         }
                     }
                 }
