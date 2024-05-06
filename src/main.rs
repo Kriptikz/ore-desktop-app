@@ -543,44 +543,73 @@ pub fn text_input(
     >,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
-        for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
-            if captured_text_entity == app_state_active_text_entity {
-                for child in captured_text_children {
-                    for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
-                        if active_text_entity == *child {
-                            if kbd.just_pressed(KeyCode::Enter) {
-                                // TODO: give TextInput some event for enter key
-                            }
-                            if mouse_input.just_pressed(MouseButton::Right) {
-                                if let Ok(mut ctx) = ClipboardContext::new() {
-                                    if let Ok(text) = ctx.get_contents() {
-                                        info!("Succesfully pasted from clipboard");
-                                        text_input.text = text;
-                                    } else {
-                                        info!("Failed to paste clipboard contents.");
+        if kbd.just_pressed(KeyCode::Enter) {
+            // TODO: give TextInput some event for enter key
+        }
+        if mouse_input.just_pressed(MouseButton::Right) {
+            if let Ok(mut ctx) = ClipboardContext::new() {
+                if let Ok(text) = ctx.get_contents() {
+                    for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                        if captured_text_entity == app_state_active_text_entity {
+                            for child in captured_text_children {
+                                for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                                    if active_text_entity == *child {
+                                        text_input.text = text.clone();
                                     }
-                                } else {
-                                    info!("Failed to create clipboard context.");
                                 }
-
                             }
-                            if kbd.just_pressed(KeyCode::Backspace) {
+                        }
+                    }
+                    info!("Succesfully pasted from clipboard");
+                } else {
+                    info!("Failed to paste clipboard contents.");
+                }
+            } else {
+                info!("Failed to create clipboard context.");
+            }
+
+        }
+        if kbd.just_pressed(KeyCode::Backspace) {
+            for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                if captured_text_entity == app_state_active_text_entity {
+                    for child in captured_text_children {
+                        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                            if active_text_entity == *child {
                                 text_input.text.pop();
                                 // reset, to ensure multiple presses aren't going to result in multiple backspaces
                                 backspace_timer.timer.reset();
-                            } else if kbd.pressed(KeyCode::Backspace) {
+                            }
+                        }
+                    }
+                }
+            }
+        } else if kbd.pressed(KeyCode::Backspace) {
+            for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                if captured_text_entity == app_state_active_text_entity {
+                    for child in captured_text_children {
+                        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                            if active_text_entity == *child {
                                 backspace_timer.timer.tick(time.delta());
                                 if backspace_timer.timer.just_finished() {
                                     text_input.text.pop();
                                     backspace_timer.timer.reset();
                                 }
                             }
-                            for ev in evr_char.read() {
-                                let mut cs = ev.char.chars();
-
-                                let c = cs.next();
-                                if let Some(char) = c {
-                                    if !char.is_control() {
+                        }
+                    }
+                }
+            }
+        }
+        for ev in evr_char.read() {
+            let mut cs = ev.char.chars();
+            let c = cs.next();
+            if let Some(char) = c {
+                if !char.is_control() {
+                    for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                        if captured_text_entity == app_state_active_text_entity {
+                            for child in captured_text_children {
+                                for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                                    if active_text_entity == *child {
                                         if text_input.numbers_only {
                                             if char.is_numeric() {
                                                 text_input.text.push_str(ev.char.as_str());
