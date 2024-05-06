@@ -491,36 +491,83 @@ pub fn text_password_input(
     app_state: Res<OreAppState>,
     mut backspace_timer: Local<BackspaceTimer>,
     time: Res<Time>,
+    captured_text_query: Query<(Entity, &Children), With<ButtonCaptureTextInput>>,
     mut active_text_query: Query<(Entity, &mut TextInput), With<TextPasswordInput>>,
     mut event_writer: EventWriter<EventUnlock>,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
-        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
-            if active_text_entity == app_state_active_text_entity {
-                if kbd.just_pressed(KeyCode::Enter) {
-                    event_writer.send(EventUnlock);
-                }
-                if kbd.just_pressed(KeyCode::Home) {
-                    text_input.hidden = !text_input.hidden;
-                }
-                if kbd.just_pressed(KeyCode::Backspace) {
-                    text_input.text.pop();
-                    // reset, to ensure multiple presses aren't going to result in multiple backspaces
-                    backspace_timer.timer.reset();
-                } else if kbd.pressed(KeyCode::Backspace) {
-                    backspace_timer.timer.tick(time.delta());
-                    if backspace_timer.timer.just_finished() {
-                        text_input.text.pop();
-                        backspace_timer.timer.reset();
+        if kbd.just_pressed(KeyCode::Enter) {
+            for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                if captured_text_entity == app_state_active_text_entity {
+                    for child in captured_text_children {
+                        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                            if active_text_entity == *child {
+                                event_writer.send(EventUnlock);
+                            }
+                        }
                     }
                 }
-                for ev in evr_char.read() {
-                    let mut cs = ev.char.chars();
+            }
+        }
+        if kbd.just_pressed(KeyCode::Home) {
+            for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                if captured_text_entity == app_state_active_text_entity {
+                    for child in captured_text_children {
+                        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                            if active_text_entity == *child {
+                                text_input.hidden = !text_input.hidden;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if kbd.just_pressed(KeyCode::Backspace) {
+            for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                if captured_text_entity == app_state_active_text_entity {
+                    for child in captured_text_children {
+                        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                            if active_text_entity == *child {
+                                text_input.text.pop();
+                                // reset, to ensure multiple presses aren't going to result in multiple backspaces
+                                backspace_timer.timer.reset();
+                            }
+                        }
+                    }
+                }
+            }
+        } else if kbd.pressed(KeyCode::Backspace) {
+            for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                if captured_text_entity == app_state_active_text_entity {
+                    for child in captured_text_children {
+                        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                            if active_text_entity == *child {
+                                backspace_timer.timer.tick(time.delta());
+                                if backspace_timer.timer.just_finished() {
+                                    text_input.text.pop();
+                                    backspace_timer.timer.reset();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for ev in evr_char.read() {
+            let mut cs = ev.char.chars();
 
-                    let c = cs.next();
-                    if let Some(char) = c {
-                        if !char.is_control() {
-                            text_input.text.push_str(ev.char.as_str());
+            let c = cs.next();
+            if let Some(char) = c {
+                if !char.is_control() {
+                    for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+                        if captured_text_entity == app_state_active_text_entity {
+                            for child in captured_text_children {
+                                for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                                    if active_text_entity == *child {
+                                        text_input.text.push_str(ev.char.as_str());
+                                    }
+                                }
+                            }
                         }
                     }
                 }

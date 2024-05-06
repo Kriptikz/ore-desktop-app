@@ -2,8 +2,7 @@ use bevy::prelude::*;
 
 use crate::ui::{
     components::{
-        BaseScreenNode, ButtonCaptureTextInput, ButtonUnlock, LockedScreenNode, TextInput,
-        TextPasswordInput, TextPasswordLabel,
+        BaseScreenNode, ButtonCaptureTextInput, ButtonUnlock, LockedScreenNode, TextCursor, TextInput, TextPasswordInput, TextPasswordLabel
     },
     styles::{FONT_SIZE, NORMAL_BUTTON},
 };
@@ -12,7 +11,7 @@ pub fn spawn_locked_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) -> Option<Entity> {
-    let mut password_text_entity = None;
+    let mut password_capture_text_entity = None;
     commands
         .spawn((
             NodeBundle {
@@ -71,49 +70,62 @@ pub fn spawn_locked_screen(
                                 ),
                                 TextPasswordLabel,
                             ));
-                            parent
-                                .spawn((
-                                    ButtonBundle {
-                                        style: Style {
-                                            width: Val::Px(150.0),
-                                            height: Val::Px(50.0),
-                                            border: UiRect::all(Val::Px(2.5)),
-                                            // horizontally center child text
-                                            justify_content: JustifyContent::Center,
-                                            // vertically center child text
-                                            align_items: AlignItems::Center,
+                            password_capture_text_entity = Some(
+                                parent
+                                    .spawn((
+                                        ButtonBundle {
+                                            style: Style {
+                                                width: Val::Px(150.0),
+                                                height: Val::Px(50.0),
+                                                border: UiRect::all(Val::Px(2.5)),
+                                                // horizontally center child text
+                                                justify_content: JustifyContent::Center,
+                                                // vertically center child text
+                                                align_items: AlignItems::Center,
+                                                ..default()
+                                            },
+                                            border_color: BorderColor(Color::BLACK),
+                                            background_color: NORMAL_BUTTON.into(),
                                             ..default()
                                         },
-                                        border_color: BorderColor(Color::BLACK),
-                                        background_color: NORMAL_BUTTON.into(),
-                                        ..default()
-                                    },
-                                    ButtonCaptureTextInput,
-                                    Name::new("ButtonCaptureText"),
-                                ))
-                                .with_children(|parent| {
-                                    password_text_entity = Some(
-                                        parent
-                                            .spawn((
-                                                TextBundle::from_section(
-                                                    "",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load("fonts/FiraSans-Bold.ttf"),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                                    },
-                                                ),
-                                                TextInput {
-                                                    hidden: true,
-                                                    numbers_only: false,
-                                                    text: "".to_string(),
+                                        ButtonCaptureTextInput,
+                                        Name::new("ButtonCaptureText"),
+                                    ))
+                                    .with_children(|parent| {
+                                        parent.spawn((
+                                            TextBundle::from_section(
+                                                "",
+                                                TextStyle {
+                                                    font: asset_server
+                                                        .load("fonts/FiraSans-Bold.ttf"),
+                                                    font_size: FONT_SIZE,
+                                                    color: Color::rgb(0.9, 0.9, 0.9),
                                                 },
-                                                TextPasswordInput,
-                                            ))
-                                            .id(),
-                                    );
-                                });
+                                            ),
+                                            TextInput {
+                                                hidden: true,
+                                                numbers_only: false,
+                                                text: "".to_string(),
+                                            },
+                                            TextPasswordInput,
+                                        ));
+                                        parent.spawn((
+                                            NodeBundle {
+                                                visibility: Visibility::Hidden,
+                                                style: Style {
+                                                    width: Val::Px(8.0),
+                                                    height: Val::Px(18.0),
+                                                    ..default()
+                                                },
+                                                background_color: Color::WHITE.into(),
+                                                ..default()
+                                            },
+                                            TextCursor,
+                                            Name::new("TextCursor"),
+                                        ));
+                                    })
+                                    .id(),
+                            );
                         });
                 });
             parent
@@ -168,5 +180,5 @@ pub fn spawn_locked_screen(
                 });
         });
 
-    password_text_entity
+    password_capture_text_entity
 }
