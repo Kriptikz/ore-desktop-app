@@ -2,14 +2,12 @@ use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 use crate::{
-    EventClaimOreRewards, EventLock, EventResetEpoch, EventStartStopMining, EventUnlock,
-    OreAppState,
+    Config, EventClaimOreRewards, EventLock, EventResetEpoch, EventSaveConfig, EventStartStopMining, EventUnlock, OreAppState
 };
 
 use super::{
     components::{
-        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonLock,
-        ButtonResetEpoch, ButtonStartStopMining, ButtonTest, ButtonUnlock, CopyableText, TextInput,
+        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -194,29 +192,19 @@ pub fn button_unlock(
 }
 
 pub fn button_capture_text(
-    mut interaction_query: Query<
+    interaction_query: Query<
         (
             Entity,
             &Interaction,
-            &mut BackgroundColor,
-            &mut BorderColor,
-            &Children,
         ),
         (Changed<Interaction>, With<ButtonCaptureTextInput>),
     >,
     mut ore_app_state: ResMut<OreAppState>,
-    child_text_query: Query<Entity, With<TextInput>>,
 ) {
-    for (_entity, interaction, mut color, mut border_color, children) in &mut interaction_query {
+    for (entity, interaction) in interaction_query.iter() {
         match *interaction {
             Interaction::Pressed => {
-                for button_child in children.iter() {
-                    for child_text in child_text_query.iter() {
-                        if child_text == *button_child {
-                            ore_app_state.active_input_node = Some(child_text);
-                        }
-                    }
-                }
+                ore_app_state.active_input_node = Some(entity);
             }
             Interaction::Hovered => {}
             Interaction::None => {}
@@ -224,11 +212,18 @@ pub fn button_capture_text(
     }
 }
 
-pub fn button_test(
+pub fn button_save_config(
     mut interaction_query: Query<
         (Entity, &Interaction, &mut UiImage, &Children),
-        (Changed<Interaction>, With<ButtonTest>),
+        (Changed<Interaction>, With<ButtonSaveConfig>),
     >,
+    mut event_writer: EventWriter<EventSaveConfig>,
+    mut set: ParamSet<(
+        Query<&TextInput, With<TextConfigInputRpcUrl>>,
+        Query<&TextInput, With<TextConfigInputThreads>>,
+        Query<&TextInput, With<TextConfigInputRpcFetchAccountsInterval>>,
+        Query<&TextInput, With<TextConfigInputRpcSendTxInterval>>,
+    )>,
 ) {
     for (_entity, interaction, mut ui_image, children) in &mut interaction_query {
         match *interaction {
@@ -237,6 +232,18 @@ pub fn button_test(
                 if !ui_image.flip_y {
                     ui_image.flip_y = true;
                 }
+
+                let text_rpc_url = set.p0().get_single().unwrap().text.clone();
+                let text_threads = set.p1().get_single().unwrap().text.clone();
+                let text_rpc_fetch_interval = set.p2().get_single().unwrap().text.clone();
+                let text_rpc_send_interval = set.p3().get_single().unwrap().text.clone();
+
+                event_writer.send(EventSaveConfig(Config {
+                    rpc_url: text_rpc_url.clone(),
+                    threads: text_threads.parse::<u64>().unwrap(),
+                    fetch_ui_data_from_rpc_interval_ms: text_rpc_fetch_interval.parse::<u64>().unwrap(),
+                    tx_check_status_and_resend_interval_ms: text_rpc_send_interval.parse::<u64>().unwrap(),
+                }));
             }
             Interaction::Hovered => {
                 info!("hovered");

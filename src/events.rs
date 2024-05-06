@@ -12,17 +12,13 @@ use crate::{
         get_claim_ix, get_clock_account, get_mine_ix, get_ore_epoch_duration, get_ore_mint,
         get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury,
         proof_pubkey, treasury_tokens_pubkey,
-    },
-    tasks::{
+    }, tasks::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
-    },
-    ui::{
+    }, ui::{
         components::{MovingScrollPanel, TextInput, TextPasswordInput},
         spawn_utils::{spawn_new_list_item, UiListItem},
-    },
-    AppWallet, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource,
-    ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus,
+    }, AppWallet, Config, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -93,6 +89,9 @@ pub struct EventLock;
 
 #[derive(Event)]
 pub struct EventUnlock;
+
+#[derive(Event)]
+pub struct EventSaveConfig(pub Config);
 
 pub fn handle_event_start_stop_mining_clicked(
     mut ev_start_stop_mining: EventReader<EventStartStopMining>,
@@ -572,6 +571,25 @@ pub fn handle_event_unlock(
         } else {
             info!("Failed to get_single on TextPasswordInput (events.rs: handle_event_unlock)");
         }
+    }
+}
+
+pub fn handle_event_save_config(
+    mut event_reader: EventReader<EventSaveConfig>,
+    mut ore_app_state: ResMut<OreAppState>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for ev in event_reader.read() {
+        info!("Save Config Event Handler.");
+        let new_config = ev.0.clone();
+        let toml_string = toml::to_string(&new_config).unwrap();
+        let data = toml_string.into_bytes();
+
+        let mut f = File::create("config.toml").expect("Unable to create file");
+        f.write_all(&data).expect("Unable to write data");
+
+        ore_app_state.config = new_config;
+        next_state.set(GameState::Locked);
     }
 }
 

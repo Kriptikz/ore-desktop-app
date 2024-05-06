@@ -37,8 +37,12 @@ pub struct CopyableText {
 #[derive(Component)]
 pub struct TextInput {
     pub hidden: bool,
+    pub numbers_only: bool,
     pub text: String,
 }
+
+#[derive(Component)]
+pub struct TextCursor;
 
 #[derive(Component)]
 pub struct TextPasswordInput;
@@ -109,6 +113,18 @@ pub struct TextCurrentTxStatus;
 pub struct TextCurrentTxElapsed;
 
 #[derive(Component)]
+pub struct TextConfigInputRpcUrl;
+
+#[derive(Component)]
+pub struct TextConfigInputThreads;
+
+#[derive(Component)]
+pub struct TextConfigInputRpcFetchAccountsInterval;
+
+#[derive(Component)]
+pub struct TextConfigInputRpcSendTxInterval;
+
+#[derive(Component)]
 pub struct ButtonCopyText;
 
 #[derive(Component)]
@@ -130,4 +146,4 @@ pub struct ButtonClaimOreRewards;
 pub struct ButtonCaptureTextInput;
 
 #[derive(Component)]
-pub struct ButtonTest;
+pub struct ButtonSaveConfig;

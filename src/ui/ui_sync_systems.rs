@@ -3,6 +3,7 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::input::mouse::MouseScrollUnit;
 use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
+use bevy::render::view::visibility;
 use chrono::DateTime;
 
 use crate::ore_utils::get_ore_decimals;
@@ -10,9 +11,11 @@ use crate::utils::{get_unix_timestamp, human_bytes, shorten_string};
 use crate::AppWallet;
 use crate::CurrentTx;
 use crate::MinerStatusResource;
+use crate::OreAppState;
 use crate::ProofAccountResource;
 use crate::TreasuryAccountResource;
 
+use super::components::ButtonCaptureTextInput;
 use super::components::FpsRoot;
 use super::components::FpsText;
 use super::components::ScrollingList;
@@ -21,6 +24,7 @@ use super::components::TextCurrentHash;
 use super::components::TextCurrentTxElapsed;
 use super::components::TextCurrentTxSig;
 use super::components::TextCurrentTxStatus;
+use super::components::TextCursor;
 use super::components::TextInput;
 use super::components::TextMinerStatusCpuUsage;
 use super::components::TextMinerStatusRamUsage;
@@ -266,6 +270,34 @@ pub fn update_text_input_ui(mut active_text_query: Query<(&mut Text, &TextInput)
             active_text_text.sections[0].value = displayed_text;
         } else {
             active_text_text.sections[0].value = text_input.text.clone();
+        }
+    }
+}
+
+pub fn update_active_text_input_cursor_vis(
+    ore_app_state: Res<OreAppState>,
+    captured_text_query: Query<(Entity, &Children), With<ButtonCaptureTextInput>>,
+    mut text_cursor_query: Query<(Entity, &mut Visibility), With<TextCursor>>,
+) {
+    if let Some(active_text_entity) = ore_app_state.active_input_node {
+        for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+            if captured_text_entity == active_text_entity {
+                for child in captured_text_children {
+                    for (tc_entity, mut visibility) in text_cursor_query.iter_mut() {
+                        if tc_entity == *child {
+                            if *visibility != Visibility::Visible {
+                                *visibility = Visibility::Visible;
+                            } else {
+                                *visibility = Visibility::Hidden;
+                            }
+                        } else {
+                            if *visibility != Visibility::Hidden {
+                                *visibility = Visibility::Hidden;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -5,10 +5,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
+use bevy::{input::mouse::MouseButtonInput, prelude::*, tasks::AsyncComputeTaskPool};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
+use copypasta::{ClipboardContext, ClipboardProvider};
 use events::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
@@ -21,18 +22,16 @@ use tasks::{
     task_update_app_wallet_sol_balance, task_update_current_tx, TaskProcessCurrentTx,
 };
 use ui::{
-    components::{TextInput, TextPasswordInput},
+    components::{ButtonCaptureTextInput, TextInput, TextPasswordInput},
     screens::{screen_despawners::{
         despawn_initial_setup_screen, despawn_locked_screen,
         despawn_mining_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen},
     ui_button_systems::{
-        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_start_stop_mining, button_test, button_unlock
+        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_save_config, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
-        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_app_wallet_ui,
-        update_current_tx_ui, update_miner_status_ui, update_proof_account_ui,
-        update_text_input_ui, update_treasury_account_ui,
+        update_active_text_input_cursor_vis, fps_counter_showhide, fps_text_update_system, mouse_scroll, update_app_wallet_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
     },
 };
 
@@ -46,7 +45,7 @@ pub mod tasks;
 pub mod ui;
 pub mod utils;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
     pub rpc_url: String,
     pub threads: u64,
@@ -130,16 +129,20 @@ fn main() {
         .add_event::<EventClaimOreRewards>()
         .add_event::<EventUnlock>()
         .add_event::<EventLock>()
+        .add_event::<EventSaveConfig>()
         .add_systems(Startup, setup_camera)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
         .add_systems(Update, text_input)
         .add_systems(Update, update_text_input_ui)
         .add_systems(Update, button_capture_text)
+        .add_systems(Update, update_active_text_input_cursor_vis)
         .add_systems(OnEnter(GameState::InitialSetup), setup_initial_setup_screen)
         .add_systems(
             OnExit(GameState::InitialSetup),
-            despawn_initial_setup_screen,
+            (
+                despawn_initial_setup_screen,
+            )
         )
         .add_systems(OnExit(GameState::InitialSetup), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Locked), setup_locked_screen)
@@ -148,7 +151,10 @@ fn main() {
         .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
         .add_systems(
             Update,
-            (button_test)
+            (
+                button_save_config,
+                handle_event_save_config,
+            )
                 .run_if(in_state(GameState::InitialSetup)),
         )
         .add_systems(
@@ -526,38 +532,65 @@ pub fn text_password_input(
 pub fn text_input(
     mut evr_char: EventReader<ReceivedCharacter>,
     kbd: Res<ButtonInput<KeyCode>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
     app_state: Res<OreAppState>,
     mut backspace_timer: Local<BackspaceTimer>,
     time: Res<Time>,
+    captured_text_query: Query<(Entity, &Children), With<ButtonCaptureTextInput>>,
     mut active_text_query: Query<
         (Entity, &mut TextInput),
         Without<TextPasswordInput>,
     >,
 ) {
     if let Some(app_state_active_text_entity) = app_state.active_input_node {
-        for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
-            if active_text_entity == app_state_active_text_entity {
-                if kbd.just_pressed(KeyCode::Enter) {
-                    // TODO: give TextInput some event for enter key
-                }
-                if kbd.just_pressed(KeyCode::Backspace) {
-                    text_input.text.pop();
-                    // reset, to ensure multiple presses aren't going to result in multiple backspaces
-                    backspace_timer.timer.reset();
-                } else if kbd.pressed(KeyCode::Backspace) {
-                    backspace_timer.timer.tick(time.delta());
-                    if backspace_timer.timer.just_finished() {
-                        text_input.text.pop();
-                        backspace_timer.timer.reset();
-                    }
-                }
-                for ev in evr_char.read() {
-                    let mut cs = ev.char.chars();
+        for (captured_text_entity, captured_text_children) in captured_text_query.iter() {
+            if captured_text_entity == app_state_active_text_entity {
+                for child in captured_text_children {
+                    for (active_text_entity, mut text_input) in active_text_query.iter_mut() {
+                        if active_text_entity == *child {
+                            if kbd.just_pressed(KeyCode::Enter) {
+                                // TODO: give TextInput some event for enter key
+                            }
+                            if mouse_input.just_pressed(MouseButton::Right) {
+                                if let Ok(mut ctx) = ClipboardContext::new() {
+                                    if let Ok(text) = ctx.get_contents() {
+                                        info!("Succesfully pasted from clipboard");
+                                        text_input.text = text;
+                                    } else {
+                                        info!("Failed to paste clipboard contents.");
+                                    }
+                                } else {
+                                    info!("Failed to create clipboard context.");
+                                }
 
-                    let c = cs.next();
-                    if let Some(char) = c {
-                        if !char.is_control() {
-                            text_input.text.push_str(ev.char.as_str());
+                            }
+                            if kbd.just_pressed(KeyCode::Backspace) {
+                                text_input.text.pop();
+                                // reset, to ensure multiple presses aren't going to result in multiple backspaces
+                                backspace_timer.timer.reset();
+                            } else if kbd.pressed(KeyCode::Backspace) {
+                                backspace_timer.timer.tick(time.delta());
+                                if backspace_timer.timer.just_finished() {
+                                    text_input.text.pop();
+                                    backspace_timer.timer.reset();
+                                }
+                            }
+                            for ev in evr_char.read() {
+                                let mut cs = ev.char.chars();
+
+                                let c = cs.next();
+                                if let Some(char) = c {
+                                    if !char.is_control() {
+                                        if text_input.numbers_only {
+                                            if char.is_numeric() {
+                                                text_input.text.push_str(ev.char.as_str());
+                                            }
+                                        } else {
+                                            text_input.text.push_str(ev.char.as_str());
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

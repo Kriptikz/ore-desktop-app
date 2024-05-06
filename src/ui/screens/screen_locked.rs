@@ -106,6 +106,7 @@ pub fn spawn_locked_screen(
                                                 ),
                                                 TextInput {
                                                     hidden: true,
+                                                    numbers_only: false,
                                                     text: "".to_string(),
                                                 },
                                                 TextPasswordInput,
