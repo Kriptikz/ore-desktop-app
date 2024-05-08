@@ -3,15 +3,14 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, IoTaskPool},
 };
 use cocoon::Cocoon;
+use ore::state::Proof;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{
-        get_claim_ix, get_clock_account, get_mine_ix, get_ore_epoch_duration, get_ore_mint,
-        get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury,
-        proof_pubkey, treasury_tokens_pubkey,
+        get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
     }, tasks::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
@@ -22,19 +21,11 @@ use crate::{
 };
 
 use std::{
-    fs::File,
-    io::{stdout, Write},
-    path::Path,
-    sync::{atomic::AtomicBool, Arc, Mutex},
-    time::Instant,
+    fs::File, io::{stdout, Write}, path::Path, str::FromStr, sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant
 };
 
 use solana_sdk::{
-    commitment_config::CommitmentLevel,
-    keccak::{hashv, Hash as KeccakHash},
-    native_token::LAMPORTS_PER_SOL,
-    signature::{Keypair, Signer},
-    transaction::Transaction,
+    bs58, commitment_config::CommitmentLevel, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{Keypair, Signer}, transaction::Transaction
 };
 
 // Events
@@ -143,16 +134,20 @@ pub fn handle_event_mine_for_hash(
             info!("\nMining for a valid hash...");
 
             let hash_time = Instant::now();
-            let (next_hash, nonce) = find_next_hash_par(
-                wallet,
-                proof.hash.into(),
-                treasury.difficulty.into(),
+            let (best_nonce, best_difficulty, best_hash) = find_hash_par(
+                wallet.pubkey(),
+                2,
                 threads,
+                &client,
+                proof,
             );
-            info!("NEXT HASH: {}", next_hash.to_string());
-            info!("NONCE: {}", nonce.to_string());
+            info!("BEST HASH: {}", best_hash.to_string());
+            info!("BEST DIFFICULTY: {}", best_hash.to_string());
+            info!("BEST NONCE: {}", best_nonce.to_string());
 
-            (next_hash, nonce, hash_time.elapsed().as_secs())
+            let best_hash = KeccakHash::from_str(&best_hash).unwrap();
+
+            (best_hash, best_nonce, hash_time.elapsed().as_secs())
         });
         miner_status.miner_status = "MINING".to_string();
 
@@ -225,7 +220,7 @@ pub fn handle_event_submit_hash_tx(
             // let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(CU_LIMIT_MINE);
             // let cu_price_ix =
             //     ComputeBudgetInstruction::set_compute_unit_price(self.priority_fee);
-            let ix_mine = get_mine_ix(signer.pubkey(), next_hash.into(), nonce);
+            let ix_mine = get_mine_ix(signer.pubkey(), nonce);
             let (hash, _slot) = client
                 .get_latest_blockhash_with_commitment(client.commitment())
                 .unwrap();
@@ -312,10 +307,10 @@ pub fn handle_event_fetch_ui_data_from_rpc(
             let proof_account_res_data;
             if let Ok(proof_account) = proof_account {
                 proof_account_res_data = ProofAccountResource {
-                    current_hash: proof_account.hash.to_string(),
+                    current_hash: KeccakHash::new_from_array(proof_account.challenge).to_string(),
                     total_hashes: proof_account.total_hashes,
                     total_rewards: proof_account.total_rewards,
-                    claimable_rewards: proof_account.claimable_rewards,
+                    claimable_rewards: proof_account.balance,
                 };
             } else {
                 proof_account_res_data = ProofAccountResource {
@@ -334,30 +329,41 @@ pub fn handle_event_fetch_ui_data_from_rpc(
 
             let treasury_account_res_data;
             if let Ok(treasury_account) = treasury_account {
-                let reward_rate =
-                    (treasury_account.reward_rate as f64) / 10f64.powf(orz::TOKEN_DECIMALS as f64);
-                let total_claimed_rewards = (treasury_account.total_claimed_rewards as f64)
-                    / 10f64.powf(orz::TOKEN_DECIMALS as f64);
+                // let reward_rate =
+                //     (treasury_account.reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                // let total_claimed_rewards = (treasury_account.total_claimed_rewards as f64)
+                //     / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                let reward_rate = 0;
 
                 let clock = get_clock_account(&connection);
-                let threshold = treasury_account
-                    .last_reset_at
-                    .saturating_add(get_ore_epoch_duration());
+                // let threshold = treasury_account
+                //     .last_reset_at
+                //     .saturating_add(get_ore_epoch_duration());
 
-                let need_epoch_reset = if clock.unix_timestamp.ge(&threshold) {
-                    true
-                } else {
-                    false
-                };
+                // let need_epoch_reset = if clock.unix_timestamp.ge(&threshold) {
+                //     true
+                // } else {
+                //     false
+                // };
+                let need_epoch_reset = false;
 
+                // treasury_account_res_data = TreasuryAccountResource {
+                //     balance: treasury_ore_balance.to_string(),
+                //     admin: treasury_account.admin.to_string(),
+                //     difficulty: treasury_account.difficulty.to_string(),
+                //     last_reset_at: treasury_account.last_reset_at,
+                //     need_epoch_reset,
+                //     reward_rate,
+                //     total_claimed_rewards,
+                // };
                 treasury_account_res_data = TreasuryAccountResource {
                     balance: treasury_ore_balance.to_string(),
-                    admin: treasury_account.admin.to_string(),
-                    difficulty: treasury_account.difficulty.to_string(),
-                    last_reset_at: treasury_account.last_reset_at,
+                    admin: "todo".to_string(),
+                    difficulty: "todo".to_string(),
+                    last_reset_at: 0,
                     need_epoch_reset,
-                    reward_rate,
-                    total_claimed_rewards,
+                    reward_rate: 0.0,
+                    total_claimed_rewards: 0.0,
                 };
             } else {
                 treasury_account_res_data = TreasuryAccountResource {
@@ -685,4 +691,93 @@ pub fn register(signer: Keypair, client: &RpcClient) -> bool {
     }
 
     return false;
+}
+
+fn find_hash_par(signer: Pubkey, buffer_time: u64, threads: u64, rpc_client: &RpcClient, proof_account: Proof) -> (u64, u32, String) {
+    // Check num threads
+    // self.check_num_cores(threads);
+
+    // Fetch data
+    let proof = proof_account;
+    println!(
+        "\nStake balance: 0 ORE",
+    );
+    let cutoff_time = get_cutoff(proof, buffer_time);
+
+    // Dispatch job to each thread
+    // let progress_bar = Arc::new(spinner::new_progress_bar());
+    // progress_bar.set_message("Mining...");
+    let handles: Vec<_> = (0..threads)
+        .map(|i| {
+            std::thread::spawn({
+                let proof = proof.clone();
+                // let progress_bar = progress_bar.clone();
+                move || {
+                    let timer = Instant::now();
+                    let first_nonce = u64::MAX.saturating_div(threads).saturating_mul(i);
+                    let mut nonce = first_nonce;
+                    let mut best_nonce = nonce;
+                    let mut best_difficulty = 0;
+                    let mut best_hash = [0; 32];
+                    loop {
+                        // Create hash
+                        let hx = drillx::hash(&proof.challenge, &nonce.to_le_bytes());
+                        let difficulty = drillx::difficulty(hx);
+
+                        // Check difficulty
+                        if difficulty.gt(&best_difficulty) {
+                            best_nonce = nonce;
+                            best_difficulty = difficulty;
+                            best_hash = hx;
+                        }
+
+                        // Exit if time has elapsed
+                        if nonce % 10_000 == 0 {
+                            if (timer.elapsed().as_secs() as i64).ge(&cutoff_time) {
+                                if best_difficulty.gt(&ore::MIN_DIFFICULTY) {
+                                    // Mine until min difficulty has been met
+                                    break;
+                                }
+                            } else if i == 0 {
+                                // progress_bar.set_message(format!(
+                                //     "Mining... ({} sec remaining)",
+                                //     cutoff_time
+                                //         .saturating_sub(timer.elapsed().as_secs() as i64),
+                                // ));
+                            }
+                        }
+
+                        // Increment nonce
+                        nonce += 1;
+                    }
+
+                    // Return the best nonce
+                    (best_nonce, best_difficulty, best_hash)
+                }
+            })
+        })
+        .collect();
+
+    // Join handles and return best nonce
+    let mut best_nonce = 0;
+    let mut best_difficulty = 0;
+    let mut best_hash = [0; 32];
+    for h in handles {
+        if let Ok((nonce, difficulty, hash)) = h.join() {
+            if difficulty > best_difficulty {
+                best_difficulty = difficulty;
+                best_nonce = nonce;
+                best_hash = hash;
+            }
+        }
+    }
+
+    let best_hash_str = bs58::encode(best_hash).into_string();
+    // info!(format!(
+    //     "Best hash: {} (difficulty: {})",
+    //     best_hash_str.clone(),
+    //     best_difficulty
+    // ));
+
+    (best_nonce, best_difficulty, best_hash_str)
 }

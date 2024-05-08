@@ -1,6 +1,8 @@
-use orz::{
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use ore::{
     instruction,
-    state::{Hash, Proof, Treasury},
+    state::{Proof, Treasury},
     utils::AccountDeserialize,
     BUS_ADDRESSES, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF, TOKEN_DECIMALS,
     TREASURY_ADDRESS,
@@ -11,8 +13,8 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
-pub fn get_mine_ix(signer: Pubkey, next_hash: Hash, nonce: u64) -> Instruction {
-    instruction::mine(signer, BUS_ADDRESSES[0], next_hash.into(), nonce)
+pub fn get_mine_ix(signer: Pubkey, nonce: u64) -> Instruction {
+    instruction::mine(signer, BUS_ADDRESSES[0], nonce)
 }
 
 pub fn get_register_ix(signer: Pubkey) -> Instruction {
@@ -95,4 +97,16 @@ pub fn get_clock_account(client: &RpcClient) -> Clock {
         .get_account_data(&sysvar::clock::ID)
         .expect("Failed to get miner account");
     bincode::deserialize::<Clock>(&data).expect("Failed to deserialize clock")
+}
+
+pub fn get_cutoff(proof: Proof, buffer_time: u64) -> i64 {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Failed to get time")
+        .as_secs() as i64;
+    proof
+        .last_hash_at
+        .saturating_add(60)
+        .saturating_sub(buffer_time as i64)
+        .saturating_sub(now)
 }

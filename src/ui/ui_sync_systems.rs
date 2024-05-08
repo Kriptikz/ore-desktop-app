@@ -79,7 +79,7 @@ pub fn update_app_wallet_ui(
 
     let mut text_ore_balance_query = set.p1();
     let mut text_ore_balance = text_ore_balance_query.single_mut();
-    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORZ";
+    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORE";
 }
 
 pub fn update_proof_account_ui(
