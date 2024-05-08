@@ -94,23 +94,23 @@ pub fn update_proof_account_ui(
     let mut text_current_hash_query = set.p0();
     let mut text_current_hash = text_current_hash_query.single_mut();
     text_current_hash.sections[0].value =
-        "Current Hash: ".to_string() + &proof_account_res.current_hash.clone();
+        proof_account_res.current_hash.clone();
 
     let mut text_total_hashes_query = set.p1();
     let mut text_total_hashes = text_total_hashes_query.single_mut();
     text_total_hashes.sections[0].value =
-        "Total Hashes: ".to_string() + &proof_account_res.total_hashes.to_string();
+        proof_account_res.total_hashes.to_string();
 
     let mut text_total_rewards_query = set.p2();
     let mut text_total_rewards = text_total_rewards_query.single_mut();
     let amount = (proof_account_res.total_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
-    text_total_rewards.sections[0].value = format!("Total Rewards: {}", amount);
+    text_total_rewards.sections[0].value = format!("{}", amount);
 
     let mut text_claimable_rewards_query = set.p3();
     let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();
     let amount =
         (proof_account_res.claimable_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
-    text_claimable_rewards.sections[0].value = format!("Claimable Rewards: {}", amount);
+    text_claimable_rewards.sections[0].value = format!("{}", amount);
 }
 
 pub fn update_treasury_account_ui(
@@ -127,16 +127,16 @@ pub fn update_treasury_account_ui(
 ) {
     let mut text_query_0 = set.p0();
     let mut text_0 = text_query_0.single_mut();
-    text_0.sections[0].value = "Balance: ".to_string() + &treasury_account_res.balance.clone();
+    text_0.sections[0].value = treasury_account_res.balance.clone();
 
     let mut text_query_1 = set.p1();
     let mut text_1 = text_query_1.single_mut();
-    text_1.sections[0].value = "Admin: ".to_string() + &treasury_account_res.admin.clone();
+    text_1.sections[0].value = treasury_account_res.admin.clone();
 
     let mut text_query_2 = set.p2();
     let mut text_2 = text_query_2.single_mut();
     text_2.sections[0].value =
-        "Difficulty: ".to_string() + &treasury_account_res.difficulty.clone();
+        treasury_account_res.difficulty.clone();
 
     let mut text_query_3 = set.p3();
     let mut text_3 = text_query_3.single_mut();
@@ -147,17 +147,16 @@ pub fn update_treasury_account_ui(
             "Err".to_string()
         };
 
-    text_3.sections[0].value = format!("Last Reset At: {}", date_time);
+    text_3.sections[0].value = format!("{}", date_time);
 
     let mut text_query_4 = set.p4();
     let mut text_4 = text_query_4.single_mut();
     text_4.sections[0].value =
-        "Reward Rate: ".to_string() + &treasury_account_res.reward_rate.to_string();
+        treasury_account_res.reward_rate.to_string();
 
     let mut text_query_5 = set.p5();
     let mut text_5 = text_query_5.single_mut();
-    text_5.sections[0].value = "Total Claimed Rewards: ".to_string()
-        + &treasury_account_res.total_claimed_rewards.to_string();
+    text_5.sections[0].value = treasury_account_res.total_claimed_rewards.to_string();
 
     let mut text_query_6 = set.p6();
     let mut text_6 = text_query_6.single_mut();
@@ -167,7 +166,7 @@ pub fn update_treasury_account_ui(
         "FALSE"
     };
 
-    text_6.sections[0].value = format!("Need Epoch Reset: {}", needs_reset_string);
+    text_6.sections[0].value = format!("{}", needs_reset_string);
 }
 
 pub fn update_miner_status_ui(
@@ -189,7 +188,25 @@ pub fn update_miner_status_ui(
 
     let mut text_query_0 = set.p0();
     let mut text_0 = text_query_0.single_mut();
-    text_0.sections[0].value = "Miner Status: ".to_string() + &res.miner_status.clone();
+    match res.miner_status.as_str() {
+        "PROCESSING" => {
+            if text_0.sections[0].style.color != Color::ORANGE {
+                text_0.sections[0].style.color = Color::ORANGE;
+            }
+        },
+        "MINING" => {
+            if text_0.sections[0].style.color != Color::GREEN {
+                text_0.sections[0].style.color = Color::GREEN;
+            }
+        },
+        _ => {
+            if text_0.sections[0].style.color != Color::RED {
+                text_0.sections[0].style.color = Color::RED;
+            }
+        },
+    }
+
+    text_0.sections[0].value = res.miner_status.clone();
 
     let mut text_query_1 = set.p1();
     let mut text_1 = text_query_1.single_mut();
@@ -200,7 +217,7 @@ pub fn update_miner_status_ui(
     }
 
     let cpu_usage = format!(
-        "CPU Usage: {:.2}  % / {} %",
+        "{:.2}  % / {} %",
         cpu_usage,
         res.sys_info.cpus().len() * 100
     );
@@ -211,7 +228,7 @@ pub fn update_miner_status_ui(
     let total_memory = res.sys_info.total_memory();
     let used_memory = res.sys_info.used_memory();
     let ram_usage = format!(
-        "RAM Usage: {} / {}",
+        "{} / {}",
         human_bytes(used_memory as f64),
         human_bytes(total_memory as f64)
     );
@@ -228,7 +245,7 @@ pub fn update_miner_status_ui(
     let mut text_query_3 = set.p3();
     let mut text_3 = text_query_3.single_mut();
 
-    text_3.sections[0].value = format!("Time: {}", date_time);
+    text_3.sections[0].value = format!("{}", date_time);
 }
 
 pub fn update_current_tx_ui(
@@ -250,6 +267,33 @@ pub fn update_current_tx_ui(
     let mut text_query_1 = set.p1();
     let mut text_1 = text_query_1.single_mut();
     text_1.sections[0].value = "Status: ".to_string() + &res.tx_status.status;
+    match res.tx_status.status.as_str() {
+        "PROCESSED" => {
+            if text_1.sections[0].style.color != Color::LIME_GREEN {
+                text_1.sections[0].style.color = Color::LIME_GREEN;
+            }
+        },
+        "SENDING" => {
+            if text_1.sections[0].style.color != Color::YELLOW {
+                text_1.sections[0].style.color = Color::YELLOW;
+            }
+        },
+        "SUCCESS" => {
+            if text_1.sections[0].style.color != Color::GREEN {
+                text_1.sections[0].style.color = Color::GREEN;
+            }
+        },
+        "FAILED" => {
+            if text_1.sections[0].style.color != Color::RED {
+                text_1.sections[0].style.color = Color::RED;
+            }
+        },
+        _ => {
+            if text_1.sections[0].style.color != Color::RED {
+                text_1.sections[0].style.color = Color::RED;
+            }
+        },
+    }
 
     if res.tx_status.status != "SUCCESS" && res.tx_status.status != "FAILED" {
         res.elapsed_seconds = res.elapsed_instant.elapsed().as_secs();

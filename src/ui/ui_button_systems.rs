@@ -23,7 +23,6 @@ pub fn button_copy_text(
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
-                border_color.0 = Color::RED;
 
                 let mut text: Option<String> = None;
                 for (copyable_text, children) in text_query.iter() {
@@ -46,11 +45,9 @@ pub fn button_copy_text(
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
-                border_color.0 = Color::WHITE;
             }
             Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                border_color.0 = Color::BLACK;
+                *color = Color::WHITE.into();
             }
         }
     }
@@ -67,17 +64,18 @@ pub fn button_start_stop_mining(
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
-                border_color.0 = Color::RED;
+                // border_color.0 = Color::RED;
 
                 ev_start_stop_mining.send(EventStartStopMining);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
-                border_color.0 = Color::WHITE;
+                // border_color.0 = Color::WHITE;
             }
             Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                border_color.0 = Color::BLACK;
+                *color = Color::WHITE.into();
+                // *color = NORMAL_BUTTON.into();
+                // border_color.0 = Color::BLACK;
             }
         }
     }
@@ -103,8 +101,9 @@ pub fn button_reset_epoch(
                 border_color.0 = Color::WHITE;
             }
             Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                border_color.0 = Color::BLACK;
+                *color = Color::WHITE.into();
+                // *color = NORMAL_BUTTON.into();
+                // border_color.0 = Color::BLACK;
             }
         }
     }
@@ -121,17 +120,18 @@ pub fn button_claim_ore_rewards(
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
-                border_color.0 = Color::RED;
+                // border_color.0 = Color::RED;
 
                 event_writer.send(EventClaimOreRewards);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
-                border_color.0 = Color::WHITE;
+                // border_color.0 = Color::WHITE;
             }
             Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                border_color.0 = Color::BLACK;
+                *color = Color::WHITE.into();
+                // *color = NORMAL_BUTTON.into();
+                // border_color.0 = Color::BLACK;
             }
         }
     }

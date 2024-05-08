@@ -43,8 +43,8 @@ pub fn spawn_new_list_item(
                 TextBundle::from_section(
                     item_data.id,
                     TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 20.,
+                        font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                        font_size: FONT_SIZE,
                         ..default()
                     },
                 ),
@@ -56,8 +56,8 @@ pub fn spawn_new_list_item(
             parent.spawn((TextBundle::from_section(
                 item_data.tx_time,
                 TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 20.,
+                    font: asset_server.load(FONT_ROBOTO),
+                    font_size: FONT_SIZE,
                     ..default()
                 },
             ),));
@@ -65,8 +65,8 @@ pub fn spawn_new_list_item(
             parent.spawn(TextBundle::from_section(
                 item_data.hash_time,
                 TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 20.,
+                    font: asset_server.load(FONT_ROBOTO),
+                    font_size: FONT_SIZE,
                     ..default()
                 },
             ));
@@ -74,8 +74,8 @@ pub fn spawn_new_list_item(
             parent.spawn(TextBundle::from_section(
                 item_data.status,
                 TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 20.,
+                    font: asset_server.load(FONT_ROBOTO),
+                    font_size: FONT_SIZE,
                     ..default()
                 },
             ));
@@ -97,18 +97,14 @@ pub fn spawn_copyable_text(
         .spawn((
             NodeBundle {
                 style: Style {
-                    width: Val::Px(200.0),
-                    height: Val::Px(40.0),
-                    justify_content: JustifyContent::SpaceBetween,
                     flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::End,
                     padding: UiRect {
                         top: Val::Px(0.0),
-                        left: Val::Px(0.0),
-                        right: Val::Px(10.0),
+                        left: Val::Px(15.0),
+                        right: Val::Px(0.0),
                         bottom: Val::Px(0.0),
                     },
-                    border: UiRect::all(Val::Px(5.0)),
                     ..default()
                 },
                 ..default()
@@ -123,7 +119,7 @@ pub fn spawn_copyable_text(
                 TextBundle::from_section(
                     &display_text,
                     TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font: asset_server.load(FONT_ROBOTO),
                         font_size: FONT_SIZE,
                         color: Color::rgb(0.9, 0.9, 0.9),
                     },
@@ -135,32 +131,22 @@ pub fn spawn_copyable_text(
                 .spawn((
                     ButtonBundle {
                         style: Style {
-                            width: Val::Px(30.0),
-                            height: Val::Px(30.0),
-                            border: UiRect::all(Val::Px(5.0)),
+                            width: Val::Px(20.96),
+                            height: Val::Px(20.96),
+                            padding: UiRect::left(Val::Px(15.0)),
+                            // border: UiRect::all(Val::Px(5.0)),
                             // horizontally center child text
-                            justify_content: JustifyContent::Center,
+                            // justify_content: JustifyContent::Center,
                             // vertically center child text
-                            align_items: AlignItems::Center,
+                            // align_items: AlignItems::Center,
                             ..default()
                         },
-                        border_color: BorderColor(Color::BLACK),
-                        background_color: NORMAL_BUTTON.into(),
+                        image: UiImage::new(asset_server.load(BUTTON_COPY_TEXT)),
                         ..default()
                     },
                     ButtonCopyText,
                     Name::new("ButtonCopyText"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Copy",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: FONT_SIZE,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                        },
-                    ));
-                });
+                ));
         });
 }
 
