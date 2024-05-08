@@ -26,7 +26,7 @@ use ui::{
     screens::{screen_despawners::{
         despawn_initial_setup_screen, despawn_locked_screen,
         despawn_mining_screen, 
-    }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::{spawn_mining_screen, spawn_mining_screen_1}},
+    }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen},
     ui_button_systems::{
         button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_save_config, button_start_stop_mining, button_unlock
     },
@@ -241,7 +241,7 @@ fn setup_mining_screen(
             TimerMode::Once,
         ),
     });
-    spawn_mining_screen_1(commands.reborrow(), asset_server, app_wallet);
+    spawn_mining_screen(commands.reborrow(), asset_server, app_wallet);
 }
 
 fn setup_locked_screen(
