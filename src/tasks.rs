@@ -26,7 +26,7 @@ pub struct TaskUpdateAppWalletSolBalance {
 
 #[derive(Component)]
 pub struct TaskGenerateHash {
-    pub task: Task<(solana_program::keccak::Hash, u64, u64)>,
+    pub task: Task<(solana_program::keccak::Hash, u64, u32, u64)>,
 }
 
 #[derive(Component)]
@@ -51,12 +51,12 @@ pub struct TaskRegisterWallet {
 
 #[derive(Component)]
 pub struct TaskProcessTx {
-    pub task: Task<Option<(String, Transaction, Option<u64>)>>,
+    pub task: Task<Option<(String, Transaction, Option<(u64, u32)>)>>,
 }
 
 #[derive(Component)]
 pub struct TaskUpdateCurrentTx {
-    pub task: Task<Option<(String, Transaction, Signature, Option<u64>)>>,
+    pub task: Task<Option<(String, Transaction, Signature, Option<(u64, u32)>)>>,
 }
 
 #[derive(Component)]
@@ -109,7 +109,7 @@ pub fn task_register_wallet(
                 ev_process_tx.send(EventProcessTx {
                     tx_type: "Register".to_string(),
                     tx,
-                    hash_time: None,
+                    hash_status: None,
                 });
             } else {
                 info!("Failed to confirm register wallet tx...");
@@ -127,11 +127,11 @@ pub fn task_process_tx(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            if let Some((tx_type, tx, hash_time)) = result {
+            if let Some((tx_type, tx, hash_status)) = result {
                 ev_process_tx.send(EventProcessTx {
                     tx_type,
                     tx,
-                    hash_time,
+                    hash_status,
                 });
             } else {
                 info!("Failed to confirm register wallet tx...");
@@ -151,7 +151,7 @@ pub fn task_update_current_tx(
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
             if let Some((tx_type, tx, sig, hash_time)) = result {
                 current_tx.tx_type = tx_type;
-                current_tx.hash_time = hash_time;
+                current_tx.hash_status = hash_time;
                 current_tx.tx_sig = Some((tx, sig));
                 let new_tx_status = TxStatus {
                     status: "SENDING".to_string(),
@@ -192,7 +192,7 @@ pub fn task_process_current_tx(
                 ev_tx_result.send(EventTxResult {
                     tx_type: current_tx.tx_type.clone(),
                     sig,
-                    hash_time: current_tx.hash_time,
+                    hash_status: current_tx.hash_status,
                     tx_time: current_tx.elapsed_seconds,
                     tx_status: tx_status.clone(),
                 });

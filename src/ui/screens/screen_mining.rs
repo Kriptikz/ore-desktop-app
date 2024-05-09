@@ -709,7 +709,7 @@ pub fn spawn_mining_screen(
                                                 },
                                             ),));
                                             parent.spawn((TextBundle::from_section(
-                                                "Hash Time",
+                                                "Hash Time - Difficulty",
                                                 TextStyle {
                                                     font: asset_server.load(FONT_ROBOTO),
                                                     font_size: FONT_SIZE,

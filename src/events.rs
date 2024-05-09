@@ -37,7 +37,7 @@ pub struct EventStartStopMining;
 pub struct EventMineForHash;
 
 #[derive(Event)]
-pub struct EventSubmitHashTx(pub (solana_program::keccak::Hash, u64, u64));
+pub struct EventSubmitHashTx(pub (solana_program::keccak::Hash, u64, u32, u64));
 
 pub struct TxResult {
     pub sig: String,
@@ -52,7 +52,7 @@ pub struct EventTxResult {
     pub tx_type: String,
     pub sig: String,
     pub tx_time: u64,
-    pub hash_time: Option<u64>,
+    pub hash_status: Option<(u64, u32)>,
     pub tx_status: TxStatus,
 }
 
@@ -72,7 +72,7 @@ pub struct EventClaimOreRewards;
 pub struct EventProcessTx {
     pub tx_type: String,
     pub tx: Transaction,
-    pub hash_time: Option<u64>,
+    pub hash_status: Option<(u64, u32)>,
 }
 
 #[derive(Event)]
@@ -142,12 +142,12 @@ pub fn handle_event_mine_for_hash(
                 proof,
             );
             info!("BEST HASH: {}", best_hash.to_string());
-            info!("BEST DIFFICULTY: {}", best_hash.to_string());
+            info!("BEST DIFFICULTY: {}", best_difficulty.to_string());
             info!("BEST NONCE: {}", best_nonce.to_string());
 
             let best_hash = KeccakHash::from_str(&best_hash).unwrap();
 
-            (best_hash, best_nonce, hash_time.elapsed().as_secs())
+            (best_hash, best_nonce, best_difficulty, hash_time.elapsed().as_secs())
         });
         miner_status.miner_status = "MINING".to_string();
 
@@ -172,7 +172,7 @@ pub fn handle_event_process_tx(
         let client = rpc_connection.rpc.clone();
         let tx_type = ev.tx_type.clone();
         let tx = ev.tx.clone();
-        let hash_time = ev.hash_time.clone();
+        let hash_time = ev.hash_status.clone();
         let task = pool.spawn(async move {
             let send_cfg = RpcSendTransactionConfig {
                 skip_preflight: true,
@@ -213,7 +213,7 @@ pub fn handle_event_submit_hash_tx(
         let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
 
-        let (next_hash, nonce, hash_time) = ev.0;
+        let (next_hash, nonce, difficulty, hash_time) = ev.0;
         let task = pool.spawn(async move {
             let signer = wallet;
             // TODO: set cu's
@@ -228,7 +228,7 @@ pub fn handle_event_submit_hash_tx(
 
             tx.sign(&[&signer], hash);
 
-            return Some(("Mine".to_string(), tx, Some(hash_time)));
+            return Some(("Mine".to_string(), tx, Some((hash_time, difficulty))));
         });
 
         commands
@@ -240,16 +240,17 @@ pub fn handle_event_submit_hash_tx(
 pub fn handle_event_tx_result(
     mut commands: Commands,
     mut ev_tx_result: EventReader<EventTxResult>,
+    mut event_writer: EventWriter<EventMineForHash>,
     mut miner_status: ResMut<MinerStatusResource>,
     asset_server: Res<AssetServer>,
     query: Query<Entity, With<MovingScrollPanel>>,
 ) {
     for ev in ev_tx_result.read() {
         info!("Tx Result Event Handler.");
-        let hash_time = if let Some(ht) = ev.hash_time {
-            ht.to_string()
+        let (hash_time, difficulty) = if let Some(ht) = ev.hash_status {
+            (ht.0.to_string(), ht.1.to_string())
         } else {
-            "N/A".to_string()
+            ("N/A".to_string(), "".to_string())
         };
         miner_status.miner_status = "STOPPED".to_string();
         let scroll_panel_entity = query.get_single().unwrap();
@@ -258,6 +259,8 @@ pub fn handle_event_tx_result(
             ev.tx_status.status.clone(),
             ev.tx_status.error.clone()
         );
+
+        let hash_time = format!("{} - {}", hash_time, difficulty);
         let item_data = UiListItem {
             id: ev.tx_type.clone(),
             sig: ev.sig.clone(),
@@ -266,6 +269,10 @@ pub fn handle_event_tx_result(
             status,
         };
         spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
+         
+        if ev.tx_type == "Mine" {
+            event_writer.send(EventMineForHash);
+        }
     }
 }
 

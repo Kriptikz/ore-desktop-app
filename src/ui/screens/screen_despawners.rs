@@ -53,7 +53,7 @@ pub fn despawn_mining_screen(
             status: "".to_string(),
             error: "".to_string(),
         },
-        hash_time: None,
+        hash_status: None,
         elapsed_instant: Instant::now(),
         elapsed_seconds: 0,
         interval_timer: Timer::new(
