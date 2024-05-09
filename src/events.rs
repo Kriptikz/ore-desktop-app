@@ -309,22 +309,24 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 };
 
             // TODO: condense as many solana accounts into one rpc get_multiple_accounts call as possible
-            let (proof_account, treasury_account) = get_proof_and_treasury(&connection, pubkey);
+            let (proof_account, treasury_account, treasury_config) = get_proof_and_treasury(&connection, pubkey);
 
             let proof_account_res_data;
             if let Ok(proof_account) = proof_account {
                 proof_account_res_data = ProofAccountResource {
-                    current_hash: KeccakHash::new_from_array(proof_account.challenge).to_string(),
+                    challenge: KeccakHash::new_from_array(proof_account.challenge).to_string(),
+                    stake: proof_account.balance,
+                    last_hash_at: proof_account.last_hash_at,
                     total_hashes: proof_account.total_hashes,
                     total_rewards: proof_account.total_rewards,
-                    claimable_rewards: proof_account.balance,
                 };
             } else {
                 proof_account_res_data = ProofAccountResource {
-                    current_hash: "Not Found".to_string(),
+                    challenge: "Not Found".to_string(),
+                    stake: 0,
+                    last_hash_at: 0,
                     total_hashes: 0,
                     total_rewards: 0,
-                    claimable_rewards: 0,
                 };
             }
 
@@ -335,52 +337,35 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 .unwrap();
 
             let treasury_account_res_data;
-            if let Ok(treasury_account) = treasury_account {
-                // let reward_rate =
-                //     (treasury_account.reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
-                // let total_claimed_rewards = (treasury_account.total_claimed_rewards as f64)
-                //     / 10f64.powf(ore::TOKEN_DECIMALS as f64);
-                let reward_rate = 0;
+            if let Ok(treasury_account) = treasury_config {
+                let base_reward_rate =
+                    (treasury_account.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
 
                 let clock = get_clock_account(&connection);
-                // let threshold = treasury_account
-                //     .last_reset_at
-                //     .saturating_add(get_ore_epoch_duration());
+                let threshold = treasury_account
+                    .last_reset_at
+                    .saturating_add(get_ore_epoch_duration());
 
-                // let need_epoch_reset = if clock.unix_timestamp.ge(&threshold) {
-                //     true
-                // } else {
-                //     false
-                // };
-                let need_epoch_reset = false;
+                let need_epoch_reset = if clock.unix_timestamp.ge(&threshold) {
+                    true
+                } else {
+                    false
+                };
 
-                // treasury_account_res_data = TreasuryAccountResource {
-                //     balance: treasury_ore_balance.to_string(),
-                //     admin: treasury_account.admin.to_string(),
-                //     difficulty: treasury_account.difficulty.to_string(),
-                //     last_reset_at: treasury_account.last_reset_at,
-                //     need_epoch_reset,
-                //     reward_rate,
-                //     total_claimed_rewards,
-                // };
                 treasury_account_res_data = TreasuryAccountResource {
                     balance: treasury_ore_balance.to_string(),
-                    admin: "todo".to_string(),
-                    difficulty: "todo".to_string(),
-                    last_reset_at: 0,
+                    admin: treasury_account.admin.to_string(),
+                    last_reset_at: treasury_account.last_reset_at,
                     need_epoch_reset,
-                    reward_rate: 0.0,
-                    total_claimed_rewards: 0.0,
+                    base_reward_rate,
                 };
             } else {
                 treasury_account_res_data = TreasuryAccountResource {
                     balance: "Not Found".to_string(),
                     admin: "".to_string(),
-                    difficulty: "".to_string(),
                     last_reset_at: 0,
                     need_epoch_reset: false,
-                    reward_rate: 0.0,
-                    total_claimed_rewards: 0.0,
+                    base_reward_rate: 0.0,
                 };
             }
 
@@ -491,7 +476,7 @@ pub fn handle_event_claim_ore_rewards(
         let pool = AsyncComputeTaskPool::get();
         let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
-        let claim_amount = proof_account.claimable_rewards;
+        let claim_amount = proof_account.stake;
         let task = pool.spawn(async move {
             let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
                 &wallet.pubkey(),

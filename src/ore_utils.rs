@@ -1,11 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use ore::{
-    instruction,
-    state::{Proof, Treasury},
-    utils::AccountDeserialize,
-    BUS_ADDRESSES, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF, TOKEN_DECIMALS,
-    TREASURY_ADDRESS,
+    instruction, state::{Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, CONFIG_ADDRESS, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF, TOKEN_DECIMALS, TREASURY_ADDRESS
 };
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
@@ -44,8 +40,8 @@ pub fn get_ore_decimals() -> u8 {
 pub fn get_proof_and_treasury(
     client: &RpcClient,
     authority: Pubkey,
-) -> (Result<Proof, ()>, Result<Treasury, ()>) {
-    let account_pubkeys = vec![TREASURY_ADDRESS, proof_pubkey(authority)];
+) -> (Result<Proof, ()>, Result<Treasury, ()>, Result<ore::state::Config, ()>) {
+    let account_pubkeys = vec![TREASURY_ADDRESS, proof_pubkey(authority), CONFIG_ADDRESS];
     let datas = client.get_multiple_accounts(&account_pubkeys);
     if let Ok(datas) = datas {
         let treasury = if let Some(data) = &datas[0] {
@@ -60,9 +56,15 @@ pub fn get_proof_and_treasury(
             Err(())
         };
 
-        (proof, treasury)
+        let treasury_config = if let Some(data) = &datas[2] {
+            Ok(*ore::state::Config::try_from_bytes(data.data()).expect("Failed to parse config account"))
+        } else {
+            Err(())
+        };
+
+        (proof, treasury, treasury_config)
     } else {
-        (Err(()), Err(()))
+        (Err(()), Err(()), Err(()))
     }
 }
 

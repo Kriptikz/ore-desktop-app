@@ -271,19 +271,21 @@ pub struct AppWallet {
 #[derive(Reflect, Resource, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
 pub struct ProofAccountResource {
-    current_hash: String,
+    challenge: String,
+    stake: u64,
+    last_hash_at: i64,
     total_hashes: u64,
     total_rewards: u64,
-    claimable_rewards: u64,
 }
 
 impl Default for ProofAccountResource {
     fn default() -> Self {
         Self {
-            current_hash: "loading...".to_string(),
+            challenge: "loading...".to_string(),
+            stake: Default::default(),
+            last_hash_at: Default::default(),
             total_hashes: Default::default(),
             total_rewards: Default::default(),
-            claimable_rewards: Default::default(),
         }
     }
 }
@@ -293,11 +295,9 @@ impl Default for ProofAccountResource {
 pub struct TreasuryAccountResource {
     balance: String,
     admin: String,
-    difficulty: String,
     last_reset_at: i64,
     need_epoch_reset: bool,
-    reward_rate: f64,
-    total_claimed_rewards: f64,
+    base_reward_rate: f64,
 }
 
 impl Default for TreasuryAccountResource {
@@ -305,11 +305,9 @@ impl Default for TreasuryAccountResource {
         Self {
             balance: "loading...".to_string(),
             admin: "loading...".to_string(),
-            difficulty: "loading...".to_string(),
             last_reset_at: 0,
             need_epoch_reset: false,
-            reward_rate: 0.0,
-            total_claimed_rewards: 0.0,
+            base_reward_rate: 0.0,
         }
     }
 }

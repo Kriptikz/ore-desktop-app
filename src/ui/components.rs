@@ -60,7 +60,7 @@ pub struct TextWalletSolBalance;
 pub struct TextWalletOreBalance;
 
 #[derive(Component)]
-pub struct TextCurrentHash;
+pub struct TextCurrentChallenge;
 
 #[derive(Component)]
 pub struct TextTotalHashes;
@@ -69,7 +69,10 @@ pub struct TextTotalHashes;
 pub struct TextTotalRewards;
 
 #[derive(Component)]
-pub struct TextClaimableRewards;
+pub struct TextCurrentStake;
+
+#[derive(Component)]
+pub struct TextLastHashAt;
 
 #[derive(Component)]
 pub struct TextTreasuryBalance;

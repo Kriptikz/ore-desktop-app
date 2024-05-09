@@ -9,10 +9,12 @@ use solana_sdk::signer::Signer;
 
 use crate::{
     ui::{
-        spawn_utils::spawn_copyable_text,
-        styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_START_MINING, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
-        },
+        components::TextLastHashAt, spawn_utils::spawn_copyable_text, styles::{
+            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_START_MINING,
+            CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE,
+            PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TREASURY_BACKGROUND,
+            TX_RESULTS_BACKGROUND,
+        }
     },
     utils::shorten_string,
     AppWallet,
@@ -21,7 +23,7 @@ use crate::{
 use crate::ui::{
     components::{
         BaseScreenNode, ButtonClaimOreRewards, ButtonLock, ButtonResetEpoch, ButtonStartStopMining,
-        MovingScrollPanel, ScrollingList, TextClaimableRewards, TextCurrentHash,
+        MovingScrollPanel, ScrollingList, TextCurrentChallenge, TextCurrentStake,
         TextCurrentTxElapsed, TextCurrentTxSig, TextCurrentTxStatus, TextMinerStatusCpuUsage,
         TextMinerStatusRamUsage, TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes,
         TextTotalRewards, TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryDifficulty,
@@ -328,18 +330,6 @@ pub fn spawn_mining_screen(
                                                         ),
                                                         Name::new("TextTreasuryAdmin"),
                                                     ));
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "Difficulty:",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new("TextTreasuryDifficulty"),
-                                                    ));
 
                                                     parent.spawn((
                                                         TextBundle::from_section(
@@ -369,7 +359,7 @@ pub fn spawn_mining_screen(
 
                                                     parent.spawn((
                                                         TextBundle::from_section(
-                                                            "Reward Rate:",
+                                                            "Base Reward Rate:",
                                                             TextStyle {
                                                                 font: asset_server
                                                                     .load(FONT_ROBOTO),
@@ -378,21 +368,6 @@ pub fn spawn_mining_screen(
                                                             },
                                                         ),
                                                         Name::new("TextTreasuryRewardRate"),
-                                                    ));
-
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "Total Claimed Rewards:",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new(
-                                                            "TextTreasuryTotalClaimedRewards",
-                                                        ),
                                                     ));
                                                 });
                                             parent
@@ -436,19 +411,6 @@ pub fn spawn_mining_screen(
                                                         Name::new("TextTreasuryAdmin"),
                                                         TextTreasuryAdmin,
                                                     ));
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "loading...",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new("TextTreasuryDifficulty"),
-                                                        TextTreasuryDifficulty,
-                                                    ));
 
                                                     parent.spawn((
                                                         TextBundle::from_section(
@@ -490,22 +452,6 @@ pub fn spawn_mining_screen(
                                                         ),
                                                         Name::new("TextTreasuryRewardRate"),
                                                         TextTreasuryRewardRate,
-                                                    ));
-
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "loading...",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new(
-                                                            "TextTreasuryTotalClaimedRewards",
-                                                        ),
-                                                        TextTreasuryTotalClaimedRewards,
                                                     ));
                                                 });
                                         });
@@ -1071,7 +1017,7 @@ pub fn spawn_mining_screen(
                                                         .with_children(|parent| {
                                                             parent.spawn((
                                                                 TextBundle::from_section(
-                                                                    "Current Hash:",
+                                                                    "Current Challenge:",
                                                                     TextStyle {
                                                                         font: asset_server
                                                                             .load(FONT_ROBOTO),
@@ -1081,9 +1027,21 @@ pub fn spawn_mining_screen(
                                                                         ),
                                                                     },
                                                                 ),
-                                                                Name::new("TextCurrentHash"),
+                                                                Name::new("TextCurrentChallenge"),
                                                             ));
                                                         });
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Last Hash At:",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        Name::new("TextLastHashAt"),
+                                                    ));
                                                     parent.spawn((
                                                         TextBundle::from_section(
                                                             "Total Hashes:",
@@ -1123,7 +1081,7 @@ pub fn spawn_mining_screen(
 
                                                     parent.spawn((
                                                         TextBundle::from_section(
-                                                            "Claimable:",
+                                                            "Staked:",
                                                             TextStyle {
                                                                 font: asset_server
                                                                     .load(FONT_ROBOTO),
@@ -1131,7 +1089,7 @@ pub fn spawn_mining_screen(
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
-                                                        Name::new("TextClaimableRewards"),
+                                                        Name::new("TextCurrentStake"),
                                                     ));
                                                 });
                                             parent
@@ -1183,10 +1141,23 @@ pub fn spawn_mining_screen(
                                                                     },
                                                                     ..Default::default()
                                                                 },
-                                                                Name::new("TextCurrentHash"),
-                                                                TextCurrentHash,
+                                                                Name::new("TextCurrentChallenge"),
+                                                                TextCurrentChallenge,
                                                             ));
                                                         });
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        Name::new("TextLastHashAt"),
+                                                        TextLastHashAt,
+                                                    ));
                                                     parent.spawn((
                                                         TextBundle::from_section(
                                                             "loading...",
@@ -1239,8 +1210,8 @@ pub fn spawn_mining_screen(
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
-                                                        Name::new("TextClaimableRewards"),
-                                                        TextClaimableRewards,
+                                                        Name::new("TextCurrentStake"),
+                                                        TextCurrentStake,
                                                     ));
                                                 });
                                         });

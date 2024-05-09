@@ -19,13 +19,14 @@ use super::components::ButtonCaptureTextInput;
 use super::components::FpsRoot;
 use super::components::FpsText;
 use super::components::ScrollingList;
-use super::components::TextClaimableRewards;
-use super::components::TextCurrentHash;
+use super::components::TextCurrentStake;
+use super::components::TextCurrentChallenge;
 use super::components::TextCurrentTxElapsed;
 use super::components::TextCurrentTxSig;
 use super::components::TextCurrentTxStatus;
 use super::components::TextCursor;
 use super::components::TextInput;
+use super::components::TextLastHashAt;
 use super::components::TextMinerStatusCpuUsage;
 use super::components::TextMinerStatusRamUsage;
 use super::components::TextMinerStatusStatus;
@@ -85,16 +86,17 @@ pub fn update_app_wallet_ui(
 pub fn update_proof_account_ui(
     proof_account_res: Res<ProofAccountResource>,
     mut set: ParamSet<(
-        Query<&mut Text, With<TextCurrentHash>>,
+        Query<&mut Text, With<TextCurrentChallenge>>,
         Query<&mut Text, With<TextTotalHashes>>,
         Query<&mut Text, With<TextTotalRewards>>,
-        Query<&mut Text, With<TextClaimableRewards>>,
+        Query<&mut Text, With<TextCurrentStake>>,
+        Query<&mut Text, With<TextLastHashAt>>,
     )>,
 ) {
     let mut text_current_hash_query = set.p0();
     let mut text_current_hash = text_current_hash_query.single_mut();
     text_current_hash.sections[0].value =
-        proof_account_res.current_hash.clone();
+        proof_account_res.challenge.clone();
 
     let mut text_total_hashes_query = set.p1();
     let mut text_total_hashes = text_total_hashes_query.single_mut();
@@ -109,8 +111,19 @@ pub fn update_proof_account_ui(
     let mut text_claimable_rewards_query = set.p3();
     let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();
     let amount =
-        (proof_account_res.claimable_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
+        (proof_account_res.stake as f64) / 10f64.powf(get_ore_decimals() as f64);
     text_claimable_rewards.sections[0].value = format!("{}", amount);
+
+    let mut text_query_3 = set.p4();
+    let mut text_3 = text_query_3.single_mut();
+    let date_time =
+        if let Some(dt) = DateTime::from_timestamp(proof_account_res.last_hash_at, 0) {
+            dt.to_string()
+        } else {
+            "Err".to_string()
+        };
+
+    text_3.sections[0].value = format!("{}", date_time);
 }
 
 pub fn update_treasury_account_ui(
@@ -118,10 +131,8 @@ pub fn update_treasury_account_ui(
     mut set: ParamSet<(
         Query<&mut Text, With<TextTreasuryBalance>>,
         Query<&mut Text, With<TextTreasuryAdmin>>,
-        Query<&mut Text, With<TextTreasuryDifficulty>>,
         Query<&mut Text, With<TextTreasuryLastResetAt>>,
         Query<&mut Text, With<TextTreasuryRewardRate>>,
-        Query<&mut Text, With<TextTreasuryTotalClaimedRewards>>,
         Query<&mut Text, With<TextTreasuryNeedEpochReset>>,
     )>,
 ) {
@@ -133,12 +144,8 @@ pub fn update_treasury_account_ui(
     let mut text_1 = text_query_1.single_mut();
     text_1.sections[0].value = treasury_account_res.admin.clone();
 
-    let mut text_query_2 = set.p2();
-    let mut text_2 = text_query_2.single_mut();
-    text_2.sections[0].value =
-        treasury_account_res.difficulty.clone();
 
-    let mut text_query_3 = set.p3();
+    let mut text_query_3 = set.p2();
     let mut text_3 = text_query_3.single_mut();
     let date_time =
         if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
@@ -149,16 +156,12 @@ pub fn update_treasury_account_ui(
 
     text_3.sections[0].value = format!("{}", date_time);
 
-    let mut text_query_4 = set.p4();
+    let mut text_query_4 = set.p3();
     let mut text_4 = text_query_4.single_mut();
     text_4.sections[0].value =
-        treasury_account_res.reward_rate.to_string();
+        treasury_account_res.base_reward_rate.to_string();
 
-    let mut text_query_5 = set.p5();
-    let mut text_5 = text_query_5.single_mut();
-    text_5.sections[0].value = treasury_account_res.total_claimed_rewards.to_string();
-
-    let mut text_query_6 = set.p6();
+    let mut text_query_6 = set.p4();
     let mut text_6 = text_query_6.single_mut();
     let needs_reset_string = if treasury_account_res.need_epoch_reset {
         "TRUE"
