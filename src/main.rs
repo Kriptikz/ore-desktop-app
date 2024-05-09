@@ -28,7 +28,7 @@ use ui::{
         despawn_mining_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen},
     ui_button_systems::{
-        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_save_config, button_start_stop_mining, button_unlock
+        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_save_config, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -90,7 +90,7 @@ fn main() {
     App::new()
         .insert_state(starting_state)
         .add_plugins(DefaultPlugins)
-        // .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -127,6 +127,7 @@ fn main() {
         .add_event::<EventProcessTx>()
         .add_event::<EventResetEpoch>()
         .add_event::<EventClaimOreRewards>()
+        .add_event::<EventStakeOre>()
         .add_event::<EventUnlock>()
         .add_event::<EventLock>()
         .add_event::<EventSaveConfig>()
@@ -172,6 +173,7 @@ fn main() {
                     button_start_stop_mining,
                     button_reset_epoch,
                     button_claim_ore_rewards,
+                    button_stake_ore,
                 ),
                 (
                     handle_event_start_stop_mining_clicked,
@@ -183,6 +185,7 @@ fn main() {
                     handle_event_reset_epoch,
                     handle_event_mine_for_hash,
                     handle_event_claim_ore_rewards,
+                    handle_event_stake_ore,
                     handle_event_lock,
                 ),
                 (

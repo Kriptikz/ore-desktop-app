@@ -7,6 +7,7 @@ pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 pub static BUTTON: &str = "button.png";
 pub static BUTTON_CLAIM: &str = "design_1/button_claim.png";
+pub static BUTTON_STAKE: &str = "design_1/button_stake.png";
 pub static BUTTON_START_MINING: &str = "design_1/button_start_mining.png";
 pub static BUTTON_RESET_EPOCH: &str = "design_1/button_reset_epoch.png";
 

@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 use crate::{
-    Config, EventClaimOreRewards, EventLock, EventResetEpoch, EventSaveConfig, EventStartStopMining, EventUnlock, OreAppState
+    Config, EventClaimOreRewards, EventLock, EventResetEpoch, EventSaveConfig, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
 };
 
 use super::{
     components::{
-        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput
+        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -123,6 +123,34 @@ pub fn button_claim_ore_rewards(
                 // border_color.0 = Color::RED;
 
                 event_writer.send(EventClaimOreRewards);
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+                // border_color.0 = Color::WHITE;
+            }
+            Interaction::None => {
+                *color = Color::WHITE.into();
+                // *color = NORMAL_BUTTON.into();
+                // border_color.0 = Color::BLACK;
+            }
+        }
+    }
+}
+
+pub fn button_stake_ore(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor, &mut BorderColor),
+        (Changed<Interaction>, With<ButtonStakeOre>),
+    >,
+    mut event_writer: EventWriter<EventStakeOre>,
+) {
+    for (interaction, mut color, mut border_color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+                // border_color.0 = Color::RED;
+
+                event_writer.send(EventStakeOre);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();

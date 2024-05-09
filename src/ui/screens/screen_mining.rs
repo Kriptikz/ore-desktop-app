@@ -9,11 +9,8 @@ use solana_sdk::signer::Signer;
 
 use crate::{
     ui::{
-        components::TextLastHashAt, spawn_utils::spawn_copyable_text, styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_START_MINING,
-            CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE,
-            PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TREASURY_BACKGROUND,
-            TX_RESULTS_BACKGROUND,
+        components::{ButtonStakeOre, TextBus1, TextLastHashAt, TextMinerStatusThreads}, spawn_utils::spawn_copyable_text, styles::{
+            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         }
     },
     utils::shorten_string,
@@ -530,6 +527,77 @@ pub fn spawn_mining_screen(
                                     parent
                                         .spawn((
                                             NodeBundle {
+                                                border_color: Color::ORANGE.into(),
+                                                style: Style {
+                                                    position_type: PositionType::Absolute,
+                                                    width: Val::Percent(100.0),
+                                                    height: Val::Percent(10.0),
+                                                    flex_direction: FlexDirection::Row,
+                                                    align_self: AlignSelf::End,
+                                                    border: UiRect::all(Val::Px(1.0)),
+                                                    ..default()
+                                                },
+                                                ..default()
+                                            },
+                                            Name::new("Text Busses Node"),
+                                        ))
+                                        .with_children(|parent| {
+                                            parent.spawn((
+                                                TextBundle::from_section(
+                                                    "Bus 1: loading...",
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load(FONT_ROBOTO),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextBus1,
+                                                Name::new("TextBus1"),
+                                            ));
+                                            parent.spawn((
+                                                TextBundle::from_section(
+                                                    "Bus 1: loading...",
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load(FONT_ROBOTO),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextBus1,
+                                                Name::new("TextBus1"),
+                                            ));
+                                            parent.spawn((
+                                                TextBundle::from_section(
+                                                    "Bus 1: loading...",
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load(FONT_ROBOTO),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextBus1,
+                                                Name::new("TextBus1"),
+                                            ));
+                                            parent.spawn((
+                                                TextBundle::from_section(
+                                                    "Bus 1: loading...",
+                                                    TextStyle {
+                                                        font: asset_server
+                                                            .load(FONT_ROBOTO),
+                                                        font_size: FONT_SIZE,
+                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    },
+                                                ),
+                                                TextBus1,
+                                                Name::new("TextBus1"),
+                                            ));
+                                        });
+                                    parent
+                                        .spawn((
+                                            NodeBundle {
                                                 style: Style {
                                                     position_type: PositionType::Absolute,
                                                     width: Val::Percent(100.0),
@@ -816,6 +884,16 @@ pub fn spawn_mining_screen(
                                                             ..default()
                                                         },
                                                     ),));
+
+                                                    parent.spawn((TextBundle::from_section(
+                                                        format!("Threads:"),
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font_size: FONT_SIZE,
+                                                            ..default()
+                                                        },
+                                                    ),));
+
                                                     parent.spawn((TextBundle::from_section(
                                                         format!("CPU Usage:"),
                                                         TextStyle {
@@ -874,6 +952,18 @@ pub fn spawn_mining_screen(
                                                             },
                                                         ),
                                                         TextMinerStatusTime,
+                                                    ));
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            format!("Loading..."),
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                ..default()
+                                                            },
+                                                        ),
+                                                        TextMinerStatusThreads,
                                                     ));
                                                     parent.spawn((
                                                         TextBundle::from_section(
@@ -1245,6 +1335,23 @@ pub fn spawn_mining_screen(
                                                 },
                                                 ButtonClaimOreRewards,
                                                 Name::new("ButtonClaimOreRewards"),
+                                            ));
+                                            parent.spawn((
+                                                ButtonBundle {
+                                                    style: Style {
+                                                        width: Val::Px(218.0),
+                                                        height: Val::Px(37.0),
+                                                        align_self: AlignSelf::Center,
+                                                        justify_self: JustifySelf::Center,
+                                                        ..default()
+                                                    },
+                                                    image: UiImage::new(
+                                                        asset_server.load(BUTTON_STAKE),
+                                                    ),
+                                                    ..default()
+                                                },
+                                                ButtonStakeOre,
+                                                Name::new("ButtonStakeOre"),
                                             ));
                                         });
                                 });

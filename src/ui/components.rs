@@ -95,10 +95,16 @@ pub struct TextTreasuryRewardRate;
 pub struct TextTreasuryTotalClaimedRewards;
 
 #[derive(Component)]
+pub struct TextBus1;
+
+#[derive(Component)]
 pub struct TextMinerStatusStatus;
 
 #[derive(Component)]
 pub struct TextMinerStatusTime;
+
+#[derive(Component)]
+pub struct TextMinerStatusThreads;
 
 #[derive(Component)]
 pub struct TextMinerStatusCpuUsage;
@@ -144,6 +150,9 @@ pub struct ButtonLock;
 
 #[derive(Component)]
 pub struct ButtonClaimOreRewards;
+
+#[derive(Component)]
+pub struct ButtonStakeOre;
 
 #[derive(Component)]
 pub struct ButtonCaptureTextInput;

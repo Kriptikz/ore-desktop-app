@@ -30,6 +30,7 @@ use super::components::TextLastHashAt;
 use super::components::TextMinerStatusCpuUsage;
 use super::components::TextMinerStatusRamUsage;
 use super::components::TextMinerStatusStatus;
+use super::components::TextMinerStatusThreads;
 use super::components::TextMinerStatusTime;
 use super::components::TextTotalHashes;
 use super::components::TextTotalRewards;
@@ -179,6 +180,7 @@ pub fn update_miner_status_ui(
         Query<&mut Text, With<TextMinerStatusCpuUsage>>,
         Query<&mut Text, With<TextMinerStatusRamUsage>>,
         Query<&mut Text, With<TextMinerStatusTime>>,
+        Query<&mut Text, With<TextMinerStatusThreads>>,
     )>,
     time: Res<Time>,
 ) {
@@ -249,6 +251,11 @@ pub fn update_miner_status_ui(
     let mut text_3 = text_query_3.single_mut();
 
     text_3.sections[0].value = format!("{}", date_time);
+
+    let mut text_query_4 = set.p4();
+    let mut text_4 = text_query_4.single_mut();
+
+    text_4.sections[0].value = format!("{}", res.miner_threads);
 }
 
 pub fn update_current_tx_ui(

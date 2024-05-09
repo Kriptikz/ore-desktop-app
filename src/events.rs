@@ -10,7 +10,7 @@ use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{
-        get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
+        get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
     }, tasks::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
@@ -67,6 +67,9 @@ pub struct EventRegisterWallet;
 
 #[derive(Event)]
 pub struct EventClaimOreRewards;
+
+#[derive(Event)]
+pub struct EventStakeOre;
 
 #[derive(Event)]
 pub struct EventProcessTx {
@@ -199,12 +202,23 @@ pub fn handle_event_process_tx(
     }
 }
 
+pub struct CurrentBus {
+    bus: usize
+}
+
+impl Default for CurrentBus {
+    fn default() -> Self {
+        Self { bus: 0 }
+    }
+}
+
 pub fn handle_event_submit_hash_tx(
     mut commands: Commands,
     mut ev_submit_hash_tx: EventReader<EventSubmitHashTx>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     app_wallet: Res<AppWallet>,
     rpc_connection: Res<RpcConnection>,
+    mut local_bus: Local<CurrentBus>,
 ) {
     for ev in ev_submit_hash_tx.read() {
         info!("Submit Hash Tx Event Handler.");
@@ -213,14 +227,23 @@ pub fn handle_event_submit_hash_tx(
         let wallet = app_wallet.wallet.clone();
         let client = rpc_connection.rpc.clone();
 
-        let (next_hash, nonce, difficulty, hash_time) = ev.0;
+        let bus = local_bus.bus;
+
+        local_bus.bus += 1;
+        if local_bus.bus >= 8 {
+            local_bus.bus = 0;
+        }
+
+        info!("BUS: {}", bus);
+
+        let (_next_hash, nonce, difficulty, hash_time) = ev.0;
         let task = pool.spawn(async move {
             let signer = wallet;
             // TODO: set cu's
             // let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(CU_LIMIT_MINE);
             // let cu_price_ix =
             //     ComputeBudgetInstruction::set_compute_unit_price(self.priority_fee);
-            let ix_mine = get_mine_ix(signer.pubkey(), nonce);
+            let ix_mine = get_mine_ix(signer.pubkey(), nonce, bus);
             let (hash, _slot) = client
                 .get_latest_blockhash_with_commitment(client.commitment())
                 .unwrap();
@@ -309,10 +332,13 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 };
 
             // TODO: condense as many solana accounts into one rpc get_multiple_accounts call as possible
-            let (proof_account, treasury_account, treasury_config) = get_proof_and_treasury(&connection, pubkey);
+            let (proof_account, treasury_account, treasury_config, busses) = get_proof_and_treasury(&connection, pubkey);
+
+            info!("\nBUSSES: {:?}", busses);
 
             let proof_account_res_data;
             if let Ok(proof_account) = proof_account {
+                info!("PROOF OK");
                 proof_account_res_data = ProofAccountResource {
                     challenge: KeccakHash::new_from_array(proof_account.challenge).to_string(),
                     stake: proof_account.balance,
@@ -321,6 +347,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     total_rewards: proof_account.total_rewards,
                 };
             } else {
+                info!("PROOF NOT OK");
                 proof_account_res_data = ProofAccountResource {
                     challenge: "Not Found".to_string(),
                     stake: 0,
@@ -338,6 +365,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
 
             let treasury_account_res_data;
             if let Ok(treasury_account) = treasury_config {
+                info!("CONFIG OK");
                 let base_reward_rate =
                     (treasury_account.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
 
@@ -360,6 +388,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     base_reward_rate,
                 };
             } else {
+                info!("CONFIG NOT OK");
                 treasury_account_res_data = TreasuryAccountResource {
                     balance: "Not Found".to_string(),
                     admin: "".to_string(),
@@ -494,6 +523,63 @@ pub fn handle_event_claim_ore_rewards(
                 tx.sign(&[&wallet], hash);
 
                 return Some(("Claim".to_string(), tx, None));
+            } else {
+                let ix = spl_associated_token_account::instruction::create_associated_token_account(
+                    &wallet.pubkey(),
+                    &wallet.pubkey(),
+                    &get_ore_mint(),
+                    &spl_token::id(),
+                );
+
+                let (hash, _slot) = client
+                    .get_latest_blockhash_with_commitment(client.commitment())
+                    .unwrap();
+                let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
+
+                tx.sign(&[&wallet], hash);
+
+                return Some(("Create ATA".to_string(), tx, None));
+            }
+        });
+
+        commands
+            .entity(task_handler_entity)
+            .insert(TaskProcessTx { task });
+    }
+}
+
+pub fn handle_event_stake_ore(
+    mut commands: Commands,
+    mut event_reader: EventReader<EventStakeOre>,
+    app_wallet: Res<AppWallet>,
+    rpc_connection: ResMut<RpcConnection>,
+    proof_account: Res<ProofAccountResource>,
+    query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+) {
+    for _ev in event_reader.read() {
+        info!("Stake Ore Rewards Event Handler.");
+        let task_handler_entity = query_task_handler.get_single().unwrap();
+        let pool = AsyncComputeTaskPool::get();
+        let wallet = app_wallet.wallet.clone();
+        let client = rpc_connection.rpc.clone();
+        let task = pool.spawn(async move {
+            let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
+                &wallet.pubkey(),
+                &get_ore_mint(),
+            );
+
+            if let Ok(Some(ata)) = client.get_token_account(&token_account_pubkey) {
+                let stake_amount = ata.token_amount.amount.parse::<u64>().unwrap();
+                let ix = get_stake_ix(wallet.pubkey(), token_account_pubkey, stake_amount);
+
+                let (hash, _slot) = client
+                    .get_latest_blockhash_with_commitment(client.commitment())
+                    .unwrap();
+                let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
+
+                tx.sign(&[&wallet], hash);
+
+                return Some(("Stake".to_string(), tx, None));
             } else {
                 let ix = spl_associated_token_account::instruction::create_associated_token_account(
                     &wallet.pubkey(),

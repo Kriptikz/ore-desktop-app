@@ -1,7 +1,12 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use bevy::log::info;
 use ore::{
-    instruction, state::{Proof, Treasury}, utils::AccountDeserialize, BUS_ADDRESSES, CONFIG_ADDRESS, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF, TOKEN_DECIMALS, TREASURY_ADDRESS
+    instruction,
+    state::{Proof, Treasury},
+    utils::AccountDeserialize,
+    BUS_ADDRESSES, CONFIG_ADDRESS, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF,
+    TOKEN_DECIMALS, TREASURY_ADDRESS,
 };
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
@@ -9,8 +14,8 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
-pub fn get_mine_ix(signer: Pubkey, nonce: u64) -> Instruction {
-    instruction::mine(signer, BUS_ADDRESSES[0], nonce)
+pub fn get_mine_ix(signer: Pubkey, nonce: u64, bus: usize) -> Instruction {
+    instruction::mine(signer, BUS_ADDRESSES[bus], nonce)
 }
 
 pub fn get_register_ix(signer: Pubkey) -> Instruction {
@@ -23,6 +28,10 @@ pub fn get_reset_ix(signer: Pubkey) -> Instruction {
 
 pub fn get_claim_ix(signer: Pubkey, beneficiary: Pubkey, claim_amount: u64) -> Instruction {
     instruction::claim(signer, beneficiary, claim_amount)
+}
+
+pub fn get_stake_ix(signer: Pubkey, sender: Pubkey, stake_amount: u64) -> Instruction {
+    instruction::stake(signer, sender, stake_amount)
 }
 
 pub fn get_ore_mint() -> Pubkey {
@@ -40,8 +49,25 @@ pub fn get_ore_decimals() -> u8 {
 pub fn get_proof_and_treasury(
     client: &RpcClient,
     authority: Pubkey,
-) -> (Result<Proof, ()>, Result<Treasury, ()>, Result<ore::state::Config, ()>) {
-    let account_pubkeys = vec![TREASURY_ADDRESS, proof_pubkey(authority), CONFIG_ADDRESS];
+) -> (
+    Result<Proof, ()>,
+    Result<Treasury, ()>,
+    Result<ore::state::Config, ()>,
+    Result<Vec<Result<ore::state::Bus, ()>>, ()>,
+) {
+    let account_pubkeys = vec![
+        TREASURY_ADDRESS,
+        proof_pubkey(authority),
+        CONFIG_ADDRESS,
+        BUS_ADDRESSES[0],
+        BUS_ADDRESSES[1],
+        BUS_ADDRESSES[2],
+        BUS_ADDRESSES[3],
+        BUS_ADDRESSES[4],
+        BUS_ADDRESSES[5],
+        BUS_ADDRESSES[6],
+        BUS_ADDRESSES[7],
+    ];
     let datas = client.get_multiple_accounts(&account_pubkeys);
     if let Ok(datas) = datas {
         let treasury = if let Some(data) = &datas[0] {
@@ -57,14 +83,63 @@ pub fn get_proof_and_treasury(
         };
 
         let treasury_config = if let Some(data) = &datas[2] {
-            Ok(*ore::state::Config::try_from_bytes(data.data()).expect("Failed to parse config account"))
+            Ok(*ore::state::Config::try_from_bytes(data.data())
+                .expect("Failed to parse config account"))
+        } else {
+            Err(())
+        };
+        let bus_1 = if let Some(data) = &datas[3] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus1 account"))
+        } else {
+            Err(())
+        };
+        let bus_2 = if let Some(data) = &datas[4] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus2 account"))
+        } else {
+            Err(())
+        };
+        let bus_3 = if let Some(data) = &datas[5] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus3 account"))
+        } else {
+            Err(())
+        };
+        let bus_4 = if let Some(data) = &datas[6] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus4 account"))
+        } else {
+            Err(())
+        };
+        let bus_5 = if let Some(data) = &datas[7] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus5 account"))
+        } else {
+            Err(())
+        };
+        let bus_6 = if let Some(data) = &datas[8] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus6 account"))
+        } else {
+            Err(())
+        };
+        let bus_7 = if let Some(data) = &datas[9] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus7 account"))
+        } else {
+            Err(())
+        };
+        let bus_8 = if let Some(data) = &datas[10] {
+            Ok(*ore::state::Bus::try_from_bytes(data.data())
+                .expect("Failed to parse bus1 account"))
         } else {
             Err(())
         };
 
-        (proof, treasury, treasury_config)
+        (proof, treasury, treasury_config, Ok(vec![bus_1, bus_2, bus_3, bus_4, bus_5, bus_6, bus_7, bus_8]))
     } else {
-        (Err(()), Err(()), Err(()))
+        (Err(()), Err(()), Err(()), Err(()))
     }
 }
 

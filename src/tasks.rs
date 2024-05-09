@@ -78,9 +78,11 @@ pub fn task_update_app_wallet_sol_balance(
             app_wallet.ore_balance = result.ore_balance;
             *proof_account_res = result.proof_account_data;
             *treasury_account_res = result.treasury_account_data;
+            info!("Removing Task");
             commands
                 .entity(entity)
                 .remove::<TaskUpdateAppWalletSolBalance>();
+            info!("Removed Task");
         }
     }
 }
@@ -134,7 +136,7 @@ pub fn task_process_tx(
                     hash_status,
                 });
             } else {
-                info!("Failed to confirm register wallet tx...");
+                info!("Failed to process tx...");
             }
 
             commands.entity(entity).remove::<TaskProcessTx>();
