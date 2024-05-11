@@ -1037,6 +1037,8 @@ pub fn spawn_mining_screen(
                                             NodeBundle {
                                                 style: Style {
                                                     flex_direction: FlexDirection::Row,
+                                                    width: Val::Percent(100.0),
+                                                    height: Val::Percent(100.0),
                                                     align_items: AlignItems::Start,
                                                     row_gap: Val::Px(10.0),
                                                     margin: UiRect::left(Val::Px(5.0)),
@@ -1064,6 +1066,8 @@ pub fn spawn_mining_screen(
                                             NodeBundle {
                                                 style: Style {
                                                     flex_direction: FlexDirection::Row,
+                                                    width: Val::Percent(90.0),
+                                                    height: Val::Percent(90.0),
                                                     margin: UiRect {
                                                         top: Val::Px(0.0),
                                                         left: Val::Px(5.0),
@@ -1084,6 +1088,7 @@ pub fn spawn_mining_screen(
                                                             flex_direction: FlexDirection::Column,
                                                             align_items: AlignItems::Start,
                                                             width: Val::Percent(32.0),
+                                                            height: Val::Percent(50.0),
                                                             row_gap: Val::Px(6.0),
                                                             ..default()
                                                         },
@@ -1187,6 +1192,8 @@ pub fn spawn_mining_screen(
                                                     NodeBundle {
                                                         style: Style {
                                                             flex_direction: FlexDirection::Column,
+                                                            width: Val::Percent(65.0),
+                                                            height: Val::Percent(50.0),
                                                             row_gap: Val::Px(6.0),
                                                             align_items: AlignItems::Start,
                                                             ..default()
@@ -1310,6 +1317,8 @@ pub fn spawn_mining_screen(
                                             NodeBundle {
                                                 style: Style {
                                                     flex_direction: FlexDirection::Row,
+                                                    width: Val::Percent(100.0),
+                                                    height: Val::Percent(100.0),
                                                     align_items: AlignItems::Start,
                                                     row_gap: Val::Px(10.0),
                                                     ..default()
