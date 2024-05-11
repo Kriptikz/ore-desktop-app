@@ -398,7 +398,11 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     let base_reward_rate =
                         (treasury_account.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
 
-                    let clock = get_clock_account(&connection);
+                    let clock = if let Ok(clock) =  get_clock_account(&connection) {
+                        clock
+                    } else {
+                        return Err("Failed to get clock account. fetch ui data.".to_string());
+                    };
                     let threshold = treasury_account
                         .last_reset_at
                         .saturating_add(get_ore_epoch_duration());

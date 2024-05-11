@@ -176,11 +176,20 @@ pub fn treasury_tokens_pubkey() -> Pubkey {
     get_associated_token_address(&TREASURY_ADDRESS, &MINT_ADDRESS)
 }
 
-pub fn get_clock_account(client: &RpcClient) -> Clock {
+pub fn get_clock_account(client: &RpcClient) -> Result<Clock, ()> {
     let data = client
         .get_account_data(&sysvar::clock::ID)
         .expect("Failed to get miner account");
-    bincode::deserialize::<Clock>(&data).expect("Failed to deserialize clock")
+
+    if let Ok(data) = client.get_account_data(&sysvar::clock::ID) {
+        if let Ok(data) = bincode::deserialize::<Clock>(&data) {
+            Ok(data)
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
 }
 
 pub fn get_cutoff(proof: Proof, buffer_time: u64) -> i64 {
