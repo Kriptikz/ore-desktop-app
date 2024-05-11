@@ -21,27 +21,27 @@ pub struct TaskUpdateAppWalletSolBalanceData {
 }
 #[derive(Component)]
 pub struct TaskUpdateAppWalletSolBalance {
-    pub task: Task<TaskUpdateAppWalletSolBalanceData>,
+    pub task: Task<Result<TaskUpdateAppWalletSolBalanceData, String>>,
 }
 
 #[derive(Component)]
 pub struct TaskGenerateHash {
-    pub task: Task<(solana_program::keccak::Hash, u64, u32, u64)>,
+    pub task: Task<Result<(solana_program::keccak::Hash, u64, u32, u64), String>>,
 }
 
 #[derive(Component)]
 pub struct TaskSendAndConfirmTx {
-    pub task: Task<(String, String)>,
+    pub task: Task<Result<(String, String), String>>,
 }
 
 #[derive(Component)]
 pub struct TaskSendTx {
-    pub task: Task<Transaction>,
+    pub task: Task<Result<Transaction, String>>,
 }
 
 #[derive(Component)]
 pub struct TaskConfirmTx {
-    pub task: Task<Signature>,
+    pub task: Task<Result<Signature, String>>,
 }
 
 #[derive(Component)]
@@ -73,16 +73,21 @@ pub fn task_update_app_wallet_sol_balance(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            info!("TaskUpdateResources Got Result.");
-            app_wallet.sol_balance = result.sol_balance;
-            app_wallet.ore_balance = result.ore_balance;
-            *proof_account_res = result.proof_account_data;
-            *treasury_account_res = result.treasury_account_data;
-            info!("Removing Task");
+            match result {
+                Ok(result) => {
+                    app_wallet.sol_balance = result.sol_balance;
+                    app_wallet.ore_balance = result.ore_balance;
+                    *proof_account_res = result.proof_account_data;
+                    *treasury_account_res = result.treasury_account_data;
+                },
+                Err(e) => {
+                    error!("Tasks UpdateResources error: {}", e);
+                }
+            }
+
             commands
                 .entity(entity)
                 .remove::<TaskUpdateAppWalletSolBalance>();
-            info!("Removed Task");
         }
     }
 }
@@ -94,7 +99,16 @@ pub fn task_generate_hash(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            ev_submit_hash_tx.send(EventSubmitHashTx(result));
+            match result {
+                Ok(result) => {
+                    info!("TaskGenerateHash Got Result.");
+                    ev_submit_hash_tx.send(EventSubmitHashTx(result));
+                },
+                Err(e) => {
+                    error!("Tasks GenerateHash error: {}", e);
+                }
+            }
+
             commands.entity(entity).remove::<TaskGenerateHash>();
         }
     }

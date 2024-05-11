@@ -33,11 +33,16 @@ pub fn button_copy_text(
                     }
                 }
                 if let Some(text) = text {
-                    let mut ctx = ClipboardContext::new().unwrap();
-                    if let Err(_) = ctx.set_contents(text) {
-                        info!("Failed to set clipboard content.");
+                    let mut ctx = ClipboardContext::new();
+                    if let Ok(mut ctx) = ctx {
+                        if let Err(_) = ctx.set_contents(text) {
+                            info!("Failed to set clipboard content.");
+                        } else {
+                            info!("Succesfully copied to clipboard");
+                        }
+
                     } else {
-                        info!("Succesfully copied to clipboard");
+                        error!("Failed to get clipboard context.");
                     }
                 } else {
                     info!("Failed to find copyable_text.");
@@ -261,16 +266,54 @@ pub fn button_save_config(
                     ui_image.flip_y = true;
                 }
 
-                let text_rpc_url = set.p0().get_single().unwrap().text.clone();
-                let text_threads = set.p1().get_single().unwrap().text.clone();
-                let text_rpc_fetch_interval = set.p2().get_single().unwrap().text.clone();
-                let text_rpc_send_interval = set.p3().get_single().unwrap().text.clone();
+                let text_rpc_url = if let Ok(single) = set.p0().get_single() {
+                    single.text.clone()
+                } else {
+                    error!("Failed to get text_rpc_url.");
+                    break;
+                };
+                let threads = if let Ok(single) = set.p1().get_single() {
+                    let threads = single.text.clone().parse::<u64>();
+                    if let Ok(threads) = threads {
+                        threads
+                    } else {
+                        error!("Failed to parse text_threads.");
+                        break;
+                    }
+                } else {
+                    error!("Failed to get text_threads.");
+                    break;
+                };
+                let text_rpc_fetch_interval = if let Ok(single) = set.p2().get_single() {
+                    let parsed = single.text.clone().parse::<u64>();
+                    if let Ok(parsed) = parsed {
+                        parsed
+                    } else {
+                        error!("Failed to parse text_rpc_fetch_interval.");
+                        break;
+                    }
+                } else {
+                    error!("Failed to get text_rpc_fetch_interval.");
+                    break;
+                };
+                let text_rpc_send_interval = if let Ok(single) = set.p3().get_single() {
+                    let parsed = single.text.clone().parse::<u64>();
+                    if let Ok(parsed) = parsed {
+                        parsed
+                    } else {
+                        error!("Failed to parse text_rpc_send_interval.");
+                        break;
+                    }
+                } else {
+                    error!("Failed to get text_rpc_send_interval.");
+                    break;
+                };
 
                 event_writer.send(EventSaveConfig(Config {
                     rpc_url: text_rpc_url.clone(),
-                    threads: text_threads.parse::<u64>().unwrap(),
-                    fetch_ui_data_from_rpc_interval_ms: text_rpc_fetch_interval.parse::<u64>().unwrap(),
-                    tx_check_status_and_resend_interval_ms: text_rpc_send_interval.parse::<u64>().unwrap(),
+                    threads,
+                    fetch_ui_data_from_rpc_interval_ms: text_rpc_fetch_interval,
+                    tx_check_status_and_resend_interval_ms: text_rpc_send_interval,
                 }));
             }
             Interaction::Hovered => {

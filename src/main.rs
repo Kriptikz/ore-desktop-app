@@ -381,82 +381,84 @@ pub fn process_current_transaction(
         {
             current_transaction.interval_timer.tick(time.delta());
             if current_transaction.interval_timer.just_finished() {
-                let task_handler_entity = query_task_handler.get_single().unwrap();
-                let pool = AsyncComputeTaskPool::get();
-                let client = rpc_connection.rpc.clone();
-                let task = pool.spawn(async move {
-                    info!("SendAndConfirmTransaction....");
+                let task_handler_entity = query_task_handler.get_single();
+                if let Ok(task_handler_entity) = task_handler_entity {
+                    let pool = AsyncComputeTaskPool::get();
+                    let client = rpc_connection.rpc.clone();
+                    let task = pool.spawn(async move {
+                        info!("SendAndConfirmTransaction....");
 
-                    let send_cfg = RpcSendTransactionConfig {
-                        skip_preflight: true,
-                        preflight_commitment: Some(CommitmentLevel::Confirmed),
-                        encoding: Some(UiTransactionEncoding::Base64),
-                        max_retries: Some(0),
-                        min_context_slot: None,
-                    };
+                        let send_cfg = RpcSendTransactionConfig {
+                            skip_preflight: true,
+                            preflight_commitment: Some(CommitmentLevel::Confirmed),
+                            encoding: Some(UiTransactionEncoding::Base64),
+                            max_retries: Some(0),
+                            min_context_slot: None,
+                        };
 
-                    let mut status = "SENDING".to_string();
-                    let mut error = "".to_string();
-                    let sig = client.send_transaction_with_config(&tx, send_cfg);
-                    if let Ok(sig) = sig {
-                        let sigs = [sig];
-                        match client.get_signature_statuses(&sigs) {
-                            Ok(signature_statuses) => {
-                                for signature_status in signature_statuses.value {
-                                    if let Some(signature_status) = signature_status.as_ref() {
-                                        if signature_status.confirmation_status.is_some() {
-                                            let current_commitment = signature_status
-                                                .confirmation_status
-                                                .as_ref()
-                                                .unwrap();
-                                            match current_commitment {
-                                                TransactionConfirmationStatus::Processed => {
-                                                    info!("Transaction landed!");
-                                                    info!("STATUS: {:?}", signature_status);
-                                                    match &signature_status.status {
-                                                        Ok(_) => {
-                                                            status = "PROCESSED".to_string();
+                        let mut status = "SENDING".to_string();
+                        let mut error = "".to_string();
+                        let sig = client.send_transaction_with_config(&tx, send_cfg);
+                        if let Ok(sig) = sig {
+                            let sigs = [sig];
+                            match client.get_signature_statuses(&sigs) {
+                                Ok(signature_statuses) => {
+                                    for signature_status in signature_statuses.value {
+                                        if let Some(signature_status) = signature_status.as_ref() {
+                                            if let Some(confirmation_status) = &signature_status.confirmation_status {
+                                                let current_commitment = confirmation_status;                                                match current_commitment {
+                                                    TransactionConfirmationStatus::Processed => {
+                                                        info!("Transaction landed!");
+                                                        info!("STATUS: {:?}", signature_status);
+                                                        match &signature_status.status {
+                                                            Ok(_) => {
+                                                                status = "PROCESSED".to_string();
+                                                            }
+                                                            Err(e) => {
+                                                                status = "FAILED".to_string();
+                                                                error = e.to_string();
+                                                            }
                                                         }
-                                                        Err(e) => {
-                                                            status = "FAILED".to_string();
-                                                            error = e.to_string();
+                                                    }
+                                                    TransactionConfirmationStatus::Confirmed
+                                                    | TransactionConfirmationStatus::Finalized => {
+                                                        info!("Transaction landed!");
+                                                        info!("STATUS: {:?}", signature_status);
+                                                        match &signature_status.status {
+                                                            Ok(_) => {
+                                                                status = "SUCCESS".to_string();
+                                                            }
+                                                            Err(e) => {
+                                                                status = "FAILED".to_string();
+                                                                error = e.to_string();
+                                                            }
                                                         }
                                                     }
                                                 }
-                                                TransactionConfirmationStatus::Confirmed
-                                                | TransactionConfirmationStatus::Finalized => {
-                                                    info!("Transaction landed!");
-                                                    info!("STATUS: {:?}", signature_status);
-                                                    match &signature_status.status {
-                                                        Ok(_) => {
-                                                            status = "SUCCESS".to_string();
-                                                        }
-                                                        Err(e) => {
-                                                            status = "FAILED".to_string();
-                                                            error = e.to_string();
-                                                        }
-                                                    }
-                                                }
+
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            // Handle confirmation errors
-                            Err(err) => {
-                                info!("Confirmation Error: {:?}", err.kind().to_string());
+                                // Handle confirmation errors
+                                Err(err) => {
+                                    info!("Confirmation Error: {:?}", err.kind().to_string());
+                                }
                             }
+                            let tx_status = TxStatus { status, error };
+                            return (Some(sig), tx_status);
                         }
                         let tx_status = TxStatus { status, error };
-                        return (Some(sig), tx_status);
-                    }
-                    let tx_status = TxStatus { status, error };
-                    (None, tx_status)
-                });
-                commands
-                    .entity(task_handler_entity)
-                    .insert(TaskProcessCurrentTx { task });
+                        (None, tx_status)
+                    });
+                    commands
+                        .entity(task_handler_entity)
+                        .insert(TaskProcessCurrentTx { task });
+
+                } else {
+                    error!("Failed to get task_handler_entity in process_current_tx.");
+                }
             }
         }
     }

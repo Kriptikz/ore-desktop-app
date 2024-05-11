@@ -156,8 +156,15 @@ pub fn get_proof(client: &RpcClient, authority: Pubkey) -> Result<Proof, String>
     let proof_address = proof_pubkey(authority);
     let data = client.get_account_data(&proof_address);
     match data {
-        Ok(data) => return Ok(*Proof::try_from_bytes(&data).unwrap()),
-        Err(_) => return Err("Failed to get miner account".to_string()),
+        Ok(data) => {
+            let proof = Proof::try_from_bytes(&data);
+            if let Ok(proof) = proof {
+                return Ok(*proof)
+            } else {
+                return Err("Failed to parse proof account".to_string())
+            }
+        }
+        Err(_) => return Err("Failed to get proof account".to_string()),
     }
 }
 
