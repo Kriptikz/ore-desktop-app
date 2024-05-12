@@ -211,14 +211,16 @@ pub fn handle_event_process_tx(
 ) {
     for ev in ev_submit_hash_tx.read() {
         info!("ProcessTx Event Handler.");
+        let tx_type = ev.tx_type.clone();
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = AsyncComputeTaskPool::get();
 
             let client = rpc_connection.rpc.clone();
-            let tx_type = ev.tx_type.clone();
+            let tx_type_task = tx_type.clone();
             let tx = ev.tx.clone();
             let hash_time = ev.hash_status.clone();
             let task = pool.spawn(async move {
+                let tx_type = tx_type_task.clone();
                 let send_cfg = RpcSendTransactionConfig {
                     skip_preflight: true,
                     preflight_commitment: Some(CommitmentLevel::Confirmed),
@@ -236,7 +238,9 @@ pub fn handle_event_process_tx(
                     return None;
                 }
             });
-            miner_status.miner_status = "PROCESSING".to_string();
+            if tx_type.as_str() == "Mine" {
+                miner_status.miner_status = "PROCESSING".to_string();
+            }
 
             commands
                 .entity(task_handler_entity)
@@ -314,7 +318,6 @@ pub fn handle_event_tx_result(
     mut commands: Commands,
     mut ev_tx_result: EventReader<EventTxResult>,
     mut event_writer: EventWriter<EventMineForHash>,
-    mut miner_status: ResMut<MinerStatusResource>,
     asset_server: Res<AssetServer>,
     query: Query<Entity, With<MovingScrollPanel>>,
 ) {
@@ -325,7 +328,6 @@ pub fn handle_event_tx_result(
         } else {
             ("N/A".to_string(), "".to_string())
         };
-        miner_status.miner_status = "STOPPED".to_string();
         let scroll_panel_entity = query.get_single().expect("There should only be 1 scroll panel entity.");
         let status = format!(
             "{}  {}",

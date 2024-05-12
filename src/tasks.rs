@@ -8,7 +8,7 @@ use ore::state::Bus;
 use solana_sdk::{signature::Signature, transaction::Transaction};
 
 use crate::{
-    AppWallet, BussesResource, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource, TxStatus
+    AppWallet, BussesResource, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxStatus
 };
 
 // Task Components
@@ -98,14 +98,22 @@ pub fn task_update_app_wallet_sol_balance(
 pub fn task_generate_hash(
     mut commands: Commands,
     mut ev_submit_hash_tx: EventWriter<EventSubmitHashTx>,
+    miner_status: Res<MinerStatusResource>,
     mut query: Query<(Entity, &mut TaskGenerateHash)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
+        let status = &miner_status.miner_status;
+
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
             match result {
                 Ok(result) => {
                     info!("TaskGenerateHash Got Result.");
-                    ev_submit_hash_tx.send(EventSubmitHashTx(result));
+                    if status == "MINING" {
+                        info!("Miner status is mining, submitting hash.");
+                        ev_submit_hash_tx.send(EventSubmitHashTx(result));
+                    } else {
+                        info!("Miner status is not MINING, discarding hash.");
+                    }
                 },
                 Err(e) => {
                     error!("Tasks GenerateHash error: {}", e);
