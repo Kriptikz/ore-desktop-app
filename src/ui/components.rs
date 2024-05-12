@@ -98,6 +98,27 @@ pub struct TextTreasuryTotalClaimedRewards;
 pub struct TextBus1;
 
 #[derive(Component)]
+pub struct TextBus2;
+
+#[derive(Component)]
+pub struct TextBus3;
+
+#[derive(Component)]
+pub struct TextBus4;
+
+#[derive(Component)]
+pub struct TextBus5;
+
+#[derive(Component)]
+pub struct TextBus6;
+
+#[derive(Component)]
+pub struct TextBus7;
+
+#[derive(Component)]
+pub struct TextBus8;
+
+#[derive(Component)]
 pub struct TextMinerStatusStatus;
 
 #[derive(Component)]

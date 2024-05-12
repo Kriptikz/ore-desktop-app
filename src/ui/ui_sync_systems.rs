@@ -9,6 +9,7 @@ use chrono::DateTime;
 use crate::ore_utils::get_ore_decimals;
 use crate::utils::{get_unix_timestamp, human_bytes, shorten_string};
 use crate::AppWallet;
+use crate::BussesResource;
 use crate::CurrentTx;
 use crate::MinerStatusResource;
 use crate::OreAppState;
@@ -19,6 +20,14 @@ use super::components::ButtonCaptureTextInput;
 use super::components::FpsRoot;
 use super::components::FpsText;
 use super::components::ScrollingList;
+use super::components::TextBus1;
+use super::components::TextBus2;
+use super::components::TextBus3;
+use super::components::TextBus4;
+use super::components::TextBus5;
+use super::components::TextBus6;
+use super::components::TextBus7;
+use super::components::TextBus8;
 use super::components::TextCurrentStake;
 use super::components::TextCurrentChallenge;
 use super::components::TextCurrentTxElapsed;
@@ -85,6 +94,62 @@ pub fn update_app_wallet_ui(
     let mut text_ore_balance_query = set.p1();
     let mut text_ore_balance = text_ore_balance_query.single_mut();
     text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORE";
+}
+
+pub fn update_busses_ui(
+    busses_res: Res<BussesResource>,
+    mut set: ParamSet<(
+        Query<&mut Text, With<TextBus1>>,
+        Query<&mut Text, With<TextBus2>>,
+        Query<&mut Text, With<TextBus3>>,
+        Query<&mut Text, With<TextBus4>>,
+        Query<&mut Text, With<TextBus5>>,
+        Query<&mut Text, With<TextBus6>>,
+        Query<&mut Text, With<TextBus7>>,
+        Query<&mut Text, With<TextBus8>>,
+    )>,
+) {
+    if busses_res.busses.len() > 7 {
+        let mut text_bus_query = set.p0();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[0].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 1: {}    ", rewards);
+
+        let mut text_bus_query = set.p1();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[1].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 2: {}    ", rewards);
+
+        let mut text_bus_query = set.p2();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[2].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 3: {}    ", rewards);
+
+        let mut text_bus_query = set.p3();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[3].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 4: {}    ", rewards);
+
+        let mut text_bus_query = set.p4();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[4].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 5: {}    ", rewards);
+
+        let mut text_bus_query = set.p5();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[5].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 6: {}    ", rewards);
+
+        let mut text_bus_query = set.p6();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[6].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 7: {}    ", rewards);
+
+        let mut text_bus_query = set.p7();
+        let mut text_bus_text = text_bus_query.single_mut();
+        let rewards = (busses_res.busses[7].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+        text_bus_text.sections[0].value = format!("Bus 8: {}    ", rewards);
+    }
 }
 
 pub fn update_proof_account_ui(

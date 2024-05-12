@@ -10,14 +10,14 @@ use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{
-        get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
+        get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
     }, tasks::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
     }, ui::{
-        components::{MovingScrollPanel, TextInput, TextPasswordInput},
-        spawn_utils::{spawn_new_list_item, UiListItem},
-    }, AppWallet, Config, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
+        components::{ButtonStartStopMining, MovingScrollPanel, TextInput, TextPasswordInput},
+        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{BUTTON_START_MINING, BUTTON_STOP_MINING},
+    }, AppWallet, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -35,6 +35,9 @@ pub struct EventStartStopMining;
 // Events
 #[derive(Event)]
 pub struct EventMineForHash;
+
+#[derive(Event)]
+pub struct EventStopMining;
 
 #[derive(Event)]
 pub struct EventSubmitHashTx(pub (solana_program::keccak::Hash, u64, u32, u64));
@@ -91,20 +94,46 @@ pub fn handle_event_start_stop_mining_clicked(
     mut ev_start_stop_mining: EventReader<EventStartStopMining>,
     mut event_writer: EventWriter<EventMineForHash>,
     mut event_writer_register: EventWriter<EventRegisterWallet>,
+    mut event_writer_stop: EventWriter<EventStopMining>,
     app_wallet: Res<AppWallet>,
+    mut miner_status: ResMut<MinerStatusResource>,
+    mut current_tx: ResMut<CurrentTx>,
     rpc_connection: Res<RpcConnection>,
+    asset_server: Res<AssetServer>,
+    mut query: Query<&mut UiImage, With<ButtonStartStopMining>>,
 ) {
     for _ev in ev_start_stop_mining.read() {
         info!("Start/Stop Mining Event Handler.");
-        let client = rpc_connection.rpc.clone();
-        let proof_address = proof_pubkey(app_wallet.wallet.pubkey());
-        if client.get_account(&proof_address).is_ok() {
-            info!("Is Successfully registered!!!");
-            info!("Sending EventMineForHash");
-            event_writer.send(EventMineForHash);
-        } else {
-            info!("Sending Register Event.");
-            event_writer_register.send(EventRegisterWallet);
+        match miner_status.miner_status.as_str() {
+            "MINING" |
+            "PROCESSING" => {
+                // stop mining
+                event_writer_stop.send(EventStopMining);
+                miner_status.miner_status = "STOPPED".to_string();
+                current_tx.tx_status.status = "INTERRUPTED".to_string();
+                let mut btn = query.single_mut();
+                *btn = UiImage::new(asset_server.load(BUTTON_START_MINING));
+            
+            },
+            "STOPPED" => {
+                // start mining
+                let client = rpc_connection.rpc.clone();
+                let proof_address = proof_pubkey(app_wallet.wallet.pubkey());
+                if client.get_account(&proof_address).is_ok() {
+                    info!("Is Successfully registered!!!");
+                    info!("Sending EventMineForHash");
+                    event_writer.send(EventMineForHash);
+                    let mut btn = query.single_mut();
+                    *btn = UiImage::new(asset_server.load(BUTTON_STOP_MINING));
+                } else {
+                    info!("Sending Register Event.");
+                    event_writer_register.send(EventRegisterWallet);
+                }
+            },
+            _ => {
+                error!("Invalid Miner Status in handle_event_start_stop_mining_clicked");
+            }
+
         }
     }
 }
@@ -361,7 +390,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     };
 
                 // TODO: condense as many solana accounts into one rpc get_multiple_accounts call as possible
-                let (proof_account, treasury_account, treasury_config, busses) = get_proof_and_treasury(&connection, pubkey);
+                let (proof_account, treasury_account, treasury_config, busses) = get_proof_and_treasury_with_busses(&connection, pubkey);
 
                 let proof_account_res_data;
                 if let Ok(proof_account) = proof_account {
@@ -429,12 +458,23 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                         base_reward_rate: 0.0,
                     };
                 }
+                let mut busses_res_data = vec![];
+                if let Ok(busses) = busses {
+                    for bus in busses {
+                        if let Ok(bus) = bus {
+                            busses_res_data.push(bus);
+                        } else {
+                            error!("Got error result for bus.");
+                        }
+                    }
+                }
 
                 Ok(TaskUpdateAppWalletSolBalanceData {
                     sol_balance,
                     ore_balance,
                     proof_account_data: proof_account_res_data,
                     treasury_account_data: treasury_account_res_data,
+                    busses: busses_res_data,
                 })
             });
 

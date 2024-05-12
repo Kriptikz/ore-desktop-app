@@ -4,11 +4,11 @@ use bevy::{
     prelude::*,
     tasks::{block_on, futures_lite::future, Task},
 };
+use ore::state::Bus;
 use solana_sdk::{signature::Signature, transaction::Transaction};
 
 use crate::{
-    AppWallet, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource,
-    TreasuryAccountResource, TxStatus,
+    AppWallet, BussesResource, CurrentTx, EventProcessTx, EventSubmitHashTx, EventTxResult, ProofAccountResource, TreasuryAccountResource, TxStatus
 };
 
 // Task Components
@@ -18,6 +18,7 @@ pub struct TaskUpdateAppWalletSolBalanceData {
     pub ore_balance: f64,
     pub proof_account_data: ProofAccountResource,
     pub treasury_account_data: TreasuryAccountResource,
+    pub busses: Vec<Bus>
 }
 #[derive(Component)]
 pub struct TaskUpdateAppWalletSolBalance {
@@ -69,6 +70,7 @@ pub fn task_update_app_wallet_sol_balance(
     mut app_wallet: ResMut<AppWallet>,
     mut proof_account_res: ResMut<ProofAccountResource>,
     mut treasury_account_res: ResMut<TreasuryAccountResource>,
+    mut busses_res: ResMut<BussesResource>,
     mut query: Query<(Entity, &mut TaskUpdateAppWalletSolBalance)>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
@@ -77,6 +79,7 @@ pub fn task_update_app_wallet_sol_balance(
                 Ok(result) => {
                     app_wallet.sol_balance = result.sol_balance;
                     app_wallet.ore_balance = result.ore_balance;
+                    busses_res.busses = result.busses;
                     *proof_account_res = result.proof_account_data;
                     *treasury_account_res = result.treasury_account_data;
                 },

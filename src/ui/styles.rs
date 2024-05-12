@@ -6,9 +6,11 @@ pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 pub static BUTTON: &str = "button.png";
+pub static BUTTON_SAVE_CONFIG: &str = "design_1/button_save_config.png";
 pub static BUTTON_CLAIM: &str = "design_1/button_claim.png";
 pub static BUTTON_STAKE: &str = "design_1/button_stake.png";
 pub static BUTTON_START_MINING: &str = "design_1/button_start_mining.png";
+pub static BUTTON_STOP_MINING: &str = "design_1/button_stop_mining.png";
 pub static BUTTON_RESET_EPOCH: &str = "design_1/button_reset_epoch.png";
 
 pub static BUTTON_COPY_TEXT: &str = "design_1/copy_icon.png";
@@ -30,6 +32,7 @@ pub static SETTINGS_ICON: &str = "icons/settings-icon.png";
 
 // Fonts
 pub const FONT_SIZE: f32 = 16.0;
+pub const FONT_SIZE_LARGE: f32 = 20.0;
 pub const FONT_SIZE_TITLE: f32 = 22.0;
 pub static FONT_REGULAR: &str = "fonts/Xirod.otf";
 pub static FONT_ROBOTO: &str = "fonts/Roboto-Regular.ttf";

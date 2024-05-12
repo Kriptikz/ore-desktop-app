@@ -46,7 +46,7 @@ pub fn get_ore_decimals() -> u8 {
     TOKEN_DECIMALS
 }
 
-pub fn get_proof_and_treasury(
+pub fn get_proof_and_treasury_with_busses(
     client: &RpcClient,
     authority: Pubkey,
 ) -> (

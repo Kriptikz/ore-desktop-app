@@ -31,7 +31,7 @@ use ui::{
         button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_save_config, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
-        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
+        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
     },
 };
 
@@ -90,7 +90,7 @@ fn main() {
     App::new()
         .insert_state(starting_state)
         .add_plugins(DefaultPlugins)
-        .add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -112,6 +112,9 @@ fn main() {
             miner_threads: threads,
             ..Default::default()
         })
+        .insert_resource(BussesResource {
+            busses: vec![],
+        })
         // .init_resource::<MinerStatusResource>()
         // .register_type::<MinerStatusResource>()
         .init_resource::<ProofAccountResource>()
@@ -119,6 +122,7 @@ fn main() {
         .init_resource::<TreasuryAccountResource>()
         .register_type::<TreasuryAccountResource>()
         .add_event::<EventStartStopMining>()
+        .add_event::<EventStopMining>()
         .add_event::<EventSubmitHashTx>()
         .add_event::<EventTxResult>()
         .add_event::<EventFetchUiDataFromRpc>()
@@ -198,6 +202,7 @@ fn main() {
                 ),
                 (
                     update_app_wallet_ui,
+                    update_busses_ui,
                     update_proof_account_ui,
                     update_treasury_account_ui,
                     update_miner_status_ui,
@@ -291,6 +296,11 @@ impl Default for ProofAccountResource {
             total_rewards: Default::default(),
         }
     }
+}
+
+#[derive(Resource)]
+pub struct BussesResource {
+    busses: Vec<ore::state::Bus>,
 }
 
 #[derive(Reflect, Resource, InspectorOptions)]

@@ -247,7 +247,7 @@ pub fn button_capture_text(
 
 pub fn button_save_config(
     mut interaction_query: Query<
-        (Entity, &Interaction, &mut UiImage, &Children),
+        (Entity, &Interaction, &mut UiImage, &mut BackgroundColor),
         (Changed<Interaction>, With<ButtonSaveConfig>),
     >,
     mut event_writer: EventWriter<EventSaveConfig>,
@@ -258,13 +258,14 @@ pub fn button_save_config(
         Query<&TextInput, With<TextConfigInputRpcSendTxInterval>>,
     )>,
 ) {
-    for (_entity, interaction, mut ui_image, children) in &mut interaction_query {
+    for (_entity, interaction, mut ui_image, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 info!("pressed");
-                if !ui_image.flip_y {
-                    ui_image.flip_y = true;
-                }
+                *color = PRESSED_BUTTON.into();
+                // if !ui_image.flip_y {
+                //     ui_image.flip_y = true;
+                // }
 
                 let text_rpc_url = if let Ok(single) = set.p0().get_single() {
                     single.text.clone()
@@ -318,15 +319,17 @@ pub fn button_save_config(
             }
             Interaction::Hovered => {
                 info!("hovered");
-                if ui_image.flip_y {
-                    ui_image.flip_y = false;
-                }
+                *color = HOVERED_BUTTON.into();
+                // if ui_image.flip_y {
+                //     ui_image.flip_y = false;
+                // }
             }
             Interaction::None => {
                 info!("none");
-                if ui_image.flip_y {
-                    ui_image.flip_y = false;
-                }
+                *color = Color::WHITE.into();
+                // if ui_image.flip_y {
+                //     ui_image.flip_y = false;
+                // }
             }
         }
     }
