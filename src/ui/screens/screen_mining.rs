@@ -530,10 +530,10 @@ pub fn spawn_mining_screen(
                                                 // border_color: Color::ORANGE.into(),
                                                 style: Style {
                                                     position_type: PositionType::Absolute,
-                                                    width: Val::Percent(42.0),
+                                                    width: Val::Percent(50.0),
                                                     height: Val::Percent(31.0),
                                                     flex_direction: FlexDirection::Row,
-                                                    flex_wrap: FlexWrap::Wrap,
+                                                    // flex_wrap: FlexWrap::Wrap,
                                                     align_self: AlignSelf::End,
                                                     // border: UiRect::all(Val::Px(1.0)),
                                                     ..default()
@@ -543,110 +543,142 @@ pub fn spawn_mining_screen(
                                             Name::new("Text Busses Node"),
                                         ))
                                         .with_children(|parent| {
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 1: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                            parent
+                                                .spawn((
+                                                    NodeBundle {
+                                                        style: Style {
+                                                            flex_direction: FlexDirection::Column,
+                                                            width: Val::Px(170.0),
+                                                            row_gap: Val::Px(10.0),
+                                                            align_items: AlignItems::Start,
+                                                            ..default()
+                                                        },
+                                                        ..default()
                                                     },
-                                                ),
-                                                TextBus1,
-                                                Name::new("TextBus1"),
-                                            ));
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 2: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                                    Name::new("Text Busses 1-4"),
+                                                ))
+                                                .with_children(|parent| {
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 1: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus1,
+                                                        Name::new("TextBus1"),
+                                                    ));
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 2: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus2,
+                                                        Name::new("TextBus2"),
+                                                    ));
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 3: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus3,
+                                                        Name::new("TextBus3"),
+                                                    ));
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 4: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus4,
+                                                        Name::new("TextBus4"),
+                                                    ));
+                                                });
+                                            parent
+                                                .spawn((
+                                                    NodeBundle {
+                                                        style: Style {
+                                                            flex_direction: FlexDirection::Column,
+                                                            width: Val::Px(170.0),
+                                                            row_gap: Val::Px(10.0),
+                                                            align_items: AlignItems::Start,
+                                                            ..default()
+                                                        },
+                                                        ..default()
                                                     },
-                                                ),
-                                                TextBus2,
-                                                Name::new("TextBus2"),
-                                            ));
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 3: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                                    },
-                                                ),
-                                                TextBus3,
-                                                Name::new("TextBus3"),
-                                            ));
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 4: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                                    },
-                                                ),
-                                                TextBus4,
-                                                Name::new("TextBus4"),
-                                            ));
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 5: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                                    },
-                                                ),
-                                                TextBus5,
-                                                Name::new("TextBus5"),
-                                            ));
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 6: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                                    },
-                                                ),
-                                                TextBus6,
-                                                Name::new("TextBus6"),
-                                            ));
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 7: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                                    },
-                                                ),
-                                                TextBus7,
-                                                Name::new("TextBus7"),
-                                            ));
-                                            parent.spawn((
-                                                TextBundle::from_section(
-                                                    "Bus 8: loading...",
-                                                    TextStyle {
-                                                        font: asset_server
-                                                            .load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
-                                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                                    },
-                                                ),
-                                                TextBus8,
-                                                Name::new("TextBus8"),
-                                            ));
+                                                    Name::new("Text Busses 5-8"),
+                                                ))
+                                                .with_children(|parent| {
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 5: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus5,
+                                                        Name::new("TextBus5"),
+                                                    ));
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 6: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus6,
+                                                        Name::new("TextBus6"),
+                                                    ));
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 7: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus7,
+                                                        Name::new("TextBus7"),
+                                                    ));
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Bus 8: loading...",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        TextBus8,
+                                                        Name::new("TextBus8"),
+                                                    ));
+                                                });
                                         });
                                     parent
                                         .spawn((
