@@ -177,10 +177,6 @@ pub fn treasury_tokens_pubkey() -> Pubkey {
 }
 
 pub fn get_clock_account(client: &RpcClient) -> Result<Clock, ()> {
-    let data = client
-        .get_account_data(&sysvar::clock::ID)
-        .expect("Failed to get miner account");
-
     if let Ok(data) = client.get_account_data(&sysvar::clock::ID) {
         if let Ok(data) = bincode::deserialize::<Clock>(&data) {
             Ok(data)
