@@ -551,7 +551,7 @@ pub fn handle_event_reset_epoch(
     for _ev in event_reader.read() {
         info!("Reset Treasury Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = AsyncComputeTaskPool::get();
+            let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
             let task = pool.spawn(async move {
