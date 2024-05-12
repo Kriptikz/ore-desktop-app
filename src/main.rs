@@ -114,6 +114,7 @@ fn main() {
         })
         .insert_resource(BussesResource {
             busses: vec![],
+            current_bus_id: 0,
         })
         // .init_resource::<MinerStatusResource>()
         // .register_type::<MinerStatusResource>()
@@ -301,6 +302,7 @@ impl Default for ProofAccountResource {
 #[derive(Resource)]
 pub struct BussesResource {
     busses: Vec<ore::state::Bus>,
+    current_bus_id: usize,
 }
 
 #[derive(Reflect, Resource, InspectorOptions)]

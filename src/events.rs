@@ -264,7 +264,7 @@ pub fn handle_event_submit_hash_tx(
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     app_wallet: Res<AppWallet>,
     rpc_connection: Res<RpcConnection>,
-    busses_res: Res<BussesResource>,
+    mut busses_res: ResMut<BussesResource>,
 ) {
     for ev in ev_submit_hash_tx.read() {
         info!("Submit Hash Tx Event Handler.");
@@ -274,6 +274,8 @@ pub fn handle_event_submit_hash_tx(
             let client = rpc_connection.rpc.clone();
 
             let bus = find_best_bus(&busses_res.busses);
+
+            busses_res.current_bus_id = bus;
 
             let (_next_hash, nonce, difficulty, hash_time) = ev.0;
             let task = pool.spawn(async move {
