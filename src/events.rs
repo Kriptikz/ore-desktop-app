@@ -17,7 +17,7 @@ use crate::{
     }, ui::{
         components::{ButtonStartStopMining, MovingScrollPanel, TextInput, TextPasswordInput},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{BUTTON_START_MINING, BUTTON_STOP_MINING},
-    }, AppWallet, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
+    }, utils::find_best_bus, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -264,7 +264,7 @@ pub fn handle_event_submit_hash_tx(
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     app_wallet: Res<AppWallet>,
     rpc_connection: Res<RpcConnection>,
-    mut local_bus: Local<CurrentBus>,
+    busses_res: Res<BussesResource>,
 ) {
     for ev in ev_submit_hash_tx.read() {
         info!("Submit Hash Tx Event Handler.");
@@ -273,14 +273,7 @@ pub fn handle_event_submit_hash_tx(
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
 
-            let bus = local_bus.bus;
-
-            local_bus.bus += 1;
-            if local_bus.bus >= 8 {
-                local_bus.bus = 0;
-            }
-
-            info!("BUS: {}", bus);
+            let bus = find_best_bus(&busses_res.busses);
 
             let (_next_hash, nonce, difficulty, hash_time) = ev.0;
             let task = pool.spawn(async move {
