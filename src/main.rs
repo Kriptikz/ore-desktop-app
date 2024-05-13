@@ -5,7 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bevy::{input::mouse::MouseButtonInput, prelude::*, tasks::AsyncComputeTaskPool};
+use bevy::{input::mouse::MouseButtonInput, prelude::*, tasks::IoTaskPool};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use events::*;
@@ -34,6 +34,7 @@ use ui::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
     },
 };
+use utils::get_unix_timestamp;
 
 // screens::{
 //     spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
@@ -212,6 +213,7 @@ fn main() {
                 (
                     mouse_scroll,
                     process_current_transaction,
+                    auto_reset_epoch,
                     trigger_rpc_calls_for_ui,
                 ),
             )
@@ -395,7 +397,7 @@ pub fn process_current_transaction(
             if current_transaction.interval_timer.just_finished() {
                 let task_handler_entity = query_task_handler.get_single();
                 if let Ok(task_handler_entity) = task_handler_entity {
-                    let pool = AsyncComputeTaskPool::get();
+                    let pool = IoTaskPool::get();
                     let client = rpc_connection.rpc.clone();
                     let task = pool.spawn(async move {
                         info!("SendAndConfirmTransaction....");
@@ -471,6 +473,29 @@ pub fn process_current_transaction(
                 } else {
                     error!("Failed to get task_handler_entity in process_current_tx.");
                 }
+            }
+        }
+    }
+}
+
+pub fn auto_reset_epoch(
+    treasury_status: Res<TreasuryAccountResource>,
+    current_tx: Res<CurrentTx>,
+    mut event_writer: EventWriter<EventResetEpoch>,
+    mut last_reset_sent_at: Local<u64>,
+) {
+    let current_ts = get_unix_timestamp();
+
+    let last_reset_at = treasury_status.last_reset_at as u64;
+
+    if last_reset_at > 0  && current_ts > last_reset_at{
+        let time_left_for_reset = current_ts - last_reset_at;
+        let last_reset_sent_at_from_now = current_ts as i64 - *last_reset_sent_at as i64;
+
+        if time_left_for_reset >= 60 && last_reset_sent_at_from_now >= 30 {
+            if current_tx.tx_type != "Reset" {
+                event_writer.send(EventResetEpoch);
+                *last_reset_sent_at = current_ts;
             }
         }
     }
