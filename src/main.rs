@@ -90,7 +90,19 @@ fn main() {
     let threads = config.threads;
     App::new()
         .insert_state(starting_state)
-        .add_plugins(DefaultPlugins)
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Unofficial Ore App".to_string(),
+                        position: WindowPosition::Centered(MonitorSelection::Current),
+                        resizable: false,
+                        focused: true,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+        )
         // .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
