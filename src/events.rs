@@ -213,7 +213,7 @@ pub fn handle_event_process_tx(
         info!("ProcessTx Event Handler.");
         let tx_type = ev.tx_type.clone();
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = AsyncComputeTaskPool::get();
+            let pool = IoTaskPool::get();
 
             let client = rpc_connection.rpc.clone();
             let tx_type_task = tx_type.clone();
@@ -273,7 +273,7 @@ pub fn handle_event_submit_hash_tx(
     for ev in ev_submit_hash_tx.read() {
         info!("Submit Hash Tx Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = AsyncComputeTaskPool::get();
+            let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
 
@@ -494,7 +494,7 @@ pub fn handle_event_register_wallet(
     for _ev in event_reader.read() {
         info!("RegisterWallet Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = AsyncComputeTaskPool::get();
+            let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
             let task = pool.spawn(async move {
@@ -597,7 +597,7 @@ pub fn handle_event_claim_ore_rewards(
     for _ev in event_reader.read() {
         info!("Claim Ore Rewards Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = AsyncComputeTaskPool::get();
+            let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
             let claim_amount = proof_account.stake;
@@ -668,7 +668,7 @@ pub fn handle_event_stake_ore(
     for _ev in event_reader.read() {
         info!("Stake Ore Rewards Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = AsyncComputeTaskPool::get();
+            let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
             let task = pool.spawn(async move {
