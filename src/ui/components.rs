@@ -24,6 +24,9 @@ pub struct BaseScreenNode;
 pub struct InitialSetupScreenNode;
 
 #[derive(Component)]
+pub struct WalletSetupScreenNode;
+
+#[derive(Component)]
 pub struct MiningScreenNode;
 
 #[derive(Component)]
@@ -43,6 +46,9 @@ pub struct TextInput {
 
 #[derive(Component)]
 pub struct TextCursor;
+
+#[derive(Component)]
+pub struct TextGeneratedPubkey;
 
 #[derive(Component)]
 pub struct TextPasswordInput;
@@ -159,6 +165,9 @@ pub struct ButtonCopyText;
 
 #[derive(Component)]
 pub struct ButtonStartStopMining;
+
+#[derive(Component)]
+pub struct ButtonGenerateWallet;
 
 #[derive(Component)]
 pub struct ButtonResetEpoch;

@@ -11,13 +11,22 @@ use crate::ui::
     components::{
         BaseScreenNode,
         InitialSetupScreenNode,
-        LockedScreenNode,
+        LockedScreenNode, WalletSetupScreenNode,
     };
 
 
 pub fn despawn_initial_setup_screen(
     mut commands: Commands,
     query: Query<Entity, With<InitialSetupScreenNode>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+pub fn despawn_wallet_setup_screen(
+    mut commands: Commands,
+    query: Query<Entity, With<WalletSetupScreenNode>>,
 ) {
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();

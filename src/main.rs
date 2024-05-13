@@ -25,10 +25,10 @@ use ui::{
     components::{ButtonCaptureTextInput, TextInput, TextPasswordInput},
     screens::{screen_despawners::{
         despawn_initial_setup_screen, despawn_locked_screen,
-        despawn_mining_screen, 
-    }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen},
+        despawn_mining_screen, despawn_wallet_setup_screen, 
+    }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen, screen_setup_wallet::spawn_wallet_setup_screen},
     ui_button_systems::{
-        button_capture_text, button_claim_ore_rewards, button_copy_text, button_lock, button_reset_epoch, button_save_config, button_stake_ore, button_start_stop_mining, button_unlock
+        button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_reset_epoch, button_save_config, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -56,20 +56,21 @@ pub struct Config {
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum GameState {
-    InitialSetup,
+    ConfigSetup,
+    WalletSetup,
     Locked,
     Mining,
 }
 
 fn main() {
     // TODO: put rpc_url in save.data and let user input from UI.
-    let mut starting_state = GameState::InitialSetup;
+    let mut starting_state = GameState::ConfigSetup;
     let config_path = Path::new("config.toml");
     let config: Option<Config> = if config_path.exists() {
         let config_string = fs::read_to_string(config_path).unwrap();
         let config = match toml::from_str(&config_string) {
             Ok(d) => {
-                starting_state = GameState::Locked;
+                starting_state = GameState::WalletSetup;
                 Some(d)
             }
             Err(_) => None,
@@ -78,6 +79,13 @@ fn main() {
     } else {
         None
     };
+
+    if starting_state == GameState::WalletSetup {
+        let wallet_path = Path::new("save.data");
+        if wallet_path.exists() {
+            starting_state = GameState::Locked;
+        }
+    }
 
     let config = config.unwrap_or(Config {
         rpc_url: "".to_string(),
@@ -103,7 +111,7 @@ fn main() {
                     ..Default::default()
                 })
         )
-        // .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -149,6 +157,7 @@ fn main() {
         .add_event::<EventUnlock>()
         .add_event::<EventLock>()
         .add_event::<EventSaveConfig>()
+        .add_event::<EventGenerateWallet>()
         .add_systems(Startup, setup_camera)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -156,14 +165,16 @@ fn main() {
         .add_systems(Update, update_text_input_ui)
         .add_systems(Update, button_capture_text)
         .add_systems(Update, update_active_text_input_cursor_vis)
-        .add_systems(OnEnter(GameState::InitialSetup), setup_initial_setup_screen)
+        .add_systems(OnEnter(GameState::ConfigSetup), setup_initial_setup_screen)
         .add_systems(
-            OnExit(GameState::InitialSetup),
+            OnExit(GameState::ConfigSetup),
             (
                 despawn_initial_setup_screen,
             )
         )
-        .add_systems(OnExit(GameState::InitialSetup), despawn_locked_screen)
+        .add_systems(OnExit(GameState::ConfigSetup), despawn_locked_screen)
+        .add_systems(OnEnter(GameState::WalletSetup), setup_wallet_setup_screen)
+        .add_systems(OnExit(GameState::WalletSetup), despawn_wallet_setup_screen)
         .add_systems(OnEnter(GameState::Locked), setup_locked_screen)
         .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
         .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
@@ -174,7 +185,15 @@ fn main() {
                 button_save_config,
                 handle_event_save_config,
             )
-                .run_if(in_state(GameState::InitialSetup)),
+                .run_if(in_state(GameState::ConfigSetup)),
+        )
+        .add_systems(
+            Update,
+            (
+                button_generate_wallet,
+                handle_event_generate_wallet,
+            )
+                .run_if(in_state(GameState::WalletSetup)),
         )
         .add_systems(
             Update,
@@ -241,6 +260,10 @@ fn setup_camera(mut commands: Commands) {
 
 fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     spawn_initial_setup_screen(commands.reborrow(), asset_server);
+}
+
+fn setup_wallet_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+    spawn_wallet_setup_screen(commands.reborrow(), asset_server);
 }
 
 fn setup_mining_screen(

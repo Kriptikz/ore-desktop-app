@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 use crate::{
-    Config, EventClaimOreRewards, EventLock, EventResetEpoch, EventSaveConfig, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
+    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventResetEpoch, EventSaveConfig, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
 };
 
 use super::{
     components::{
-        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput
+        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -72,6 +72,34 @@ pub fn button_start_stop_mining(
                 // border_color.0 = Color::RED;
 
                 ev_start_stop_mining.send(EventStartStopMining);
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+                // border_color.0 = Color::WHITE;
+            }
+            Interaction::None => {
+                *color = Color::WHITE.into();
+                // *color = NORMAL_BUTTON.into();
+                // border_color.0 = Color::BLACK;
+            }
+        }
+    }
+}
+
+pub fn button_generate_wallet(
+    mut event_writer: EventWriter<EventGenerateWallet>,
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
+        (Changed<Interaction>, With<ButtonGenerateWallet>),
+    >,
+) {
+    for (_entity, interaction, mut color, mut border_color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+                // border_color.0 = Color::RED;
+
+                event_writer.send(EventGenerateWallet);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();

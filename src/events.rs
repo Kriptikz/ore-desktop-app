@@ -15,7 +15,7 @@ use crate::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
     }, ui::{
-        components::{ButtonStartStopMining, MovingScrollPanel, TextInput, TextPasswordInput},
+        components::{ButtonStartStopMining, MovingScrollPanel, TextGeneratedPubkey, TextInput, TextPasswordInput},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{BUTTON_START_MINING, BUTTON_STOP_MINING},
     }, utils::find_best_bus, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
@@ -32,7 +32,9 @@ use solana_sdk::{
 #[derive(Event)]
 pub struct EventStartStopMining;
 
-// Events
+#[derive(Event)]
+pub struct EventGenerateWallet;
+
 #[derive(Event)]
 pub struct EventMineForHash;
 
@@ -802,6 +804,23 @@ pub fn handle_event_save_config(
 
         ore_app_state.config = new_config;
         next_state.set(GameState::Locked);
+    }
+}
+
+pub fn handle_event_generate_wallet(
+    mut event_reader: EventReader<EventGenerateWallet>,
+    mut text_query: Query<&mut Text, With<TextGeneratedPubkey>>,
+    // mut ore_app_state: ResMut<OreAppState>,
+    // mut next_state: ResMut<NextState<GameState>>,
+) {
+    for ev in event_reader.read() {
+        info!("Generate Wallet Event Handler.");
+
+        let new_key = Keypair::new();
+
+        for mut text in text_query.iter_mut() {
+            text.sections[0].value = new_key.pubkey().to_string()
+        }
     }
 }
 
