@@ -95,7 +95,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Unofficial Ore App".to_string(),
-                        position: WindowPosition::Centered(MonitorSelection::Current),
+                        position: WindowPosition::Centered(MonitorSelection::Primary),
                         resizable: false,
                         focused: true,
                         ..Default::default()
