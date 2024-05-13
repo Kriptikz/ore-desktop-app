@@ -2,6 +2,7 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, IoTaskPool},
 };
+use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use cocoon::Cocoon;
 use ore::state::Proof;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
@@ -15,17 +16,17 @@ use crate::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
     }, ui::{
-        components::{ButtonStartStopMining, MovingScrollPanel, TextGeneratedPubkey, TextInput, TextPasswordInput},
+        components::{ButtonStartStopMining, MovingScrollPanel, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{BUTTON_START_MINING, BUTTON_STOP_MINING},
     }, utils::find_best_bus, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
 
 use std::{
-    fs::File, io::{stdout, Write}, path::Path, str::FromStr, sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant
+    fs::File, io::{stdout, Write}, path::{Path, PathBuf}, str::FromStr, sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant
 };
 
 use solana_sdk::{
-    bs58, commitment_config::CommitmentLevel, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{Keypair, Signer}, transaction::Transaction
+    bs58, commitment_config::CommitmentLevel, derivation_path::DerivationPath, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{read_keypair_file, Keypair, Signer}, signer::SeedDerivable, transaction::Transaction
 };
 
 // Events
@@ -34,6 +35,12 @@ pub struct EventStartStopMining;
 
 #[derive(Event)]
 pub struct EventGenerateWallet;
+
+#[derive(Event)]
+pub struct EventLoadKeypairFile(pub PathBuf);
+
+#[derive(Event)]
+pub struct EventSaveWallet;
 
 #[derive(Event)]
 pub struct EventMineForHash;
@@ -809,17 +816,149 @@ pub fn handle_event_save_config(
 
 pub fn handle_event_generate_wallet(
     mut event_reader: EventReader<EventGenerateWallet>,
-    mut text_query: Query<&mut Text, With<TextGeneratedPubkey>>,
+    // mut text_query: Query<&mut Text, With<TextGeneratedPubkey>>,
     // mut ore_app_state: ResMut<OreAppState>,
     // mut next_state: ResMut<NextState<GameState>>,
+    mut set: ParamSet<(
+        Query<(&mut Text, &mut TextGeneratedKeypair)>,
+        Query<&mut Text, With<TextMnemonicLine1>>,
+        Query<&mut Text, With<TextMnemonicLine2>>,
+        Query<&mut Text, With<TextMnemonicLine3>>,
+    )>,
 ) {
     for ev in event_reader.read() {
         info!("Generate Wallet Event Handler.");
 
-        let new_key = Keypair::new();
+        // let new_key = Keypair::new();
+        let new_mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
 
-        for mut text in text_query.iter_mut() {
-            text.sections[0].value = new_key.pubkey().to_string()
+        let phrase = new_mnemonic.clone().into_phrase();
+
+        let words: Vec<&str> = phrase.split(" ").collect();
+
+        info!("Generated Mnemonic: {}", new_mnemonic.clone().into_phrase());
+
+        // let mnemonic_bytes = new_mnemonic.phrase().as_bytes();
+        let seed = Seed::new(&new_mnemonic, "");
+
+        let derivation_path = DerivationPath::from_absolute_path_str("m/44'/501'/0'/0'").unwrap();
+
+        let new_key = Keypair::from_seed_and_derivation_path(seed.as_bytes(), Some(derivation_path));
+        if let Ok(new_key) = new_key {
+            let new_key = Arc::new(new_key);
+            let pubkey = new_key.pubkey().to_string();
+            for (mut text, mut text_keypair) in set.p0().iter_mut() {
+                text.sections[0].value = pubkey.clone();
+                text_keypair.0 = new_key.clone();
+            }
+            for mut text in set.p1().iter_mut() {
+                let mut value = String::new();
+                for word in &words[0..4] {
+                    value += word;
+                    value += "     ";
+                }
+                text.sections[0].value = value;
+            }
+            for mut text in set.p2().iter_mut() {
+                let mut value = String::new();
+                for word in &words[4..8] {
+                    value += word;
+                    value += "     ";
+                }
+                text.sections[0].value = value;
+            }
+            for mut text in set.p3().iter_mut() {
+                let mut value = String::new();
+                for word in &words[8..12] {
+                    value += word;
+                    value += "     ";
+                }
+                text.sections[0].value = value;
+            }
+        } else {
+            error!("Failed to generate keypair from seed as bytes");
+        }
+    }
+}
+
+pub fn handle_event_load_keypair_file(
+    mut event_reader: EventReader<EventLoadKeypairFile>,
+    // mut text_query: Query<&mut Text, With<TextGeneratedPubkey>>,
+    // mut ore_app_state: ResMut<OreAppState>,
+    // mut next_state: ResMut<NextState<GameState>>,
+    mut set: ParamSet<(
+        Query<(&mut Text, &mut TextGeneratedKeypair)>,
+        Query<&mut Text, With<TextMnemonicLine1>>,
+        Query<&mut Text, With<TextMnemonicLine2>>,
+        Query<&mut Text, With<TextMnemonicLine3>>,
+    )>,
+) {
+    for ev in event_reader.read() {
+        info!("Load Keypair File Event Handler.");
+
+
+        let path = &ev.0;
+        if let Ok(keypair) = read_keypair_file(path) {
+            let keypair = Arc::new(keypair);
+            let pubkey = keypair.pubkey().to_string();
+            for (mut text, mut text_keypair) in set.p0().iter_mut() {
+                text.sections[0].value = pubkey.clone();
+                text_keypair.0 = keypair.clone();
+            }
+            for mut text in set.p1().iter_mut() {
+                let value = String::new();
+                text.sections[0].value = value;
+            }
+            for mut text in set.p2().iter_mut() {
+                let value = String::new();
+                text.sections[0].value = value;
+            }
+            for mut text in set.p3().iter_mut() {
+                let value = String::new();
+                text.sections[0].value = value;
+            }
+        } else {
+            error!("Error: Failed to load keypair file from path: {}", path.display());
+        }
+
+    }
+}
+
+pub fn handle_event_save_wallet(
+    mut event_reader: EventReader<EventSaveWallet>,
+    mut set: ParamSet<(
+        Query<&TextGeneratedKeypair>,
+        Query<&TextInput, With<TextPasswordInput>>,
+    )>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for ev in event_reader.read() {
+        info!("Save Wallet Event Handler.");
+
+        // create the app wallet resource and go to the unlock screen.
+        let generated_keypair = set.p0().single().0.clone();
+
+        let password = set.p1().single().text.clone();
+
+        info!("Saving wallet pubkey: {}", generated_keypair.pubkey().to_string());
+        let wallet_path = Path::new("save.data");
+
+        let cocoon = Cocoon::new(password.as_bytes());
+        let wallet_bytes = generated_keypair.to_bytes();
+        let file = File::create(wallet_path);
+
+        if let Ok(mut file) = file {
+            let container = cocoon.dump(wallet_bytes.to_vec(), &mut file);
+
+            if let Ok(_) = container {
+                info!("Successfully saved wallet.");
+                // go to locked screen
+                next_state.set(GameState::Locked);
+            } else {
+                error!("Error: Failed to save wallet file.");
+            }
+        } else {
+            error!("Error: failed to create file at path: {}", wallet_path.display());
         }
     }
 }

@@ -12,9 +12,7 @@ use events::*;
 use serde::{Deserialize, Serialize};
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{
-    commitment_config::{CommitmentConfig, CommitmentLevel},
-    signature::{Keypair, Signature},
-    transaction::Transaction,
+    commitment_config::{CommitmentConfig, CommitmentLevel}, signature::{read_keypair_file, Keypair, Signature}, signer::Signer, transaction::Transaction
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::{
@@ -28,7 +26,7 @@ use ui::{
         despawn_mining_screen, despawn_wallet_setup_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen, screen_setup_wallet::spawn_wallet_setup_screen},
     ui_button_systems::{
-        button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_reset_epoch, button_save_config, button_stake_ore, button_start_stop_mining, button_unlock
+        button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_reset_epoch, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -158,6 +156,8 @@ fn main() {
         .add_event::<EventLock>()
         .add_event::<EventSaveConfig>()
         .add_event::<EventGenerateWallet>()
+        .add_event::<EventSaveWallet>()
+        .add_event::<EventLoadKeypairFile>()
         .add_systems(Startup, setup_camera)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -190,8 +190,19 @@ fn main() {
         .add_systems(
             Update,
             (
-                button_generate_wallet,
-                handle_event_generate_wallet,
+                (
+                    button_generate_wallet,
+                    button_save_wallet,
+                ),
+                (
+                    handle_event_generate_wallet,
+                    handle_event_save_wallet,
+                    handle_event_load_keypair_file,
+                ),
+                (
+                    text_password_input,
+                    file_drop,
+                ),
             )
                 .run_if(in_state(GameState::WalletSetup)),
         )
@@ -746,6 +757,20 @@ pub fn text_input(
                     }
                 }
             }
+        }
+    }
+}
+
+fn file_drop(
+    mut dnd_evr: EventReader<FileDragAndDrop>,
+    mut event_writer: EventWriter<EventLoadKeypairFile>
+) {
+    for ev in dnd_evr.read() {
+        println!("{:?}", ev);
+        if let FileDragAndDrop::DroppedFile { path_buf, .. } = ev {
+            println!("Dropped file with path: {:?}", path_buf);
+
+            event_writer.send(EventLoadKeypairFile(path_buf.to_path_buf()));
         }
     }
 }

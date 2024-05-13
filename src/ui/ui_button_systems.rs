@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 use crate::{
-    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventResetEpoch, EventSaveConfig, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
+    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventResetEpoch, EventSaveConfig, EventSaveWallet, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
 };
 
 use super::{
     components::{
-        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput
+        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -344,6 +344,42 @@ pub fn button_save_config(
                     fetch_ui_data_from_rpc_interval_ms: text_rpc_fetch_interval,
                     tx_check_status_and_resend_interval_ms: text_rpc_send_interval,
                 }));
+            }
+            Interaction::Hovered => {
+                info!("hovered");
+                *color = HOVERED_BUTTON.into();
+                // if ui_image.flip_y {
+                //     ui_image.flip_y = false;
+                // }
+            }
+            Interaction::None => {
+                info!("none");
+                *color = Color::WHITE.into();
+                // if ui_image.flip_y {
+                //     ui_image.flip_y = false;
+                // }
+            }
+        }
+    }
+}
+
+pub fn button_save_wallet(
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut UiImage, &mut BackgroundColor),
+        (Changed<Interaction>, With<ButtonSaveGeneratedWallet>),
+    >,
+    mut event_writer: EventWriter<EventSaveWallet>,
+) {
+    for (_entity, interaction, mut ui_image, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                info!("pressed");
+                *color = PRESSED_BUTTON.into();
+                // if !ui_image.flip_y {
+                //     ui_image.flip_y = true;
+                // }
+
+                event_writer.send(EventSaveWallet);
             }
             Interaction::Hovered => {
                 info!("hovered");

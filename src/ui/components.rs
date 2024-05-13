@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use bevy::prelude::*;
+use solana_sdk::signature::Keypair;
 
 // Components
 #[derive(Component, Default)]
@@ -48,7 +51,16 @@ pub struct TextInput {
 pub struct TextCursor;
 
 #[derive(Component)]
-pub struct TextGeneratedPubkey;
+pub struct TextGeneratedKeypair(pub Arc<Keypair>);
+
+#[derive(Component)]
+pub struct TextMnemonicLine1;
+
+#[derive(Component)]
+pub struct TextMnemonicLine2;
+
+#[derive(Component)]
+pub struct TextMnemonicLine3;
 
 #[derive(Component)]
 pub struct TextPasswordInput;
@@ -168,6 +180,9 @@ pub struct ButtonStartStopMining;
 
 #[derive(Component)]
 pub struct ButtonGenerateWallet;
+
+#[derive(Component)]
+pub struct ButtonSaveGeneratedWallet;
 
 #[derive(Component)]
 pub struct ButtonResetEpoch;

@@ -3,7 +3,6 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::input::mouse::MouseScrollUnit;
 use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
-use bevy::render::view::visibility;
 use chrono::DateTime;
 
 use crate::ore_utils::get_ore_decimals;
@@ -45,11 +44,9 @@ use super::components::TextTotalHashes;
 use super::components::TextTotalRewards;
 use super::components::TextTreasuryAdmin;
 use super::components::TextTreasuryBalance;
-use super::components::TextTreasuryDifficulty;
 use super::components::TextTreasuryLastResetAt;
 use super::components::TextTreasuryNeedEpochReset;
 use super::components::TextTreasuryRewardRate;
-use super::components::TextTreasuryTotalClaimedRewards;
 use super::components::TextWalletOreBalance;
 use super::components::TextWalletSolBalance;
 

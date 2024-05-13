@@ -7,6 +7,7 @@ pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 pub static BUTTON: &str = "button.png";
 pub static BUTTON_SAVE_CONFIG: &str = "design_1/button_save_config.png";
+pub static BUTTON_SAVE_WALLET: &str = "design_1/button_save_wallet.png";
 pub static BUTTON_GENERATE: &str = "design_1/button_generate.png";
 pub static BUTTON_CLAIM: &str = "design_1/button_claim.png";
 pub static BUTTON_STAKE: &str = "design_1/button_stake.png";
