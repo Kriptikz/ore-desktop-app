@@ -16,7 +16,10 @@ use crate::{
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING,
+            CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM,
+            FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND,
+            TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND,
         },
     },
     utils::shorten_string,
@@ -25,13 +28,13 @@ use crate::{
 
 use crate::ui::{
     components::{
-        BaseScreenNode, ButtonClaimOreRewards, ButtonLock, ToggleAutoReset, ToggleAutoMine,
-        MovingScrollPanel, ScrollingList, TextCurrentChallenge, TextCurrentStake,
-        TextCurrentTxElapsed, TextCurrentTxSig, TextCurrentTxStatus, TextMinerStatusCpuUsage,
-        TextMinerStatusRamUsage, TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes,
-        TextTotalRewards, TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryDifficulty,
-        TextTreasuryLastResetAt, TextTreasuryNeedEpochReset, TextTreasuryRewardRate,
-        TextTreasuryTotalClaimedRewards, TextWalletOreBalance, TextWalletSolBalance,
+        BaseScreenNode, ButtonClaimOreRewards, ButtonLock, MovingScrollPanel, ScrollingList,
+        TextCurrentChallenge, TextCurrentStake, TextCurrentTxElapsed, TextCurrentTxSig,
+        TextCurrentTxStatus, TextMinerStatusCpuUsage, TextMinerStatusRamUsage,
+        TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes, TextTotalRewards,
+        TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryDifficulty, TextTreasuryLastResetAt,
+        TextTreasuryNeedEpochReset, TextTreasuryRewardRate, TextTreasuryTotalClaimedRewards,
+        TextWalletOreBalance, TextWalletSolBalance, ToggleAutoMine, ToggleAutoReset,
     },
     styles::{FONT_SIZE, NORMAL_BUTTON},
 };
@@ -906,10 +909,14 @@ pub fn spawn_mining_screen(
                                         .spawn((
                                             NodeBundle {
                                                 style: Style {
+                                                    // flex_direction: FlexDirection::Row,
+                                                    // align_items: AlignItems::Center,
+                                                    // justify_content: JustifyContent::SpaceAround,
+                                                    // width: Val::Percent(100.0),
                                                     flex_direction: FlexDirection::Row,
-                                                    align_items: AlignItems::Center,
-                                                    justify_content: JustifyContent::SpaceAround,
                                                     width: Val::Percent(100.0),
+                                                    // padding: UiRect::left(Val::Px(20.0)),
+                                                    // column_gap: Val::Px(30.0),
                                                     ..default()
                                                 },
                                                 background_color: Color::rgb(0.15, 0.15, 0.15)
@@ -919,46 +926,210 @@ pub fn spawn_mining_screen(
                                             Name::new("Tx Status Title"),
                                         ))
                                         .with_children(|parent| {
-                                            parent.spawn((TextBundle::from_section(
-                                                "Tx Type",
-                                                TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO),
-                                                    font_size: FONT_SIZE_TITLE,
+                                            parent.spawn((
+                                                NodeBundle {
+                                                    style: Style {
+                                                        height: Val::Px(20.0),
+                                                        width: Val::Px(60.0),
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::Center,
+                                                        ..default()
+                                                    },
                                                     ..default()
                                                 },
-                                            ),));
-                                            parent.spawn((TextBundle::from_section(
-                                                "Signature",
-                                                TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO),
-                                                    font_size: FONT_SIZE,
+                                                Name::new("Tx Type Node"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Type",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font_size: FONT_SIZE,
+                                                            ..default()
+                                                        },
+                                                    ),
+                                                    Label,
+                                                ));
+                                            });
+
+                                            parent.spawn((
+                                                NodeBundle {
+                                                    style: Style {
+                                                        height: Val::Px(20.0),
+                                                        width: Val::Px(165.0),
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::Center,
+                                                        ..default()
+                                                    },
                                                     ..default()
                                                 },
-                                            ),));
-                                            parent.spawn((TextBundle::from_section(
-                                                "Tx Time",
-                                                TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO),
-                                                    font_size: FONT_SIZE,
+                                                Name::new("DateTime"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Landed At",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font_size: FONT_SIZE,
+                                                            ..default()
+                                                        },
+                                                    ),
+                                                    Label,
+                                                ));
+                                            });
+
+                                            parent.spawn((
+                                                NodeBundle {
+                                                    style: Style {
+                                                        height: Val::Px(20.0),
+                                                        width: Val::Px(134.0),
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::Center,
+                                                        ..default()
+                                                    },
                                                     ..default()
                                                 },
-                                            ),));
-                                            parent.spawn((TextBundle::from_section(
-                                                "Hash Time - Difficulty",
-                                                TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO),
-                                                    font_size: FONT_SIZE,
+                                                Name::new("Signature"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Signature",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font_size: FONT_SIZE,
+                                                            ..default()
+                                                        },
+                                                    ),
+                                                    Label,
+                                                ));
+                                            });
+
+                                            parent.spawn((
+                                                NodeBundle {
+                                                    style: Style {
+                                                        height: Val::Px(20.0),
+                                                        width: Val::Px(80.0),
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::Center,
+                                                        ..default()
+                                                    },
                                                     ..default()
                                                 },
-                                            ),));
-                                            parent.spawn((TextBundle::from_section(
-                                                "Status",
-                                                TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO),
-                                                    font_size: FONT_SIZE,
+                                                Name::new("SendTime"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Send Time",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font_size: FONT_SIZE,
+                                                            ..default()
+                                                        },
+                                                    ),
+                                                    Label,
+                                                ));
+                                            });
+
+                                            parent.spawn((
+                                                NodeBundle {
+                                                    style: Style {
+                                                        height: Val::Px(20.0),
+                                                        width: Val::Px(150.0),
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::Center,
+                                                        ..default()
+                                                    },
                                                     ..default()
                                                 },
-                                            ),));
+                                                Name::new("HashTime"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Hash Time - Difficulty",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font_size: FONT_SIZE,
+                                                            ..default()
+                                                        },
+                                                    ),
+                                                    Label,
+                                                ));
+                                            });
+
+                                            parent.spawn((
+                                                NodeBundle {
+                                                    style: Style {
+                                                        height: Val::Px(20.0),
+                                                        width: Val::Px(200.0),
+                                                        margin: UiRect::left(Val::Px(10.0)),
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::Start,
+                                                        ..default()
+                                                    },
+                                                    ..default()
+                                                },
+                                                Name::new("Status"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Status",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font_size: FONT_SIZE,
+                                                            ..default()
+                                                        },
+                                                    ),
+                                                    Label,
+                                                ));
+                                            });
+                                            // parent.spawn((TextBundle::from_section(
+                                            //     "Tx Type",
+                                            //     TextStyle {
+                                            //         font: asset_server.load(FONT_ROBOTO),
+                                            //         font_size: FONT_SIZE_TITLE,
+                                            //         ..default()
+                                            //     },
+                                            // ),));
+                                            // parent.spawn((TextBundle::from_section(
+                                            //     "DateTime",
+                                            //     TextStyle {
+                                            //         font: asset_server.load(FONT_ROBOTO),
+                                            //         font_size: FONT_SIZE,
+                                            //         ..default()
+                                            //     },
+                                            // ),));
+                                            // parent.spawn((TextBundle::from_section(
+                                            //     "Signature",
+                                            //     TextStyle {
+                                            //         font: asset_server.load(FONT_ROBOTO),
+                                            //         font_size: FONT_SIZE,
+                                            //         ..default()
+                                            //     },
+                                            // ),));
+                                            // parent.spawn((TextBundle::from_section(
+                                            //     "Send Time",
+                                            //     TextStyle {
+                                            //         font: asset_server.load(FONT_ROBOTO),
+                                            //         font_size: FONT_SIZE,
+                                            //         ..default()
+                                            //     },
+                                            // ),));
+                                            // parent.spawn((TextBundle::from_section(
+                                            //     "Hash Time - Difficulty",
+                                            //     TextStyle {
+                                            //         font: asset_server.load(FONT_ROBOTO),
+                                            //         font_size: FONT_SIZE,
+                                            //         ..default()
+                                            //     },
+                                            // ),));
+                                            // parent.spawn((TextBundle::from_section(
+                                            //     "Status",
+                                            //     TextStyle {
+                                            //         font: asset_server.load(FONT_ROBOTO),
+                                            //         font_size: FONT_SIZE,
+                                            //         ..default()
+                                            //     },
+                                            // ),));
                                         });
                                     // List with hidden overflow
                                     // TODO: look into lazy loading items

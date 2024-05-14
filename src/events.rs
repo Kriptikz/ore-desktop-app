@@ -358,11 +358,11 @@ pub fn handle_event_tx_result(
         } else {
             "Err".to_string()
         };
-        info!("TX LANDED AT: {}", date_time);
 
         let hash_time = format!("{} - {}", hash_time, difficulty);
         let item_data = UiListItem {
             id: ev.tx_type.clone(),
+            landed_at: date_time.clone(),
             sig: ev.sig.clone(),
             tx_time: ev.tx_time.to_string(),
             hash_time,

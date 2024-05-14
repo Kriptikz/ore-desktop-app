@@ -11,6 +11,7 @@ use super::{components::*, styles::*};
 
 pub struct UiListItem {
     pub id: String,
+    pub landed_at: String,
     pub sig: String,
     pub tx_time: String,
     pub hash_time: String,
@@ -30,7 +31,9 @@ pub fn spawn_new_list_item(
                 style: Style {
                     flex_direction: FlexDirection::Row,
                     width: Val::Percent(100.0),
-                    justify_content: JustifyContent::SpaceAround,
+                    // padding: UiRect::left(Val::Px(20.0)),
+                    // column_gap: Val::Px(30.0),
+                    // justify_content: JustifyContent::SpaceAround,
                     ..default()
                 },
                 ..default()
@@ -40,45 +43,151 @@ pub fn spawn_new_list_item(
         ))
         .with_children(|parent| {
             parent.spawn((
-                TextBundle::from_section(
-                    item_data.id,
-                    TextStyle {
-                        font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                        font_size: FONT_SIZE,
+                NodeBundle {
+                    style: Style {
+                        height: Val::Px(20.0),
+                        width: Val::Px(60.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
                         ..default()
                     },
-                ),
-                Label,
-            ));
-
-            spawn_copyable_text(parent, asset_server, item_data.sig.clone(), sig);
-
-            parent.spawn((TextBundle::from_section(
-                item_data.tx_time,
-                TextStyle {
-                    font: asset_server.load(FONT_ROBOTO),
-                    font_size: FONT_SIZE,
                     ..default()
                 },
-            ),));
+                Name::new("Tx Type Node"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        item_data.id,
+                        TextStyle {
+                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                            font_size: FONT_SIZE,
+                            ..default()
+                        },
+                    ),
+                    Label,
+                ));
+            });
 
-            parent.spawn(TextBundle::from_section(
-                item_data.hash_time,
-                TextStyle {
-                    font: asset_server.load(FONT_ROBOTO),
-                    font_size: FONT_SIZE,
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        height: Val::Px(20.0),
+                        width: Val::Px(165.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
                     ..default()
                 },
-            ));
+                Name::new("DateTime"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        item_data.landed_at,
+                        TextStyle {
+                            font: asset_server.load(FONT_ROBOTO),
+                            font_size: FONT_SIZE,
+                            ..default()
+                        },
+                    ),
+                    Label,
+                ));
+            });
 
-            parent.spawn(TextBundle::from_section(
-                item_data.status,
-                TextStyle {
-                    font: asset_server.load(FONT_ROBOTO),
-                    font_size: FONT_SIZE,
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        height: Val::Px(20.0),
+                        width: Val::Px(134.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
                     ..default()
                 },
-            ));
+                Name::new("Signature"),
+            )).with_children(|parent| {
+                spawn_copyable_text(parent, asset_server, item_data.sig.clone(), sig);
+            });
+
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        height: Val::Px(20.0),
+                        width: Val::Px(80.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("SendTime"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        item_data.tx_time,
+                        TextStyle {
+                            font: asset_server.load(FONT_ROBOTO),
+                            font_size: FONT_SIZE,
+                            ..default()
+                        },
+                    ),
+                    Label,
+                ));
+            });
+
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        height: Val::Px(20.0),
+                        width: Val::Px(150.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("HashTime"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        item_data.hash_time,
+                        TextStyle {
+                            font: asset_server.load(FONT_ROBOTO),
+                            font_size: FONT_SIZE,
+                            ..default()
+                        },
+                    ),
+                    Label,
+                ));
+            });
+
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        height: Val::Px(20.0),
+                        width: Val::Px(200.0),
+                        margin: UiRect::left(Val::Px(10.0)),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Start,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("Status"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        item_data.status,
+                        TextStyle {
+                            font: asset_server.load(FONT_ROBOTO),
+                            font_size: FONT_SIZE,
+                            ..default()
+                        },
+                    ),
+                    Label,
+                ));
+            });
         })
         .id();
 
@@ -133,7 +242,7 @@ pub fn spawn_copyable_text(
                         style: Style {
                             width: Val::Px(20.96),
                             height: Val::Px(20.96),
-                            padding: UiRect::left(Val::Px(15.0)),
+                            padding: UiRect::left(Val::Px(20.0)),
                             // border: UiRect::all(Val::Px(5.0)),
                             // horizontally center child text
                             // justify_content: JustifyContent::Center,
