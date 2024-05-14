@@ -16,7 +16,7 @@ use crate::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
     }, ui::{
-        components::{ButtonStartStopMining, MovingScrollPanel, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput},
+        components::{ButtonAutoScroll, ButtonStartStopMining, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{BUTTON_START_MINING, BUTTON_STOP_MINING},
     }, utils::find_best_bus, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
@@ -328,7 +328,9 @@ pub fn handle_event_tx_result(
     mut ev_tx_result: EventReader<EventTxResult>,
     mut event_writer: EventWriter<EventMineForHash>,
     asset_server: Res<AssetServer>,
-    query: Query<Entity, With<MovingScrollPanel>>,
+    mut query: Query<(Entity, &mut ScrollingList, &mut Style, &Parent, &Node), With<MovingScrollPanel>>,
+    query_node: Query<&Node>,
+    query_auto_scroll: Query<&ButtonAutoScroll>,
 ) {
     for ev in ev_tx_result.read() {
         info!("Tx Result Event Handler.");
@@ -337,7 +339,7 @@ pub fn handle_event_tx_result(
         } else {
             ("N/A".to_string(), "".to_string())
         };
-        let scroll_panel_entity = query.get_single().expect("There should only be 1 scroll panel entity.");
+        let (scroll_panel_entity, mut scrolling_list, mut style, parent, list_node) = query.get_single_mut().expect("There should only be 1 scroll panel entity.");
         let status = format!(
             "{}  {}",
             ev.tx_status.status.clone(),
@@ -353,7 +355,23 @@ pub fn handle_event_tx_result(
             status,
         };
         spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
-         
+
+        let auto_scroll = query_auto_scroll.single();
+
+        if auto_scroll.0 {
+            let items_height = list_node.size().y + 20.0;
+            if let Ok(query_node_parent) = query_node.get(parent.get()) {
+                let container_height = query_node_parent.size().y;
+
+                if items_height > container_height {
+                    let max_scroll = items_height - container_height;
+
+                    scrolling_list.position = -max_scroll;
+                    style.top = Val::Px(scrolling_list.position);
+                }
+            }
+        }
+        // TODO: only start again if auto_mine is toggled on.
         if ev.tx_type == "Mine" {
             event_writer.send(EventMineForHash);
         }

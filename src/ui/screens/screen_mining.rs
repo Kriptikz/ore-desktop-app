@@ -9,9 +9,15 @@ use solana_sdk::signer::Signer;
 
 use crate::{
     ui::{
-        components::{ButtonStakeOre, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastHashAt, TextMinerStatusThreads}, spawn_utils::spawn_copyable_text, styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
-        }
+        components::{
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, TextBus1, TextBus2, TextBus3,
+            TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastHashAt,
+            TextMinerStatusThreads,
+        },
+        spawn_utils::spawn_copyable_text,
+        styles::{
+            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+        },
     },
     utils::shorten_string,
     AppWallet,
@@ -156,7 +162,7 @@ pub fn spawn_mining_screen(
                         // border_color: Color::BLUE.into(),
                         style: Style {
                             width: Val::Percent(70.0),
-                            height: Val::Percent(90.0),
+                            height: Val::Percent(93.0),
                             flex_direction: FlexDirection::Column,
                             // border: UiRect::all(Val::Px(1.0)),
                             margin: UiRect::top(Val::Px(50.0)),
@@ -739,7 +745,7 @@ pub fn spawn_mining_screen(
                                 // border_color: Color::ORANGE.into(),
                                 style: Style {
                                     width: Val::Percent(100.0),
-                                    height: Val::Percent(45.0),
+                                    height: Val::Percent(47.0),
                                     flex_direction: FlexDirection::Column,
                                     border: UiRect::all(Val::Px(1.0)),
                                     ..default()
@@ -860,6 +866,65 @@ pub fn spawn_mining_screen(
                                                 MovingScrollPanel,
                                                 Name::new("MovingScrollPanel"),
                                             ));
+                                        });
+                                    parent
+                                        .spawn((
+                                            NodeBundle {
+                                                style: Style {
+                                                    width: Val::Px(100.0),
+                                                    height: Val::Px(21.0),
+                                                    align_self: AlignSelf::End,
+                                                    justify_content: JustifyContent::SpaceBetween,
+                                                    ..default()
+                                                },
+                                                ..default()
+                                            },
+                                            Name::new("Auto Scroll Node"),
+                                        ))
+                                        .with_children(|parent| {
+                                            parent.spawn((TextBundle::from_section(
+                                                "Auto-Scroll",
+                                                TextStyle {
+                                                    font: asset_server.load(FONT_ROBOTO),
+                                                    font_size: FONT_SIZE,
+                                                    color: Color::Rgba { red: 1.0, green: 1.0, blue: 1.0, alpha: 0.60 }
+                                                },
+                                            ),));
+                                            parent.spawn((
+                                                ButtonBundle {
+                                                    background_color: HOVERED_BUTTON.into(),
+                                                    style: Style {
+                                                        width: Val::Px(21.0),
+                                                        height: Val::Px(21.0),
+                                                        justify_content: JustifyContent::Center,
+                                                        align_items: AlignItems::Center,
+                                                        ..default()
+                                                    },
+                                                    image: UiImage::new(
+                                                        asset_server.load(CHECKBOX),
+                                                    ),
+                                                    ..default()
+                                                },
+                                                ButtonAutoScroll(false),
+                                                Name::new("ButtonAutoScroll"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    NodeBundle {
+                                                        background_color: Color::GRAY.into(),
+                                                        style: Style {
+                                                            width: Val::Px(16.0),
+                                                            height: Val::Px(11.0),
+                                                            ..default()
+                                                        },
+                                                        ..default()
+                                                    },
+                                                    UiImage::new(
+                                                            asset_server.load(CHECK_ICON),
+                                                        ),
+                                                    AutoScrollCheckIcon,
+                                                    Name::new("CheckIcon"),
+                                                ));
+                                            });
                                         });
                                 });
                         });

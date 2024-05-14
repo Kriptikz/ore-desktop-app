@@ -173,6 +173,12 @@ pub struct TextConfigInputRpcFetchAccountsInterval;
 pub struct TextConfigInputRpcSendTxInterval;
 
 #[derive(Component)]
+pub struct ButtonAutoScroll(pub bool);
+
+#[derive(Component)]
+pub struct AutoScrollCheckIcon;
+
+#[derive(Component)]
 pub struct ButtonCopyText;
 
 #[derive(Component)]

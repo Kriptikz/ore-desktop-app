@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     components::{
-        ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput
+        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -391,6 +391,56 @@ pub fn button_save_wallet(
             Interaction::None => {
                 info!("none");
                 *color = Color::WHITE.into();
+                // if ui_image.flip_y {
+                //     ui_image.flip_y = false;
+                // }
+            }
+        }
+    }
+}
+
+pub fn button_auto_scroll(
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut UiImage, &mut BackgroundColor, &mut ButtonAutoScroll),
+        Changed<Interaction>,
+    >,
+    mut query_check_icon: Query<&mut BackgroundColor, (With<AutoScrollCheckIcon>, Without<ButtonAutoScroll>)>,
+    // mut event_writer: EventWriter<EventToggleAutoScroll>,
+) {
+    for (_entity, interaction, mut ui_image, mut color, mut button_auto_scroll) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                info!("pressed");
+                *color = PRESSED_BUTTON.into();
+                // if !ui_image.flip_y {
+                //     ui_image.flip_y = true;
+                // }
+                button_auto_scroll.0 = !button_auto_scroll.0;
+
+                let mut check_icon = query_check_icon.single_mut();
+                let checked = button_auto_scroll.0;
+
+
+                if checked {
+                    *check_icon = Color::WHITE.into();
+                }
+
+                if !checked {
+                    *check_icon = Color::DARK_GRAY.into();
+                }
+                // event_writer.send(EventSaveWallet);
+                
+            }
+            Interaction::Hovered => {
+                info!("hovered");
+                *color = Color::WHITE.into();
+                // if ui_image.flip_y {
+                //     ui_image.flip_y = false;
+                // }
+            }
+            Interaction::None => {
+                info!("none");
+                *color = HOVERED_BUTTON.into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
                 // }
