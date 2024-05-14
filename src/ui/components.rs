@@ -176,22 +176,25 @@ pub struct TextConfigInputRpcSendTxInterval;
 pub struct ButtonAutoScroll(pub bool);
 
 #[derive(Component)]
+pub struct ButtonAutoReset(pub bool);
+
+#[derive(Component)]
 pub struct AutoScrollCheckIcon;
 
 #[derive(Component)]
 pub struct ButtonCopyText;
 
 #[derive(Component)]
-pub struct ButtonStartStopMining;
+pub struct ToggleAutoMine(pub bool);
+
+#[derive(Component)]
+pub struct ToggleAutoReset(pub bool);
 
 #[derive(Component)]
 pub struct ButtonGenerateWallet;
 
 #[derive(Component)]
 pub struct ButtonSaveGeneratedWallet;
-
-#[derive(Component)]
-pub struct ButtonResetEpoch;
 
 #[derive(Component)]
 pub struct ButtonUnlock;

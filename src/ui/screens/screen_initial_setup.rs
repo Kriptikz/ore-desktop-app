@@ -293,7 +293,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: false,
-                                                    text: "www.rpcpool.com".to_string(),
+                                                    text: "https://api.devnet.solana.com".to_string(),
                                                 },
                                                 TextConfigInputRpcUrl,
                                                 Name::new("TextConfigRpcUrl"),
@@ -394,7 +394,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: true,
-                                                    text: "3000".to_string(),
+                                                    text: "1200".to_string(),
                                                 },
                                                 TextConfigInputRpcFetchAccountsInterval,
                                             ));
@@ -444,7 +444,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: true,
-                                                    text: "2000".to_string(),
+                                                    text: "1200".to_string(),
                                                 },
                                                 TextConfigInputRpcSendTxInterval,
                                             ));

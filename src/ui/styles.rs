@@ -5,6 +5,9 @@ pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
+pub static TOGGLE_ON: &str = "design_1/toggle_on.png";
+pub static TOGGLE_OFF: &str = "design_1/toggle_off.png";
+
 pub static BUTTON: &str = "button.png";
 pub static BUTTON_SAVE_CONFIG: &str = "design_1/button_save_config.png";
 pub static BUTTON_SAVE_WALLET: &str = "design_1/button_save_wallet.png";

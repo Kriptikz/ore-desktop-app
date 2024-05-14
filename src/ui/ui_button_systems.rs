@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     components::{
-        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonResetEpoch, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonStartStopMining, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput
+        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput, ToggleAutoMine, ToggleAutoReset
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -62,7 +62,7 @@ pub fn button_start_stop_mining(
     mut ev_start_stop_mining: EventWriter<EventStartStopMining>,
     mut interaction_query: Query<
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ButtonStartStopMining>),
+        (Changed<Interaction>, With<ToggleAutoMine>),
     >,
 ) {
     for (_entity, interaction, mut color, mut border_color) in &mut interaction_query {
@@ -116,22 +116,21 @@ pub fn button_generate_wallet(
 
 pub fn button_reset_epoch(
     mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ButtonResetEpoch>),
+        (&Interaction, &mut BackgroundColor, &mut ToggleAutoReset),
+        Changed<Interaction>,
     >,
     mut event_writer: EventWriter<EventResetEpoch>,
 ) {
-    for (interaction, mut color, mut border_color) in &mut interaction_query {
+    for (interaction, mut color, mut toggle) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
-                border_color.0 = Color::RED;
 
-                event_writer.send(EventResetEpoch);
+                toggle.0 = !toggle.0;
+                // event_writer.send(EventResetEpoch);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
-                border_color.0 = Color::WHITE;
             }
             Interaction::None => {
                 *color = Color::WHITE.into();

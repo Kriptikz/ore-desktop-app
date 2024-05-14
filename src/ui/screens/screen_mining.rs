@@ -16,7 +16,7 @@ use crate::{
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
     },
     utils::shorten_string,
@@ -25,7 +25,7 @@ use crate::{
 
 use crate::ui::{
     components::{
-        BaseScreenNode, ButtonClaimOreRewards, ButtonLock, ButtonResetEpoch, ButtonStartStopMining,
+        BaseScreenNode, ButtonClaimOreRewards, ButtonLock, ToggleAutoReset, ToggleAutoMine,
         MovingScrollPanel, ScrollingList, TextCurrentChallenge, TextCurrentStake,
         TextCurrentTxElapsed, TextCurrentTxSig, TextCurrentTxStatus, TextMinerStatusCpuUsage,
         TextMinerStatusRamUsage, TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes,
@@ -706,35 +706,165 @@ pub fn spawn_mining_screen(
                                         ))
                                         .with_children(|parent| {
                                             parent.spawn((
-                                                ButtonBundle {
+                                                NodeBundle {
                                                     style: Style {
-                                                        width: Val::Px(164.53),
-                                                        height: Val::Px(38.0),
-                                                        ..default()
+                                                        width: Val::Px(136.0),
+                                                        height: Val::Px(73.0),
+                                                        flex_direction: FlexDirection::Column,
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::SpaceAround,
+                                                        ..Default::default()
                                                     },
-                                                    image: UiImage::new(
-                                                        asset_server.load(BUTTON_START_MINING),
-                                                    ),
-                                                    ..default()
+                                                    ..Default::default()
                                                 },
-                                                ButtonStartStopMining,
-                                                Name::new("ButtonStartMining"),
-                                            ));
+                                                Name::new("Toggle Auto-Mine Node"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    NodeBundle {
+                                                        style: Style {
+                                                            width: Val::Px(66.0),
+                                                            height: Val::Px(16.0),
+                                                            align_items: AlignItems::Center,
+                                                            justify_content: JustifyContent::Center,
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    Name::new("Text Auto-Mine Node"),
+                                                )).with_children(|parent| {
+                                                    parent.spawn((TextBundle::from_section(
+                                                            "Auto-Mine",
+                                                            TextStyle {
+                                                                font: asset_server.load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                ..default()
+                                                            },
+                                                        ),
+                                                    ));
+                                                });
+                                                parent.spawn((
+                                                    NodeBundle {
+                                                        style: Style {
+                                                            width: Val::Px(49.0),
+                                                            height: Val::Px(26.0),
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    Name::new("Toggle Auto-Mine"),
+                                                )).with_children(|parent| {
+                                                            parent.spawn((
+                                                                ButtonBundle {
+                                                                    style: Style {
+                                                                        width: Val::Px(49.53),
+                                                                        height: Val::Px(26.0),
+                                                                        ..default()
+                                                                    },
+                                                                    image: UiImage::new(
+                                                                        asset_server.load(TOGGLE_OFF),
+                                                                    ),
+                                                                    ..default()
+                                                                },
+                                                                ToggleAutoMine(false),
+                                                                Name::new("ButtonStartMining"),
+                                                            ));
+                                                });
+                                            });
                                             parent.spawn((
-                                                ButtonBundle {
+                                                NodeBundle {
                                                     style: Style {
-                                                        width: Val::Px(164.53),
-                                                        height: Val::Px(38.0),
-                                                        ..default()
+                                                        width: Val::Px(136.0),
+                                                        height: Val::Px(73.0),
+                                                        flex_direction: FlexDirection::Column,
+                                                        align_items: AlignItems::Center,
+                                                        justify_content: JustifyContent::SpaceAround,
+                                                        ..Default::default()
                                                     },
-                                                    image: UiImage::new(
-                                                        asset_server.load(BUTTON_RESET_EPOCH),
-                                                    ),
-                                                    ..default()
+                                                    ..Default::default()
                                                 },
-                                                ButtonResetEpoch,
-                                                Name::new("ButtonResetEpoch"),
-                                            ));
+                                                Name::new("Toggle Auto-Reset Node"),
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    NodeBundle {
+                                                        style: Style {
+                                                            width: Val::Px(68.0),
+                                                            height: Val::Px(16.0),
+                                                            align_items: AlignItems::Center,
+                                                            justify_content: JustifyContent::Center,
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    Name::new("Text Auto-Reset Node"),
+                                                )).with_children(|parent| {
+                                                    parent.spawn((TextBundle::from_section(
+                                                            "Auto-Reset",
+                                                            TextStyle {
+                                                                font: asset_server.load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                ..default()
+                                                            },
+                                                        ),
+                                                    ));
+                                                });
+                                                parent.spawn((
+                                                    NodeBundle {
+                                                        style: Style {
+                                                            width: Val::Px(49.0),
+                                                            height: Val::Px(26.0),
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    Name::new("Toggle Auto-Reset"),
+                                                )).with_children(|parent| {
+                                                            parent.spawn((
+                                                                ButtonBundle {
+                                                                    style: Style {
+                                                                        width: Val::Px(49.53),
+                                                                        height: Val::Px(26.0),
+                                                                        ..default()
+                                                                    },
+                                                                    image: UiImage::new(
+                                                                        asset_server.load(TOGGLE_OFF),
+                                                                    ),
+                                                                    ..default()
+                                                                },
+                                                                ToggleAutoReset(false),
+                                                                Name::new("ToggleAutoReset"),
+                                                            ));
+                                                });
+                                            });
+                                            // parent.spawn((
+                                            //     ButtonBundle {
+                                            //         style: Style {
+                                            //             width: Val::Px(164.53),
+                                            //             height: Val::Px(38.0),
+                                            //             ..default()
+                                            //         },
+                                            //         image: UiImage::new(
+                                            //             asset_server.load(BUTTON_START_MINING),
+                                            //         ),
+                                            //         ..default()
+                                            //     },
+                                            //     ButtonStartStopMining,
+                                            //     Name::new("ButtonStartMining"),
+                                            // ));
+                                            // parent.spawn((
+                                            //     ButtonBundle {
+                                            //         style: Style {
+                                            //             width: Val::Px(164.53),
+                                            //             height: Val::Px(38.0),
+                                            //             ..default()
+                                            //         },
+                                            //         image: UiImage::new(
+                                            //             asset_server.load(BUTTON_RESET_EPOCH),
+                                            //         ),
+                                            //         ..default()
+                                            //     },
+                                            //     ButtonResetEpoch,
+                                            //     Name::new("ButtonResetEpoch"),
+                                            // ));
                                         });
                                 });
                         });
@@ -910,7 +1040,7 @@ pub fn spawn_mining_screen(
                                             )).with_children(|parent| {
                                                 parent.spawn((
                                                     NodeBundle {
-                                                        background_color: Color::GRAY.into(),
+                                                        background_color: Color::DARK_GRAY.into(),
                                                         style: Style {
                                                             width: Val::Px(16.0),
                                                             height: Val::Px(11.0),

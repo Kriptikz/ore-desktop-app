@@ -206,6 +206,7 @@ pub fn task_process_current_tx(
     mut query: Query<(Entity, &mut TaskProcessCurrentTx)>,
     mut current_tx: ResMut<CurrentTx>,
     mut ev_tx_result: EventWriter<EventTxResult>,
+    miner_status: Res<MinerStatusResource>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some((sig, tx_status)) = block_on(future::poll_once(&mut task.task)) {

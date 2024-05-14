@@ -20,7 +20,7 @@ use tasks::{
     task_update_app_wallet_sol_balance, task_update_current_tx, TaskProcessCurrentTx,
 };
 use ui::{
-    components::{ButtonCaptureTextInput, TextInput, TextPasswordInput},
+    components::{ButtonCaptureTextInput, TextInput, TextPasswordInput, ToggleAutoReset},
     screens::{screen_despawners::{
         despawn_initial_setup_screen, despawn_locked_screen,
         despawn_mining_screen, despawn_wallet_setup_screen, 
@@ -29,7 +29,7 @@ use ui::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_reset_epoch, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
-        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
+        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_toggle_reset_ui, update_treasury_account_ui
     },
 };
 use utils::get_unix_timestamp;
@@ -252,6 +252,7 @@ fn main() {
                     update_treasury_account_ui,
                     update_miner_status_ui,
                     update_current_tx_ui,
+                    update_toggle_reset_ui
                 ),
                 (
                     mouse_scroll,
@@ -525,11 +526,25 @@ pub fn process_current_transaction(
     }
 }
 
+pub struct LocalResetCooldown {
+    reset_timer: Timer
+}
+
+impl Default for LocalResetCooldown {
+    fn default() -> Self {
+        Self { reset_timer: Timer::new(Duration::from_secs(5), TimerMode::Once) }
+    }
+}
+
 pub fn auto_reset_epoch(
     treasury_status: Res<TreasuryAccountResource>,
+    proof_res: Res<ProofAccountResource>,
     current_tx: Res<CurrentTx>,
     mut event_writer: EventWriter<EventResetEpoch>,
-    mut last_reset_sent_at: Local<u64>,
+    // mut last_reset_sent_at: Local<u64>,
+    query: Query<&ToggleAutoReset>,
+    mut reset_cooldown: Local<LocalResetCooldown>,
+    time: Res<Time>,
 ) {
     let current_ts = get_unix_timestamp();
 
@@ -537,12 +552,29 @@ pub fn auto_reset_epoch(
 
     if last_reset_at > 0  && current_ts > last_reset_at{
         let time_left_for_reset = current_ts - last_reset_at;
-        let last_reset_sent_at_from_now = current_ts as i64 - *last_reset_sent_at as i64;
+        // let last_reset_sent_at_from_now = current_ts as i64 - *last_reset_sent_at as i64;
 
-        if time_left_for_reset >= 60 && last_reset_sent_at_from_now >= 30 {
-            if current_tx.tx_type != "Reset" {
-                event_writer.send(EventResetEpoch);
-                *last_reset_sent_at = current_ts;
+        if time_left_for_reset >= 60 {
+            let toggle_reset_epoch = query.single();
+            if toggle_reset_epoch.0 {
+                // check if 5 seconds before proof challenge time limit
+                let last_hash_at = proof_res.last_hash_at;
+
+                let current_ts = get_unix_timestamp();
+
+                let time_since_challenge_issued = current_ts - (last_hash_at as u64);
+
+                if time_since_challenge_issued >= 55 {
+                    reset_cooldown.reset_timer.tick(time.delta());
+
+                    if reset_cooldown.reset_timer.just_finished() {
+                        if current_tx.tx_type != "Reset" {
+                            event_writer.send(EventResetEpoch);
+                            reset_cooldown.reset_timer.reset();
+                            // *last_reset_sent_at = current_ts;
+                        }
+                    }
+                }
             }
         }
     }

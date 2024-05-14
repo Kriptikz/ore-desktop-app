@@ -3,6 +3,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, IoTaskPool},
 };
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
+use chrono::DateTime;
 use cocoon::Cocoon;
 use ore::state::Proof;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
@@ -16,9 +17,9 @@ use crate::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
     }, ui::{
-        components::{ButtonAutoScroll, ButtonStartStopMining, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput},
-        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{BUTTON_START_MINING, BUTTON_STOP_MINING},
-    }, utils::find_best_bus, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
+        components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
+        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
+    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -109,7 +110,7 @@ pub fn handle_event_start_stop_mining_clicked(
     mut current_tx: ResMut<CurrentTx>,
     rpc_connection: Res<RpcConnection>,
     asset_server: Res<AssetServer>,
-    mut query: Query<&mut UiImage, With<ButtonStartStopMining>>,
+    mut query: Query<(&mut UiImage, &mut ToggleAutoMine)>,
 ) {
     for _ev in ev_start_stop_mining.read() {
         info!("Start/Stop Mining Event Handler.");
@@ -117,11 +118,12 @@ pub fn handle_event_start_stop_mining_clicked(
             "MINING" |
             "PROCESSING" => {
                 // stop mining
-                event_writer_stop.send(EventStopMining);
+                // event_writer_stop.send(EventStopMining);
                 miner_status.miner_status = "STOPPED".to_string();
                 current_tx.tx_status.status = "INTERRUPTED".to_string();
-                let mut btn = query.single_mut();
-                *btn = UiImage::new(asset_server.load(BUTTON_START_MINING));
+                let (mut btn, mut toggle) = query.single_mut();
+                toggle.0 = false;
+                *btn = UiImage::new(asset_server.load(TOGGLE_OFF));
             
             },
             "STOPPED" => {
@@ -132,8 +134,9 @@ pub fn handle_event_start_stop_mining_clicked(
                     info!("Is Successfully registered!!!");
                     info!("Sending EventMineForHash");
                     event_writer.send(EventMineForHash);
-                    let mut btn = query.single_mut();
-                    *btn = UiImage::new(asset_server.load(BUTTON_STOP_MINING));
+                    let (mut btn, mut toggle) = query.single_mut();
+                    toggle.0 = true;
+                    *btn = UiImage::new(asset_server.load(TOGGLE_ON));
                 } else {
                     info!("Sending Register Event.");
                     event_writer_register.send(EventRegisterWallet);
@@ -159,6 +162,8 @@ pub fn handle_event_mine_for_hash(
         info!("Mine For Hash Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = AsyncComputeTaskPool::get();
+            let threads = pool.thread_num();
+            info!("TASK POOL THREADS: {}", threads);
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
             let threads = miner_status.miner_threads;
@@ -331,6 +336,7 @@ pub fn handle_event_tx_result(
     mut query: Query<(Entity, &mut ScrollingList, &mut Style, &Parent, &Node), With<MovingScrollPanel>>,
     query_node: Query<&Node>,
     query_auto_scroll: Query<&ButtonAutoScroll>,
+    query_toggle: Query<&ToggleAutoMine>,
 ) {
     for ev in ev_tx_result.read() {
         info!("Tx Result Event Handler.");
@@ -345,6 +351,14 @@ pub fn handle_event_tx_result(
             ev.tx_status.status.clone(),
             ev.tx_status.error.clone()
         );
+
+        let ts = get_unix_timestamp();
+        let date_time = if let Some(dt) = DateTime::from_timestamp(ts as i64, 0) {
+            dt.to_string()
+        } else {
+            "Err".to_string()
+        };
+        info!("TX LANDED AT: {}", date_time);
 
         let hash_time = format!("{} - {}", hash_time, difficulty);
         let item_data = UiListItem {
@@ -371,9 +385,12 @@ pub fn handle_event_tx_result(
                 }
             }
         }
-        // TODO: only start again if auto_mine is toggled on.
-        if ev.tx_type == "Mine" {
-            event_writer.send(EventMineForHash);
+
+        let toggle = query_toggle.single();
+        if toggle.0 {
+            if ev.tx_type == "Mine" {
+                event_writer.send(EventMineForHash);
+            }
         }
     }
 }
