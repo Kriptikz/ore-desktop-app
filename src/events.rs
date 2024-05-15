@@ -244,7 +244,6 @@ pub fn handle_event_process_tx(
                 };
 
                 let sig = client.send_transaction_with_config(&tx, send_cfg);
-                if sig.is_err() {}
                 if let Ok(sig) = sig {
                     return Some((tx_type, tx, sig, hash_time));
                 } else {
