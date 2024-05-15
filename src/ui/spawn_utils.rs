@@ -72,7 +72,7 @@ pub fn spawn_new_list_item(
                 NodeBundle {
                     style: Style {
                         height: Val::Px(20.0),
-                        width: Val::Px(165.0),
+                        width: Val::Px(80.0),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
                         ..default()
@@ -81,9 +81,18 @@ pub fn spawn_new_list_item(
                 },
                 Name::new("DateTime"),
             )).with_children(|parent| {
+
+                let pieces: Vec<&str> = item_data.landed_at.split(' ').collect();
+
+                let value = if pieces.len() > 2 {
+                    String::from(pieces[1])
+                } else {
+                    item_data.landed_at
+                };
+
                 parent.spawn((
                     TextBundle::from_section(
-                        item_data.landed_at,
+                            value,
                         TextStyle {
                             font: asset_server.load(FONT_ROBOTO),
                             font_size: FONT_SIZE,
@@ -166,7 +175,11 @@ pub fn spawn_new_list_item(
                 NodeBundle {
                     style: Style {
                         height: Val::Px(20.0),
-                        width: Val::Px(200.0),
+                        width: Val::Px(400.0),
+                        overflow: Overflow {
+                            x: OverflowAxis::Clip,
+                            y: OverflowAxis::Clip,
+                        },
                         margin: UiRect::left(Val::Px(10.0)),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Start,

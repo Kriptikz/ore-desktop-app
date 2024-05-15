@@ -956,7 +956,7 @@ pub fn spawn_mining_screen(
                                                 NodeBundle {
                                                     style: Style {
                                                         height: Val::Px(20.0),
-                                                        width: Val::Px(165.0),
+                                                        width: Val::Px(80.0),
                                                         align_items: AlignItems::Center,
                                                         justify_content: JustifyContent::Center,
                                                         ..default()
@@ -1193,7 +1193,7 @@ pub fn spawn_mining_screen(
                                             ),));
                                             parent.spawn((
                                                 ButtonBundle {
-                                                    background_color: HOVERED_BUTTON.into(),
+                                                    background_color: Color::WHITE.into(),
                                                     style: Style {
                                                         width: Val::Px(21.0),
                                                         height: Val::Px(21.0),
@@ -1206,12 +1206,12 @@ pub fn spawn_mining_screen(
                                                     ),
                                                     ..default()
                                                 },
-                                                ButtonAutoScroll(false),
+                                                ButtonAutoScroll(true),
                                                 Name::new("ButtonAutoScroll"),
                                             )).with_children(|parent| {
                                                 parent.spawn((
                                                     NodeBundle {
-                                                        background_color: Color::DARK_GRAY.into(),
+                                                        background_color: Color::WHITE.into(),
                                                         style: Style {
                                                             width: Val::Px(16.0),
                                                             height: Val::Px(11.0),
