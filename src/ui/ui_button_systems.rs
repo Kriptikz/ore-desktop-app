@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     components::{
-        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput, ToggleAutoMine, ToggleAutoReset
+        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput, ToggleAutoMine, ToggleAutoReset
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -43,6 +43,45 @@ pub fn button_copy_text(
 
                     } else {
                         error!("Failed to get clipboard context.");
+                    }
+                } else {
+                    info!("Failed to find copyable_text.");
+                }
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                *color = Color::WHITE.into();
+            }
+        }
+    }
+}
+
+pub fn button_open_web_tx_explorer(
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
+        (Changed<Interaction>, With<ButtonOpenWebTxExplorer>),
+    >,
+    text_query: Query<(&CopyableText, &Children)>,
+) {
+    for (entity, interaction, mut color, mut border_color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+
+                let mut text: Option<String> = None;
+                for (copyable_text, children) in text_query.iter() {
+                    for child in children.iter() {
+                        if *child == entity {
+                            text = Some(copyable_text.full_text.clone());
+                        }
+                    }
+                }
+                if let Some(text) = text {
+                    let url = format!("https://solscan.io/tx/{}?cluster=devnet", text);
+                    if let Err(_) = open::that(url) {
+                        error!("Failed to open web tx explorer with default web browser.");
                     }
                 } else {
                     info!("Failed to find copyable_text.");

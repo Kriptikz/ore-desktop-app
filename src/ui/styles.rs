@@ -18,10 +18,13 @@ pub static BUTTON_START_MINING: &str = "design_1/button_start_mining.png";
 pub static BUTTON_STOP_MINING: &str = "design_1/button_stop_mining.png";
 pub static BUTTON_RESET_EPOCH: &str = "design_1/button_reset_epoch.png";
 
+
+// Icons
 pub static CHECKBOX: &str = "design_1/checkbox.png";
 pub static CHECK_ICON: &str = "design_1/check_icon_medium.png";
 
 pub static BUTTON_COPY_TEXT: &str = "design_1/copy_icon.png";
+pub static SOLANA_ICON: &str = "solana-icon.png";
 
 // Backgrounds
 pub static SCREEN_BACKGROUND_1: &str = "screen_backgrounds/background_1.png";

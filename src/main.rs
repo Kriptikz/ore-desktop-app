@@ -22,7 +22,7 @@ use ui::{
         despawn_mining_screen, despawn_wallet_setup_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen, screen_setup_wallet::spawn_wallet_setup_screen},
     ui_button_systems::{
-        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_reset_epoch, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
+        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_reset_epoch, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_toggle_reset_ui, update_treasury_account_ui
@@ -105,7 +105,7 @@ fn main() {
                     ..Default::default()
                 })
         )
-        // .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -205,6 +205,7 @@ fn main() {
                     button_claim_ore_rewards,
                     button_stake_ore,
                     button_auto_scroll,
+                    button_open_web_tx_explorer,
                 ),
                 (
                     handle_event_start_stop_mining_clicked,

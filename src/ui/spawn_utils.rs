@@ -116,7 +116,7 @@ pub fn spawn_new_list_item(
                 },
                 Name::new("Signature"),
             )).with_children(|parent| {
-                spawn_copyable_text(parent, asset_server, item_data.sig.clone(), sig);
+                spawn_web_link_icon(parent, asset_server, item_data.sig.clone(), sig);
             });
 
             parent.spawn((
@@ -267,6 +267,69 @@ pub fn spawn_copyable_text(
                         ..default()
                     },
                     ButtonCopyText,
+                    Name::new("ButtonCopyText"),
+                ));
+        });
+}
+
+pub fn spawn_web_link_icon(
+    parent: &mut ChildBuilder,
+    asset_server: &AssetServer,
+    copy_text: String,
+    display_text: String,
+) {
+    parent
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::End,
+                    // padding: UiRect {
+                    //     top: Val::Px(0.0),
+                    //     left: Val::Px(15.0),
+                    //     right: Val::Px(0.0),
+                    //     bottom: Val::Px(0.0),
+                    // },
+                    ..default()
+                },
+                ..default()
+            },
+            CopyableText {
+                full_text: copy_text.clone(),
+            },
+            Name::new("CopyableText"),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                TextBundle::from_section(
+                    &display_text,
+                    TextStyle {
+                        font: asset_server.load(FONT_ROBOTO),
+                        font_size: FONT_SIZE,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+                TextWalletPubkey,
+                Name::new("WalletPubkeyText"),
+            ));
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(14.0),
+                            height: Val::Px(14.0),
+                            margin: UiRect::left(Val::Px(8.0)),
+                            // border: UiRect::all(Val::Px(5.0)),
+                            // horizontally center child text
+                            // justify_content: JustifyContent::Center,
+                            // vertically center child text
+                            // align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        image: UiImage::new(asset_server.load(SOLANA_ICON)),
+                        ..default()
+                    },
+                    ButtonOpenWebTxExplorer,
                     Name::new("ButtonCopyText"),
                 ));
         });
