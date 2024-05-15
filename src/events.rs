@@ -439,7 +439,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                         stake: proof_account.balance,
                         last_hash_at: proof_account.last_hash_at,
                         total_hashes: proof_account.total_hashes,
-                        total_rewards: proof_account.total_rewards,
+                        last_claim_at: proof_account.last_claim_at,
                     };
                 } else {
                     proof_account_res_data = ProofAccountResource {
@@ -447,7 +447,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                         stake: 0,
                         last_hash_at: 0,
                         total_hashes: 0,
-                        total_rewards: 0,
+                        last_claim_at: 0,
                     };
                 }
 

@@ -93,6 +93,9 @@ pub struct TextTotalHashes;
 pub struct TextTotalRewards;
 
 #[derive(Component)]
+pub struct TextLastClaimAt;
+
+#[derive(Component)]
 pub struct TextCurrentStake;
 
 #[derive(Component)]

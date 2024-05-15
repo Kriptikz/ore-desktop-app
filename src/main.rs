@@ -105,7 +105,7 @@ fn main() {
                     ..Default::default()
                 })
         )
-        .add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -389,7 +389,7 @@ pub struct ProofAccountResource {
     stake: u64,
     last_hash_at: i64,
     total_hashes: u64,
-    total_rewards: u64,
+    last_claim_at: i64,
 }
 
 impl Default for ProofAccountResource {
@@ -399,7 +399,7 @@ impl Default for ProofAccountResource {
             stake: Default::default(),
             last_hash_at: Default::default(),
             total_hashes: Default::default(),
-            total_rewards: Default::default(),
+            last_claim_at: Default::default(),
         }
     }
 }

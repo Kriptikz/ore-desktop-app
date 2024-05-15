@@ -30,6 +30,7 @@ use super::components::TextCurrentStake;
 use super::components::TextCurrentChallenge;
 use super::components::TextCursor;
 use super::components::TextInput;
+use super::components::TextLastClaimAt;
 use super::components::TextLastHashAt;
 use super::components::TextMinerStatusCpuUsage;
 use super::components::TextMinerStatusRamUsage;
@@ -201,7 +202,7 @@ pub fn update_proof_account_ui(
     mut set: ParamSet<(
         Query<&mut Text, With<TextCurrentChallenge>>,
         Query<&mut Text, With<TextTotalHashes>>,
-        Query<&mut Text, With<TextTotalRewards>>,
+        Query<&mut Text, With<TextLastClaimAt>>,
         Query<&mut Text, With<TextCurrentStake>>,
         Query<&mut Text, With<TextLastHashAt>>,
     )>,
@@ -216,10 +217,16 @@ pub fn update_proof_account_ui(
     text_total_hashes.sections[0].value =
         proof_account_res.total_hashes.to_string();
 
-    let mut text_total_rewards_query = set.p2();
-    let mut text_total_rewards = text_total_rewards_query.single_mut();
-    let amount = (proof_account_res.total_rewards as f64) / 10f64.powf(get_ore_decimals() as f64);
-    text_total_rewards.sections[0].value = format!("{}", amount);
+    let mut text_last_claim_at_query = set.p2();
+    let mut text_last_claim_at = text_last_claim_at_query.single_mut();
+    let last_claim_at = proof_account_res.last_claim_at;
+    let last_claim_at =
+        if let Some(dt) = DateTime::from_timestamp(last_claim_at, 0) {
+            dt.to_string()
+        } else {
+            "Err".to_string()
+        };
+    text_last_claim_at.sections[0].value = format!("{}", last_claim_at);
 
     let mut text_claimable_rewards_query = set.p3();
     let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();

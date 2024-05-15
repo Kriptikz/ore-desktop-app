@@ -10,7 +10,7 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, SpinnerIcon, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, SpinnerIcon, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
@@ -1641,7 +1641,7 @@ pub fn spawn_mining_screen(
                                                     ));
                                                     parent.spawn((
                                                         TextBundle::from_section(
-                                                            "Total:",
+                                                            "Last Claim At:",
                                                             TextStyle {
                                                                 font: asset_server
                                                                     .load(FONT_ROBOTO),
@@ -1649,7 +1649,7 @@ pub fn spawn_mining_screen(
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
-                                                        Name::new("TextTotalRewards"),
+                                                        Name::new("TextLastClaimAt"),
                                                     ));
 
                                                     parent.spawn((
@@ -1771,8 +1771,8 @@ pub fn spawn_mining_screen(
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
-                                                        Name::new("TextTotalRewards"),
-                                                        TextTotalRewards,
+                                                        Name::new("TextLastClaimAt"),
+                                                        TextLastClaimAt,
                                                     ));
 
                                                     parent.spawn((
