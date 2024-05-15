@@ -22,9 +22,12 @@ pub static BUTTON_RESET_EPOCH: &str = "design_1/button_reset_epoch.png";
 // Icons
 pub static CHECKBOX: &str = "design_1/checkbox.png";
 pub static CHECK_ICON: &str = "design_1/check_icon_medium.png";
+pub static SPINNER_ICON: &str = "design_1/spinner_icon.png";
 
 pub static BUTTON_COPY_TEXT: &str = "design_1/copy_icon.png";
 pub static SOLANA_ICON: &str = "solana-icon.png";
+
+pub static SETTINGS_ICON: &str = "icons/settings-icon.png";
 
 // Backgrounds
 pub static SCREEN_BACKGROUND_1: &str = "screen_backgrounds/background_1.png";
@@ -39,7 +42,7 @@ pub static PROOF_ACCOUNT_BACKGROUND: &str = "design_1/proof_account_background.p
 pub static SYSTEM_OVERVIEW_BACKGROUND: &str = "design_1/system_overview_background.png";
 pub static CURRENT_TX_STATUS_BACKGROUND: &str = "design_1/current_tx_background.png";
 
-pub static SETTINGS_ICON: &str = "icons/settings-icon.png";
+pub static TX_POP_UP_BACKGROUND: &str = "design_1/tx_pop_up_background.png";
 
 // Fonts
 pub const FONT_SIZE: f32 = 16.0;

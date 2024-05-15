@@ -10,16 +10,11 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, TextBus1, TextBus2, TextBus3,
-            TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastHashAt,
-            TextMinerStatusThreads, TxPopUpArea,
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, SpinnerIcon, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING,
-            CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM,
-            FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND,
-            TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND,
+            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
     },
     utils::shorten_string,
@@ -87,6 +82,7 @@ pub fn spawn_mining_screen(
                             width: Val::Px(250.0),
                             height: Val::Percent(90.0),
                             flex_direction: FlexDirection::ColumnReverse,
+                            row_gap: Val::Px(10.0),
                             ..default()
                         },
                         ..default()

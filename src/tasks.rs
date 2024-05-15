@@ -10,7 +10,7 @@ use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, trans
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType
+    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType
 };
 
 // Task Components
@@ -226,16 +226,16 @@ pub fn handle_task_process_tx_result(
                         background_color: Color::WHITE.into(),
                         style: Style {
                             width: Val::Percent(100.0),
-                            height: Val::Px(80.0),
-                            flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(20.0),
+                            height: Val::Px(40.0),
+                            flex_direction: FlexDirection::Row,
+                            // row_gap: Val::Px(20.0),
                             align_items: AlignItems::Center,
-                            justify_content: JustifyContent::Center,
+                            justify_content: JustifyContent::SpaceAround,
                             ..default()
                         },
                         ..default()
                     },
-                    UiImage::new(asset_server.load(CURRENT_TX_STATUS_BACKGROUND)),
+                    UiImage::new(asset_server.load(TX_POP_UP_BACKGROUND)),
                     TxProcessor {
                         tx_type: tx_type.clone(),
                         status: "SENDING".to_string(),
@@ -266,11 +266,25 @@ pub fn handle_task_process_tx_result(
                             TextStyle {
                                 font: asset_server.load(FONT_ROBOTO),
                                 font_size: FONT_SIZE_TITLE,
-                                color: Color::hex("#FFFFFF").unwrap(),
+                                color: Color::ORANGE.into(),
                             },
                         ),
                         Name::new("TextTxProcessorTxType"),
                         TextTxProcessorTxType,
+                    ));
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: Color::WHITE.into(),
+                            style: Style {
+                                width: Val::Px(24.0),
+                                height: Val::Px(24.0),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        Name::new("SpinnerIcon"),
+                        UiImage::new(asset_server.load(SPINNER_ICON)),
+                        SpinnerIcon,
                     ));
                 }).id();
 
@@ -313,11 +327,14 @@ pub fn handle_task_tx_sig_check_results(
                         if let Some(confirmation_status) = &sig_status.confirmation_status {
                             let current_commitment = confirmation_status;
                             let mut status;
-                            let mut error = "".to_string();;
+                            let mut error = "".to_string();
                             match current_commitment {
                                 TransactionConfirmationStatus::Processed => {
                                     info!("Transaction landed!");
-                                    info!("STATUS: {:?}", sig_status);
+                                    info!("SIG: {:?}", tx_processor.signature.unwrap().to_string());
+                                    info!("SIG STATUS: {:?}", sig_status);
+                                    info!("TX TYPE: {}", tx_processor.tx_type.to_string());
+                                    info!("Stake Balance: {:?}", tx_processor.staked_balance);
                                     match &sig_status.status {
                                         Ok(_) => {
                                             status = "PROCESSED".to_string();
@@ -331,7 +348,10 @@ pub fn handle_task_tx_sig_check_results(
                                 TransactionConfirmationStatus::Confirmed
                                 | TransactionConfirmationStatus::Finalized => {
                                     info!("Transaction landed!");
-                                    info!("STATUS: {:?}", sig_status);
+                                    info!("SIG: {:?}", tx_processor.signature.unwrap().to_string());
+                                    info!("SIG STATUS: {:?}", sig_status);
+                                    info!("TX TYPE: {}", tx_processor.tx_type.to_string());
+                                    info!("Stake Balance: {:?}", tx_processor.staked_balance);
                                     match &sig_status.status {
                                         Ok(_) => {
                                             status = "SUCCESS".to_string();

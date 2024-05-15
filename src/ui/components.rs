@@ -222,3 +222,6 @@ pub struct ButtonCaptureTextInput;
 
 #[derive(Component)]
 pub struct ButtonSaveConfig;
+
+#[derive(Component)]
+pub struct SpinnerIcon;

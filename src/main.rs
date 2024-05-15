@@ -16,7 +16,7 @@ use tasks::{
     handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskSendTx
 };
 use ui::{
-    components::{ButtonCaptureTextInput, TextInput, TextPasswordInput, ToggleAutoReset},
+    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput, ToggleAutoReset},
     screens::{screen_despawners::{
         despawn_initial_setup_screen, despawn_locked_screen,
         despawn_mining_screen, despawn_wallet_setup_screen, 
@@ -242,6 +242,7 @@ fn main() {
                     auto_reset_epoch,
                     mining_screen_hotkeys,
                     trigger_rpc_calls_for_ui,
+                    spin_spinner_icons
                 ),
             )
                 .run_if(in_state(GameState::Mining)),
@@ -939,5 +940,17 @@ pub fn tx_processor_result_checks(
                 }
             }
         }
+    }
+}
+
+pub fn spin_spinner_icons(
+    mut query: Query<&mut Transform, With<SpinnerIcon>>,
+    time: Res<Time>,
+) {
+    for mut transform in query.iter_mut() {
+        let rotation_rate = 6.0;
+
+        let scaled_rotation = rotation_rate * time.delta().as_secs_f32();
+        transform.rotate_z(scaled_rotation);
     }
 }
