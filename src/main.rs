@@ -135,8 +135,6 @@ fn main() {
             busses: vec![],
             current_bus_id: 0,
         })
-        // .init_resource::<MinerStatusResource>()
-        // .register_type::<MinerStatusResource>()
         .init_resource::<ProofAccountResource>()
         .register_type::<ProofAccountResource>()
         .init_resource::<TreasuryAccountResource>()
@@ -258,6 +256,7 @@ fn main() {
                     mouse_scroll,
                     process_current_transaction,
                     auto_reset_epoch,
+                    mining_screen_hotkeys,
                     trigger_rpc_calls_for_ui,
                 ),
             )
@@ -272,7 +271,28 @@ fn setup_camera(mut commands: Commands) {
 }
 
 fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
-    spawn_initial_setup_screen(commands.reborrow(), asset_server);
+    let config_path = Path::new("config.toml");
+    let config: Option<Config> = if config_path.exists() {
+        let config_string = fs::read_to_string(config_path).unwrap();
+        let config = match toml::from_str(&config_string) {
+            Ok(d) => {
+                Some(d)
+            }
+            Err(_) => None,
+        };
+        config
+    } else {
+        None
+    };
+
+    let config = config.unwrap_or(Config {
+        rpc_url: "https://api.devnet.solana.com".to_string(),
+        threads: 1,
+        fetch_ui_data_from_rpc_interval_ms: 3000,
+        tx_check_status_and_resend_interval_ms: 10000,
+    });
+
+    spawn_initial_setup_screen(commands.reborrow(), asset_server, config);
 }
 
 fn setup_wallet_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -577,6 +597,15 @@ pub fn auto_reset_epoch(
                 }
             }
         }
+    }
+}
+
+pub fn mining_screen_hotkeys(
+    key_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if key_input.just_pressed(KeyCode::KeyC) {
+        next_state.set(GameState::ConfigSetup);
     }
 }
 

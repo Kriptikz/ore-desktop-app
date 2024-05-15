@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::ui::{
+use crate::{ui::{
     components::{
         BaseScreenNode, ButtonCaptureTextInput, ButtonSaveConfig, InitialSetupScreenNode,
         TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval,
@@ -9,9 +9,9 @@ use crate::ui::{
     styles::{
         BUTTON, BUTTON_SAVE_CONFIG, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE, FONT_SIZE_LARGE, FONT_SIZE_TITLE, MENU_BACKGROUND, SCREEN_BACKGROUND_1, SETTINGS_ICON, TITLE_BACKGROUND, TREASURY_BACKGROUND
     },
-};
+}, Config};
 
-pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>, config: Config) {
     commands
         .spawn((
             NodeBundle {
@@ -293,7 +293,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: false,
-                                                    text: "https://api.devnet.solana.com".to_string(),
+                                                    text: config.rpc_url,
                                                 },
                                                 TextConfigInputRpcUrl,
                                                 Name::new("TextConfigRpcUrl"),
@@ -344,7 +344,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: true,
-                                                    text: "1".to_string(),
+                                                    text: config.threads.to_string(),
                                                 },
                                                 TextConfigInputThreads,
                                             ));
@@ -394,7 +394,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: true,
-                                                    text: "1200".to_string(),
+                                                    text: config.fetch_ui_data_from_rpc_interval_ms.to_string(),
                                                 },
                                                 TextConfigInputRpcFetchAccountsInterval,
                                             ));
@@ -444,7 +444,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: true,
-                                                    text: "1200".to_string(),
+                                                    text: config.tx_check_status_and_resend_interval_ms.to_string(),
                                                 },
                                                 TextConfigInputRpcSendTxInterval,
                                             ));
