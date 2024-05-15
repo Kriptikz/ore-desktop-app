@@ -27,6 +27,8 @@ pub static SPINNER_ICON: &str = "design_1/spinner_icon.png";
 pub static BUTTON_COPY_TEXT: &str = "design_1/copy_icon.png";
 pub static SOLANA_ICON: &str = "solana-icon.png";
 
+pub static FIRE_ICON: &str = "design_1/fire_icon.png";
+
 pub static SETTINGS_ICON: &str = "icons/settings-icon.png";
 
 // Backgrounds

@@ -373,6 +373,7 @@ pub fn handle_event_tx_result(
 
         if auto_scroll.0 {
             let items_height = list_node.size().y + 20.0;
+            info!("ITEMS HEIGHT: {}", items_height);
             if let Ok(query_node_parent) = query_node.get(parent.get()) {
                 let container_height = query_node_parent.size().y;
 

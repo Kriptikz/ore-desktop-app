@@ -10,11 +10,11 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, SpinnerIcon, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FIRE_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
     },
     utils::shorten_string,
@@ -1495,7 +1495,7 @@ pub fn spawn_mining_screen(
                                     NodeBundle {
                                         style: Style {
                                             width: Val::Percent(100.0),
-                                            height: Val::Percent(50.0),
+                                            height: Val::Percent(100.0),
                                             flex_direction: FlexDirection::Column,
                                             padding: UiRect {
                                                 top: Val::Px(10.0),
@@ -1516,9 +1516,8 @@ pub fn spawn_mining_screen(
                                                 style: Style {
                                                     flex_direction: FlexDirection::Row,
                                                     width: Val::Percent(100.0),
-                                                    height: Val::Percent(100.0),
+                                                    height: Val::Px(40.0),
                                                     align_items: AlignItems::Start,
-                                                    row_gap: Val::Px(10.0),
                                                     margin: UiRect::left(Val::Px(5.0)),
                                                     ..default()
                                                 },
@@ -1544,14 +1543,15 @@ pub fn spawn_mining_screen(
                                             NodeBundle {
                                                 style: Style {
                                                     flex_direction: FlexDirection::Row,
-                                                    width: Val::Percent(90.0),
-                                                    height: Val::Percent(90.0),
+                                                    width: Val::Percent(100.0),
+                                                    height: Val::Percent(70.0),
                                                     margin: UiRect {
-                                                        top: Val::Px(0.0),
+                                                        top: Val::Px(10.0),
                                                         left: Val::Px(5.0),
                                                         right: Val::Px(5.0),
                                                         bottom: Val::Px(0.0),
                                                     },
+                                                    row_gap: Val::Px(10.0),
                                                     ..default()
                                                 },
                                                 ..default()
@@ -1650,6 +1650,19 @@ pub fn spawn_mining_screen(
                                                             },
                                                         ),
                                                         Name::new("TextLastClaimAt"),
+                                                    ));
+
+                                                    parent.spawn((
+                                                        TextBundle::from_section(
+                                                            "Burn Amount: ",
+                                                            TextStyle {
+                                                                font: asset_server
+                                                                    .load(FONT_ROBOTO),
+                                                                font_size: FONT_SIZE,
+                                                                color: Color::rgb(0.9, 0.9, 0.9),
+                                                            },
+                                                        ),
+                                                        Name::new("TextBurnAmount"),
                                                     ));
 
                                                     parent.spawn((
@@ -1774,6 +1787,45 @@ pub fn spawn_mining_screen(
                                                         Name::new("TextLastClaimAt"),
                                                         TextLastClaimAt,
                                                     ));
+                                                    parent.spawn((
+                                                        NodeBundle {
+                                                            style: Style {
+                                                                width: Val::Px(100.0),
+                                                                height: Val::Px(40.0),
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        Name::new("BurnAmount Node"),
+                                                    )).with_children(|parent| {
+                                                        parent.spawn((
+                                                            TextBundle::from_section(
+                                                                "loading...",
+                                                                TextStyle {
+                                                                    font: asset_server
+                                                                        .load(FONT_ROBOTO),
+                                                                    font_size: FONT_SIZE,
+                                                                    color: Color::rgb(0.9, 0.9, 0.9),
+                                                                },
+                                                            ),
+                                                            Name::new("TextBurnAmount"),
+                                                            TextBurnAmount,
+                                                        ));
+
+                                                        // parent.spawn((
+                                                        //     NodeBundle {
+                                                        //         background_color: Color::WHITE.into(),
+                                                        //         style: Style {
+                                                        //             width: Val::Px(24.0),
+                                                        //             height: Val::Px(24.0),
+                                                        //             ..Default::default()
+                                                        //         },
+                                                        //         ..Default::default()
+                                                        //     },
+                                                        //     UiImage::new(asset_server.load(FIRE_ICON)),
+                                                        //     Name::new("FireIcon"),
+                                                        // ));
+                                                    });
 
                                                     parent.spawn((
                                                         TextBundle::from_section(
@@ -1796,9 +1848,7 @@ pub fn spawn_mining_screen(
                                                 style: Style {
                                                     flex_direction: FlexDirection::Row,
                                                     width: Val::Percent(100.0),
-                                                    height: Val::Percent(100.0),
-                                                    align_items: AlignItems::Start,
-                                                    row_gap: Val::Px(10.0),
+                                                    height: Val::Percent(30.0),
                                                     ..default()
                                                 },
                                                 ..default()
