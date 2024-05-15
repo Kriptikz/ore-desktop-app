@@ -1,8 +1,5 @@
 use std::{
-    fs::{self},
-    path::Path,
-    sync::Arc,
-    time::{Duration, Instant},
+    fmt::{Formatter, Display}, fs, path::Path, sync::Arc, time::{Duration, Instant}
 };
 
 use bevy::{input::mouse::MouseButtonInput, prelude::*, tasks::IoTaskPool};
@@ -16,8 +13,7 @@ use solana_sdk::{
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::{
-    task_generate_hash, task_process_current_tx, task_process_tx, task_register_wallet,
-    task_update_app_wallet_sol_balance, task_update_current_tx, TaskProcessCurrentTx,
+    handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskProcessCurrentTx, TaskSendTx
 };
 use ui::{
     components::{ButtonCaptureTextInput, TextInput, TextPasswordInput, ToggleAutoReset},
@@ -228,7 +224,6 @@ fn main() {
                     handle_event_tx_result,
                     handle_event_fetch_ui_data_from_rpc,
                     handle_event_register_wallet,
-                    handle_event_process_tx,
                     handle_event_reset_epoch,
                     handle_event_mine_for_hash,
                     handle_event_claim_ore_rewards,
@@ -239,9 +234,10 @@ fn main() {
                     task_update_app_wallet_sol_balance,
                     task_generate_hash,
                     task_register_wallet,
-                    task_process_tx,
-                    task_process_current_tx,
-                    task_update_current_tx,
+                    handle_task_process_tx_result,
+                    handle_task_send_tx_result,
+                    handle_task_tx_sig_check_results,
+                    // task_process_current_tx,
                 ),
                 (
                     update_app_wallet_ui,
@@ -254,7 +250,9 @@ fn main() {
                 ),
                 (
                     mouse_scroll,
-                    process_current_transaction,
+                    // process_current_transaction,
+                    tx_processor,
+                    tx_processor_result_checks,
                     auto_reset_epoch,
                     mining_screen_hotkeys,
                     trigger_rpc_calls_for_ui,
@@ -335,6 +333,53 @@ fn setup_locked_screen(
 // Components
 #[derive(Component)]
 pub struct EntityTaskHandler;
+
+pub enum TxType {
+    Mine,
+    ResetEpoch,
+    CreateAta,
+    Stake,
+    Claim,
+}
+
+impl ToString for TxType {
+    fn to_string(&self) -> String {
+        match self {
+            TxType::Mine => {
+                "Mine".to_string()
+            },
+            TxType::ResetEpoch => {
+                "Reset".to_string()
+            },
+            TxType::CreateAta =>  {
+                "Create Ata".to_string()
+            },
+            TxType::Stake =>  {
+                "Stake".to_string()
+            },
+            TxType::Claim => {
+                "Claim".to_string()
+            },
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct HashStatus {
+    pub hash_time: u64,
+    pub hash_difficulty: u32,
+}
+
+#[derive(Component)]
+pub struct TxProcessor {
+    tx_type: TxType,
+    status: String,
+    error: String,
+    signed_tx: Transaction,
+    signature: Option<Signature>,
+    hash_status: Option<HashStatus>,
+    send_and_confirm_interval: Timer,
+}
 
 #[derive(Component)]
 pub struct EntityTaskFetchUiData;
@@ -834,5 +879,118 @@ fn file_drop(
 
             event_writer.send(EventLoadKeypairFile(path_buf.to_path_buf()));
         }
+    }
+}
+
+pub fn tx_processor(
+    mut commands: Commands,
+    mut query_tx: Query<(Entity, &mut TxProcessor)>,
+    rpc_connection: Res<RpcConnection>,
+    time: Res<Time>
+) {
+    // let mut sigs: Vec<Signature> = Vec::new();
+    for (entity, mut tx_processor) in query_tx.iter_mut() {
+        let mut just_finished = false;
+        {
+            let timer = &mut tx_processor.send_and_confirm_interval;
+            timer.tick(time.delta());
+            if timer.just_finished() {
+                just_finished = true;
+                timer.reset();
+            }
+        }
+
+        if just_finished {
+            if let Some(sig) = tx_processor.signature {
+                // sigs.push(sig);
+                let task_pool = IoTaskPool::get();
+                let client = rpc_connection.rpc.clone();
+                let task = task_pool.spawn(async move {
+                    let sigs = [sig];
+                    match client.get_signature_statuses(&sigs) {
+                        Ok(signature_statuses) => {
+                            for signature_status in signature_statuses.value {
+                                if let Some(signature_status) = signature_status.as_ref() {
+                                    return Ok(Some(signature_status.clone()));
+                                } else {
+                                    return Ok(None);
+                                }
+                            }
+
+                            return Ok(None);
+                        }
+
+                        // Handle confirmation errors
+                        Err(err) => {
+                            let e_str = format!("Confirmation Error: {:?}", err.kind().to_string());
+                            return Err(e_str);
+                        }
+                    }
+                });
+
+                commands
+                    .entity(entity)
+                    .insert(TaskCheckSigStatus { task });
+            }
+
+            // create the task to send the tx and update the TxProcessor Signature
+            info!("Send tx...");
+            let task_pool = IoTaskPool::get();
+            let client = rpc_connection.rpc.clone();
+            let tx = tx_processor.signed_tx.clone();
+            let task = task_pool.spawn(async move {
+                let send_cfg = RpcSendTransactionConfig {
+                    skip_preflight: true,
+                    preflight_commitment: Some(CommitmentLevel::Confirmed),
+                    encoding: Some(UiTransactionEncoding::Base64),
+                    max_retries: Some(0),
+                    min_context_slot: None,
+                };
+
+                let sig = client.send_transaction_with_config(&tx, send_cfg);
+                if let Ok(sig) = sig {
+                    return Ok(sig);
+                } else {
+                    info!("Failed to send initial transaction...");
+                    return Err("Failed to send tx".to_string());
+                }
+            });
+
+            commands
+                .entity(entity)
+                .insert(TaskSendTx { task });
+
+            }
+
+    }
+}
+
+pub fn tx_processor_result_checks(
+    mut commands: Commands,
+    mut event_writer: EventWriter<EventTxResult>,
+    query_tx: Query<(Entity, &TxProcessor)>,
+) {
+    for (entity, tx_processor) in query_tx.iter() {
+        let status = tx_processor.status.clone();
+        if status == "SUCCESS" || status == "FAILED" {
+            let sig = if let Some(s) = tx_processor.signature {
+                s.to_string()
+            } else {
+                "FAILED".to_string()
+            };
+            event_writer.send(EventTxResult {
+                tx_type: tx_processor.tx_type.to_string(),
+                sig,
+                hash_status: tx_processor.hash_status,
+                tx_time: 0,
+                tx_status:  TxStatus {
+                    status,
+                    error: tx_processor.error.clone()
+                }
+            });
+
+            commands.entity(entity).despawn_recursive();
+        }
+
     }
 }

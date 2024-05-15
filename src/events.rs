@@ -15,11 +15,11 @@ use crate::{
         get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
     }, tasks::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
-        TaskUpdateAppWalletSolBalanceData, TaskUpdateCurrentTx,
+        TaskUpdateAppWalletSolBalanceData
     }, ui::{
         components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
+    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -65,7 +65,7 @@ pub struct EventTxResult {
     pub tx_type: String,
     pub sig: String,
     pub tx_time: u64,
-    pub hash_status: Option<(u64, u32)>,
+    pub hash_status: Option<HashStatus>,
     pub tx_status: TxStatus,
 }
 
@@ -216,54 +216,54 @@ pub fn handle_event_mine_for_hash(
     }
 }
 
-pub fn handle_event_process_tx(
-    mut commands: Commands,
-    mut ev_submit_hash_tx: EventReader<EventProcessTx>,
-    mut miner_status: ResMut<MinerStatusResource>,
-    query_task_handler: Query<Entity, With<EntityTaskHandler>>,
-    rpc_connection: Res<RpcConnection>,
-) {
-    for ev in ev_submit_hash_tx.read() {
-        info!("ProcessTx Event Handler.");
-        let tx_type = ev.tx_type.clone();
-        if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = IoTaskPool::get();
+// pub fn handle_event_process_tx(
+//     mut commands: Commands,
+//     mut ev_submit_hash_tx: EventReader<EventProcessTx>,
+//     mut miner_status: ResMut<MinerStatusResource>,
+//     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+//     rpc_connection: Res<RpcConnection>,
+// ) {
+//     for ev in ev_submit_hash_tx.read() {
+//         info!("ProcessTx Event Handler.");
+//         let tx_type = ev.tx_type.clone();
+//         if let Ok(task_handler_entity) = query_task_handler.get_single() {
+//             let pool = IoTaskPool::get();
 
-            let client = rpc_connection.rpc.clone();
-            let tx_type_task = tx_type.clone();
-            let tx = ev.tx.clone();
-            let hash_time = ev.hash_status.clone();
-            let task = pool.spawn(async move {
-                let tx_type = tx_type_task.clone();
-                let send_cfg = RpcSendTransactionConfig {
-                    skip_preflight: true,
-                    preflight_commitment: Some(CommitmentLevel::Confirmed),
-                    encoding: Some(UiTransactionEncoding::Base64),
-                    max_retries: Some(0),
-                    min_context_slot: None,
-                };
+//             let client = rpc_connection.rpc.clone();
+//             let tx_type_task = tx_type.clone();
+//             let tx = ev.tx.clone();
+//             let hash_time = ev.hash_status.clone();
+//             let task = pool.spawn(async move {
+//                 let tx_type = tx_type_task.clone();
+//                 let send_cfg = RpcSendTransactionConfig {
+//                     skip_preflight: true,
+//                     preflight_commitment: Some(CommitmentLevel::Confirmed),
+//                     encoding: Some(UiTransactionEncoding::Base64),
+//                     max_retries: Some(0),
+//                     min_context_slot: None,
+//                 };
 
-                let sig = client.send_transaction_with_config(&tx, send_cfg);
-                if let Ok(sig) = sig {
-                    return Some((tx_type, tx, sig, hash_time));
-                } else {
-                    info!("Failed to send initial transaction...");
-                    return None;
-                }
-            });
-            if tx_type.as_str() == "Mine" {
-                miner_status.miner_status = "PROCESSING".to_string();
-            }
+//                 let sig = client.send_transaction_with_config(&tx, send_cfg);
+//                 if let Ok(sig) = sig {
+//                     return Some((tx_type, tx, sig, hash_time));
+//                 } else {
+//                     info!("Failed to send initial transaction...");
+//                     return None;
+//                 }
+//             });
+//             if tx_type.as_str() == "Mine" {
+//                 miner_status.miner_status = "PROCESSING".to_string();
+//             }
 
-            commands
-                .entity(task_handler_entity)
-                .insert(TaskUpdateCurrentTx { task });
+//             commands
+//                 .entity(task_handler_entity)
+//                 .insert(TaskUpdateCurrentTx { task });
 
-        } else {
-            error!("Failed to get task entity. handle_event_process_tx");
-        }
-    }
-}
+//         } else {
+//             error!("Failed to get task entity. handle_event_process_tx");
+//         }
+//     }
+// }
 
 pub struct CurrentBus {
     bus: usize
@@ -339,8 +339,8 @@ pub fn handle_event_tx_result(
 ) {
     for ev in ev_tx_result.read() {
         info!("Tx Result Event Handler.");
-        let (hash_time, difficulty) = if let Some(ht) = ev.hash_status {
-            (ht.0.to_string(), ht.1.to_string())
+        let (hash_time, difficulty) = if let Some(ht) = &ev.hash_status {
+            (ht.hash_time.to_string(), ht.hash_difficulty.to_string())
         } else {
             ("N/A".to_string(), "".to_string())
         };
