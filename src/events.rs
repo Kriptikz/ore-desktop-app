@@ -278,6 +278,7 @@ pub fn handle_event_submit_hash_tx(
     mut ev_submit_hash_tx: EventReader<EventSubmitHashTx>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     app_wallet: Res<AppWallet>,
+    mut miner_status: ResMut<MinerStatusResource>,
     rpc_connection: Res<RpcConnection>,
     mut busses_res: ResMut<BussesResource>,
 ) {
@@ -316,6 +317,7 @@ pub fn handle_event_submit_hash_tx(
                 }
             });
 
+            miner_status.miner_status = "PROCESSING".to_string();
             commands
                 .entity(task_handler_entity)
                 .insert(TaskProcessTx { task });
