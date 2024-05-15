@@ -866,15 +866,32 @@ pub fn tx_processor_result_checks(
 
             match tx_processor.tx_type {
                 TxType::Mine =>  {
-                    let previous_staked_balance = tx_processor.staked_balance;
-                    if let Some(previous_staked_balance) = previous_staked_balance {
-                        let current_staked_balance = proof_res.stake;
-                        if previous_sol_balance != current_sol_balance && current_staked_balance != previous_staked_balance {
-                            // let sol_diff = current_sol_balance - previous_sol_balance;
-                            let staked_diff = current_staked_balance - previous_staked_balance;
-                            let ore_conversion = staked_diff as f64 / 10f64.powf(ore::TOKEN_DECIMALS as f64);
-                            let status = format!("{} +{} ORE.", status, ore_conversion.to_string());
-                            
+                    if status == "SUCCESS" {
+                        let previous_staked_balance = tx_processor.staked_balance;
+                        if let Some(previous_staked_balance) = previous_staked_balance {
+                            let current_staked_balance = proof_res.stake;
+                            if previous_sol_balance != current_sol_balance && current_staked_balance != previous_staked_balance {
+                                // let sol_diff = current_sol_balance - previous_sol_balance;
+                                let staked_diff = current_staked_balance - previous_staked_balance;
+                                let ore_conversion = staked_diff as f64 / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                                let status = format!("{} +{} ORE.", status, ore_conversion.to_string());
+                                
+                                event_writer.send(EventTxResult {
+                                    tx_type: tx_processor.tx_type.to_string(),
+                                    sig,
+                                    hash_status: tx_processor.hash_status,
+                                    tx_time: 0,
+                                    tx_status:  TxStatus {
+                                        status,
+                                        error: tx_processor.error.clone()
+                                    }
+                                });
+
+                                commands.entity(entity).despawn_recursive();
+
+                            }
+                        } else {
+                            error!("Mine tx does not have previous staked balance");
                             event_writer.send(EventTxResult {
                                 tx_type: tx_processor.tx_type.to_string(),
                                 sig,
@@ -887,22 +904,20 @@ pub fn tx_processor_result_checks(
                             });
 
                             commands.entity(entity).despawn_recursive();
-
                         }
-                    } else {
-                        error!("Mine tx does not have previous staked balance");
-                        event_writer.send(EventTxResult {
-                            tx_type: tx_processor.tx_type.to_string(),
-                            sig,
-                            hash_status: tx_processor.hash_status,
-                            tx_time: 0,
-                            tx_status:  TxStatus {
-                                status,
-                                error: tx_processor.error.clone()
-                            }
-                        });
+                    } else if status == "FAILED" {
+                            event_writer.send(EventTxResult {
+                                tx_type: tx_processor.tx_type.to_string(),
+                                sig,
+                                hash_status: tx_processor.hash_status,
+                                tx_time: 0,
+                                tx_status:  TxStatus {
+                                    status,
+                                    error: tx_processor.error.clone()
+                                }
+                            });
 
-                        commands.entity(entity).despawn_recursive();
+                            commands.entity(entity).despawn_recursive();
                     }
                 }
                 TxType::ResetEpoch |
