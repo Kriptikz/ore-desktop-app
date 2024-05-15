@@ -98,6 +98,7 @@ pub fn update_app_wallet_ui(
 
 pub fn update_busses_ui(
     busses_res: Res<BussesResource>,
+    miner_status: Res<MinerStatusResource>,
     mut set: ParamSet<(
         Query<&mut Text, With<TextBus1>>,
         Query<&mut Text, With<TextBus2>>,
@@ -114,8 +115,14 @@ pub fn update_busses_ui(
         let mut text_bus_text = text_bus_query.single_mut();
         let rewards = (busses_res.busses[0].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 1: {}    ", rewards);
+        let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+            Color::GREEN
+        } else {
+            Color::ORANGE
+        };
+        
         if busses_res.current_bus_id == 0 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
@@ -125,7 +132,7 @@ pub fn update_busses_ui(
         let rewards = (busses_res.busses[1].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 2: {}    ", rewards);
         if busses_res.current_bus_id == 1 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
@@ -135,7 +142,7 @@ pub fn update_busses_ui(
         let rewards = (busses_res.busses[2].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 3: {}    ", rewards);
         if busses_res.current_bus_id == 2 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
@@ -146,7 +153,7 @@ pub fn update_busses_ui(
         let rewards = (busses_res.busses[3].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 4: {}    ", rewards);
         if busses_res.current_bus_id == 3 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
@@ -156,7 +163,7 @@ pub fn update_busses_ui(
         let rewards = (busses_res.busses[4].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 5: {}    ", rewards);
         if busses_res.current_bus_id == 4 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
@@ -166,7 +173,7 @@ pub fn update_busses_ui(
         let rewards = (busses_res.busses[5].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 6: {}    ", rewards);
         if busses_res.current_bus_id == 5 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
@@ -176,7 +183,7 @@ pub fn update_busses_ui(
         let rewards = (busses_res.busses[6].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 7: {}    ", rewards);
         if busses_res.current_bus_id == 6 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
@@ -186,7 +193,7 @@ pub fn update_busses_ui(
         let rewards = (busses_res.busses[7].rewards as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
         text_bus_text.sections[0].value = format!("Bus 8: {}    ", rewards);
         if busses_res.current_bus_id == 7 {
-            text_bus_text.sections[0].style.color = Color::GREEN.into();
+            text_bus_text.sections[0].style.color = selected_color.into();
         } else {
             text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
         }
