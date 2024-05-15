@@ -19,7 +19,7 @@ use crate::{
     }, ui::{
         components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, Config, CurrentTx, EntityTaskFetchUiData, EntityTaskHandler, GameState, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
+    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, Config, EntityTaskFetchUiData, EntityTaskHandler, GameState, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxStatus
 };
 
 use std::{
@@ -107,7 +107,6 @@ pub fn handle_event_start_stop_mining_clicked(
     mut event_writer_stop: EventWriter<EventStopMining>,
     app_wallet: Res<AppWallet>,
     mut miner_status: ResMut<MinerStatusResource>,
-    mut current_tx: ResMut<CurrentTx>,
     rpc_connection: Res<RpcConnection>,
     asset_server: Res<AssetServer>,
     mut query: Query<(&mut UiImage, &mut ToggleAutoMine)>,
@@ -120,7 +119,6 @@ pub fn handle_event_start_stop_mining_clicked(
                 // stop mining
                 // event_writer_stop.send(EventStopMining);
                 miner_status.miner_status = "STOPPED".to_string();
-                current_tx.tx_status.status = "INTERRUPTED".to_string();
                 let (mut btn, mut toggle) = query.single_mut();
                 toggle.0 = false;
                 *btn = UiImage::new(asset_server.load(TOGGLE_OFF));

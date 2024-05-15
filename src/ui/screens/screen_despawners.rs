@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 
 use crate::{
-    CurrentTx, EntityTaskFetchUiData, EntityTaskHandler,
+    EntityTaskFetchUiData, EntityTaskHandler,
     MinerStatusResource, OreAppState, RpcConnection, TxStatus,
 };
 
@@ -42,7 +42,6 @@ pub fn despawn_locked_screen(mut commands: Commands, query: Query<Entity, With<L
 pub fn despawn_mining_screen(
     mut commands: Commands,
     app_state: Res<OreAppState>,
-    mut current_tx: ResMut<CurrentTx>,
     mut miner_status: ResMut<MinerStatusResource>,
     query: Query<Entity, With<BaseScreenNode>>,
     query_task_miner_entity: Query<Entity, With<EntityTaskHandler>>,
@@ -55,23 +54,6 @@ pub fn despawn_mining_screen(
     let config = &app_state.config;
 
     miner_status.miner_status = "STOPPED".to_string();
-    let reset_current_tx = CurrentTx {
-        tx_type: "".to_string(),
-        tx_sig: None,
-        tx_status: TxStatus {
-            status: "".to_string(),
-            error: "".to_string(),
-        },
-        hash_status: None,
-        elapsed_instant: Instant::now(),
-        elapsed_seconds: 0,
-        interval_timer: Timer::new(
-            Duration::from_millis(config.tx_check_status_and_resend_interval_ms),
-            TimerMode::Once,
-        ),
-    };
-
-    *current_tx = reset_current_tx;
 
     let entity_task_miner = query_task_miner_entity
         .get_single()

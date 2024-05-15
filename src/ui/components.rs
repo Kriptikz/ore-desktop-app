@@ -24,6 +24,9 @@ pub struct FpsText;
 pub struct BaseScreenNode;
 
 #[derive(Component)]
+pub struct TxPopUpArea;
+
+#[derive(Component)]
 pub struct InitialSetupScreenNode;
 
 #[derive(Component)]
@@ -171,6 +174,9 @@ pub struct TextConfigInputRpcFetchAccountsInterval;
 
 #[derive(Component)]
 pub struct TextConfigInputRpcSendTxInterval;
+
+#[derive(Component)]
+pub struct TextTxProcessorTxType;
 
 #[derive(Component)]
 pub struct ButtonAutoScroll(pub bool);

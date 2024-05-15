@@ -13,7 +13,7 @@ use solana_sdk::{
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::{
-    handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskProcessCurrentTx, TaskSendTx
+    handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskSendTx
 };
 use ui::{
     components::{ButtonCaptureTextInput, TextInput, TextPasswordInput, ToggleAutoReset},
@@ -25,7 +25,7 @@ use ui::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_reset_epoch, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
-        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_current_tx_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_toggle_reset_ui, update_treasury_account_ui
+        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_toggle_reset_ui, update_treasury_account_ui
     },
 };
 use utils::get_unix_timestamp;
@@ -110,18 +110,6 @@ fn main() {
         .insert_resource(OreAppState {
             config,
             active_input_node: None,
-        })
-        .insert_resource(CurrentTx {
-            tx_type: "".to_string(),
-            tx_sig: None,
-            tx_status: TxStatus {
-                status: "".to_string(),
-                error: "".to_string(),
-            },
-            hash_status: None,
-            elapsed_instant: Instant::now(),
-            elapsed_seconds: 0,
-            interval_timer: Timer::new(Duration::from_millis(tx_send_interval), TimerMode::Once),
         })
         .insert_resource(MinerStatusResource {
             miner_threads: threads,
@@ -237,7 +225,6 @@ fn main() {
                     handle_task_process_tx_result,
                     handle_task_send_tx_result,
                     handle_task_tx_sig_check_results,
-                    // task_process_current_tx,
                 ),
                 (
                     update_app_wallet_ui,
@@ -245,12 +232,10 @@ fn main() {
                     update_proof_account_ui,
                     update_treasury_account_ui,
                     update_miner_status_ui,
-                    update_current_tx_ui,
                     update_toggle_reset_ui
                 ),
                 (
                     mouse_scroll,
-                    // process_current_transaction,
                     tx_processor,
                     tx_processor_result_checks,
                     auto_reset_epoch,
@@ -334,6 +319,7 @@ fn setup_locked_screen(
 #[derive(Component)]
 pub struct EntityTaskHandler;
 
+#[derive(Clone)]
 pub enum TxType {
     Mine,
     ResetEpoch,
@@ -477,118 +463,10 @@ pub struct TxStatus {
     pub error: String,
 }
 
-#[derive(Resource, Debug)]
-pub struct CurrentTx {
-    pub tx_type: String,
-    pub tx_sig: Option<(Transaction, Signature)>,
-    pub tx_status: TxStatus,
-    pub hash_status: Option<(u64, u32)>,
-    pub elapsed_instant: Instant,
-    pub elapsed_seconds: u64,
-    pub interval_timer: Timer,
-}
-
 #[derive(Resource)]
 pub struct OreAppState {
     config: Config,
     active_input_node: Option<Entity>,
-}
-
-pub fn process_current_transaction(
-    mut commands: Commands,
-    mut current_transaction: ResMut<CurrentTx>,
-    time: Res<Time>,
-    query_task_handler: Query<Entity, With<EntityTaskHandler>>,
-    rpc_connection: Res<RpcConnection>,
-) {
-    if let Some((tx, _sig)) = current_transaction.tx_sig.clone() {
-        if current_transaction.tx_status.status != "SUCCESS"
-            && current_transaction.tx_status.status != "FAILED"
-            && current_transaction.tx_status.status != "INTERRUPTED"
-        {
-            current_transaction.interval_timer.tick(time.delta());
-            if current_transaction.interval_timer.just_finished() {
-                let task_handler_entity = query_task_handler.get_single();
-                if let Ok(task_handler_entity) = task_handler_entity {
-                    let pool = IoTaskPool::get();
-                    let client = rpc_connection.rpc.clone();
-                    let task = pool.spawn(async move {
-                        info!("SendAndConfirmTransaction....");
-
-                        let send_cfg = RpcSendTransactionConfig {
-                            skip_preflight: true,
-                            preflight_commitment: Some(CommitmentLevel::Confirmed),
-                            encoding: Some(UiTransactionEncoding::Base64),
-                            max_retries: Some(0),
-                            min_context_slot: None,
-                        };
-
-                        let mut status = "SENDING".to_string();
-                        let mut error = "".to_string();
-                        let sig = client.send_transaction_with_config(&tx, send_cfg);
-                        if let Ok(sig) = sig {
-                            let sigs = [sig];
-                            match client.get_signature_statuses(&sigs) {
-                                Ok(signature_statuses) => {
-                                    for signature_status in signature_statuses.value {
-                                        if let Some(signature_status) = signature_status.as_ref() {
-                                            if let Some(confirmation_status) = &signature_status.confirmation_status {
-                                                let current_commitment = confirmation_status;                                                match current_commitment {
-                                                    TransactionConfirmationStatus::Processed => {
-                                                        info!("Transaction landed!");
-                                                        info!("STATUS: {:?}", signature_status);
-                                                        match &signature_status.status {
-                                                            Ok(_) => {
-                                                                status = "PROCESSED".to_string();
-                                                            }
-                                                            Err(e) => {
-                                                                status = "FAILED".to_string();
-                                                                error = e.to_string();
-                                                            }
-                                                        }
-                                                    }
-                                                    TransactionConfirmationStatus::Confirmed
-                                                    | TransactionConfirmationStatus::Finalized => {
-                                                        info!("Transaction landed!");
-                                                        info!("STATUS: {:?}", signature_status);
-                                                        match &signature_status.status {
-                                                            Ok(_) => {
-                                                                status = "SUCCESS".to_string();
-                                                            }
-                                                            Err(e) => {
-                                                                status = "FAILED".to_string();
-                                                                error = e.to_string();
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Handle confirmation errors
-                                Err(err) => {
-                                    info!("Confirmation Error: {:?}", err.kind().to_string());
-                                }
-                            }
-                            let tx_status = TxStatus { status, error };
-                            return (Some(sig), tx_status);
-                        }
-                        let tx_status = TxStatus { status, error };
-                        (None, tx_status)
-                    });
-                    commands
-                        .entity(task_handler_entity)
-                        .insert(TaskProcessCurrentTx { task });
-
-                } else {
-                    error!("Failed to get task_handler_entity in process_current_tx.");
-                }
-            }
-        }
-    }
 }
 
 pub struct LocalResetCooldown {
@@ -604,7 +482,6 @@ impl Default for LocalResetCooldown {
 pub fn auto_reset_epoch(
     treasury_status: Res<TreasuryAccountResource>,
     proof_res: Res<ProofAccountResource>,
-    current_tx: Res<CurrentTx>,
     mut event_writer: EventWriter<EventResetEpoch>,
     // mut last_reset_sent_at: Local<u64>,
     query: Query<&ToggleAutoReset>,
@@ -633,11 +510,8 @@ pub fn auto_reset_epoch(
                     reset_cooldown.reset_timer.tick(time.delta());
 
                     if reset_cooldown.reset_timer.just_finished() {
-                        if current_tx.tx_type != "Reset" {
                             event_writer.send(EventResetEpoch);
                             reset_cooldown.reset_timer.reset();
-                            // *last_reset_sent_at = current_ts;
-                        }
                     }
                 }
             }

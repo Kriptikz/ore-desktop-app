@@ -9,7 +9,6 @@ use crate::ore_utils::get_ore_decimals;
 use crate::utils::{get_unix_timestamp, human_bytes, shorten_string};
 use crate::AppWallet;
 use crate::BussesResource;
-use crate::CurrentTx;
 use crate::MinerStatusResource;
 use crate::OreAppState;
 use crate::ProofAccountResource;
@@ -29,9 +28,6 @@ use super::components::TextBus7;
 use super::components::TextBus8;
 use super::components::TextCurrentStake;
 use super::components::TextCurrentChallenge;
-use super::components::TextCurrentTxElapsed;
-use super::components::TextCurrentTxSig;
-use super::components::TextCurrentTxStatus;
 use super::components::TextCursor;
 use super::components::TextInput;
 use super::components::TextLastHashAt;
@@ -372,61 +368,6 @@ pub fn update_miner_status_ui(
     let mut text_4 = text_query_4.single_mut();
 
     text_4.sections[0].value = format!("{}", res.miner_threads);
-}
-
-pub fn update_current_tx_ui(
-    mut res: ResMut<CurrentTx>,
-    mut set: ParamSet<(
-        Query<&mut Text, With<TextCurrentTxSig>>,
-        Query<&mut Text, With<TextCurrentTxStatus>>,
-        Query<&mut Text, With<TextCurrentTxElapsed>>,
-    )>,
-) {
-    let mut text_query_0 = set.p0();
-    let mut text_0 = text_query_0.single_mut();
-    if let Some((_tx, sig)) = res.tx_sig.clone() {
-        text_0.sections[0].value = format!("Signature: {}", shorten_string(sig.to_string(), 10));
-    } else {
-        text_0.sections[0].value = "Signature: ".to_string() + "None";
-    }
-
-    let mut text_query_1 = set.p1();
-    let mut text_1 = text_query_1.single_mut();
-    text_1.sections[0].value = "Status: ".to_string() + &res.tx_status.status;
-    match res.tx_status.status.as_str() {
-        "PROCESSED" => {
-            if text_1.sections[0].style.color != Color::LIME_GREEN {
-                text_1.sections[0].style.color = Color::LIME_GREEN;
-            }
-        },
-        "SENDING" => {
-            if text_1.sections[0].style.color != Color::YELLOW {
-                text_1.sections[0].style.color = Color::YELLOW;
-            }
-        },
-        "SUCCESS" => {
-            if text_1.sections[0].style.color != Color::GREEN {
-                text_1.sections[0].style.color = Color::GREEN;
-            }
-        },
-        "FAILED" => {
-            if text_1.sections[0].style.color != Color::RED {
-                text_1.sections[0].style.color = Color::RED;
-            }
-        },
-        _ => {
-            if text_1.sections[0].style.color != Color::RED {
-                text_1.sections[0].style.color = Color::RED;
-            }
-        },
-    }
-
-    if res.tx_status.status != "SUCCESS" && res.tx_status.status != "FAILED" {
-        res.elapsed_seconds = res.elapsed_instant.elapsed().as_secs();
-    }
-    let mut text_query_2 = set.p2();
-    let mut text_2 = text_query_2.single_mut();
-    text_2.sections[0].value = "Elapsed: ".to_string() + &res.elapsed_seconds.to_string();
 }
 
 pub fn update_text_input_ui(mut active_text_query: Query<(&mut Text, &TextInput)>) {

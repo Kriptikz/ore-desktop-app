@@ -12,7 +12,7 @@ use crate::{
         components::{
             AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, TextBus1, TextBus2, TextBus3,
             TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastHashAt,
-            TextMinerStatusThreads,
+            TextMinerStatusThreads, TxPopUpArea,
         },
         spawn_utils::spawn_copyable_text,
         styles::{
@@ -64,6 +64,37 @@ pub fn spawn_mining_screen(
             BaseScreenNode,
         ))
         .with_children(|parent| {
+            // pop-up area
+            parent.spawn((
+                NodeBundle {
+                    z_index: ZIndex::Global(15),
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        padding: UiRect::right(Val::Px(25.0)),
+                        position_type: PositionType::Absolute,
+                        align_content: AlignContent::End,
+                        justify_content: JustifyContent::End,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("TxPopUpScreen Node"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    NodeBundle {
+                        style: Style {
+                            width: Val::Px(250.0),
+                            height: Val::Percent(90.0),
+                            flex_direction: FlexDirection::ColumnReverse,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    TxPopUpArea,
+                    Name::new("TxPopUpArea"),
+                ));
+            });
             // Top Left Ore Logo
             parent
                 .spawn(NodeBundle {
@@ -1814,73 +1845,6 @@ pub fn spawn_mining_screen(
                                                 Name::new("ButtonStakeOre"),
                                             ));
                                         });
-                                });
-                            parent
-                                .spawn((
-                                    NodeBundle {
-                                        background_color: Color::WHITE.into(),
-                                        // border_color: Color::ORANGE.into(),
-                                        style: Style {
-                                            width: Val::Percent(100.0),
-                                            height: Val::Percent(30.0),
-                                            flex_direction: FlexDirection::Column,
-                                            padding: UiRect {
-                                                top: Val::Px(10.0),
-                                                right: Val::Px(1.0),
-                                                left: Val::Px(16.0),
-                                                bottom: Val::Px(1.0),
-                                            },
-                                            row_gap: Val::Px(6.0),
-                                            // border: UiRect::all(Val::Px(1.0)),
-                                            ..default()
-                                        },
-                                        ..default()
-                                    },
-                                    UiImage::new(asset_server.load(CURRENT_TX_STATUS_BACKGROUND)),
-                                    Name::new("Current Tx Status Node"),
-                                ))
-                                .with_children(|parent| {
-                                    parent.spawn((TextBundle::from_section(
-                                        format!("Current Transaction"),
-                                        TextStyle {
-                                            font: asset_server.load(FONT_ROBOTO),
-                                            font_size: FONT_SIZE_TITLE,
-                                            ..default()
-                                        },
-                                    ),));
-                                    parent.spawn((
-                                        TextBundle::from_section(
-                                            format!("Signature:   COPY"),
-                                            TextStyle {
-                                                font: asset_server.load(FONT_ROBOTO),
-                                                font_size: FONT_SIZE,
-                                                ..default()
-                                            },
-                                        ),
-                                        TextCurrentTxSig,
-                                    ));
-                                    parent.spawn((
-                                        TextBundle::from_section(
-                                            format!("Status:"),
-                                            TextStyle {
-                                                font: asset_server.load(FONT_ROBOTO),
-                                                font_size: FONT_SIZE,
-                                                ..default()
-                                            },
-                                        ),
-                                        TextCurrentTxStatus,
-                                    ));
-                                    parent.spawn((
-                                        TextBundle::from_section(
-                                            format!("Elapsed:"),
-                                            TextStyle {
-                                                font: asset_server.load(FONT_ROBOTO),
-                                                font_size: FONT_SIZE,
-                                                ..default()
-                                            },
-                                        ),
-                                        TextCurrentTxElapsed,
-                                    ));
                                 });
                         });
                 });

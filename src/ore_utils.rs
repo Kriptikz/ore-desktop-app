@@ -1,6 +1,5 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use bevy::log::info;
 use ore::{
     instruction,
     state::{Proof, Treasury},
