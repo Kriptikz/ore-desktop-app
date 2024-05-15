@@ -847,7 +847,6 @@ pub fn tx_processor_result_checks(
     mut commands: Commands,
     mut event_writer: EventWriter<EventTxResult>,
     app_wallet: Res<AppWallet>,
-    miner_status: Res<MinerStatusResource>,
     proof_res: Res<ProofAccountResource>,
     query_tx: Query<(Entity, &TxProcessor)>,
 ) {
@@ -870,7 +869,7 @@ pub fn tx_processor_result_checks(
                         let previous_staked_balance = tx_processor.staked_balance;
                         if let Some(previous_staked_balance) = previous_staked_balance {
                             let current_staked_balance = proof_res.stake;
-                            if previous_sol_balance != current_sol_balance && current_staked_balance != previous_staked_balance {
+                            if  current_staked_balance != previous_staked_balance {
                                 // let sol_diff = current_sol_balance - previous_sol_balance;
                                 let staked_diff = current_staked_balance - previous_staked_balance;
                                 let ore_conversion = staked_diff as f64 / 10f64.powf(ore::TOKEN_DECIMALS as f64);
