@@ -10,7 +10,7 @@ use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, trans
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE}}, AppWallet, BussesResource, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType
+    ui::{components::{TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType
 };
 
 // Task Components
@@ -156,9 +156,11 @@ pub fn task_register_wallet(
 
 pub fn handle_task_process_tx_result(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    app_wallet: Res<AppWallet>,
+    proof_account: Res<ProofAccountResource>,
     mut query_task_handler: Query<(Entity, &mut TaskProcessTx)>,
     mut query_pop_up: Query<Entity, With<TxPopUpArea>>,
-    asset_server: Res<AssetServer>
     // mut query: Query<(Entity, &mut TaskProcessTx)>,
 ) {
     for (entity, mut task) in &mut query_task_handler.iter_mut() {
@@ -206,6 +208,19 @@ pub fn handle_task_process_tx_result(
 
                 let pop_up_area = query_pop_up.single_mut();
 
+                let sol_balance = app_wallet.sol_balance;
+                let staked_balance = if tx_type == TxType::Mine {
+                    let current_ts = get_unix_timestamp();
+                    let time_since_last_hash = current_ts - proof_account.last_hash_at as u64;
+                    if time_since_last_hash >= 62 {
+                        None
+                    } else {
+                        Some(proof_account.stake)
+                    }
+                } else {
+                    None
+                };
+
                 let new_tx = commands.spawn((
                     NodeBundle {
                         background_color: Color::WHITE.into(),
@@ -225,6 +240,8 @@ pub fn handle_task_process_tx_result(
                         tx_type: tx_type.clone(),
                         status: "SENDING".to_string(),
                         error: "".to_string(),
+                        sol_balance,
+                        staked_balance,
                         signature: None,
                         signed_tx: tx,
                         hash_status,

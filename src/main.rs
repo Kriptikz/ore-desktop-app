@@ -319,7 +319,7 @@ fn setup_locked_screen(
 #[derive(Component)]
 pub struct EntityTaskHandler;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum TxType {
     Mine,
     ResetEpoch,
@@ -361,6 +361,8 @@ pub struct TxProcessor {
     tx_type: TxType,
     status: String,
     error: String,
+    sol_balance: f64,
+    staked_balance: Option<u64>,
     signed_tx: Transaction,
     signature: Option<Signature>,
     hash_status: Option<HashStatus>,
@@ -764,77 +766,79 @@ pub fn tx_processor(
 ) {
     // let mut sigs: Vec<Signature> = Vec::new();
     for (entity, mut tx_processor) in query_tx.iter_mut() {
-        let mut just_finished = false;
-        {
-            let timer = &mut tx_processor.send_and_confirm_interval;
-            timer.tick(time.delta());
-            if timer.just_finished() {
-                just_finished = true;
-                timer.reset();
+        if tx_processor.status.as_str() != "SUCCESS" && tx_processor.status.as_str() != "FAILED" {
+            let mut just_finished = false;
+            {
+                let timer = &mut tx_processor.send_and_confirm_interval;
+                timer.tick(time.delta());
+                if timer.just_finished() {
+                    just_finished = true;
+                    timer.reset();
+                }
             }
-        }
 
-        if just_finished {
-            if let Some(sig) = tx_processor.signature {
-                // sigs.push(sig);
-                let task_pool = IoTaskPool::get();
-                let client = rpc_connection.rpc.clone();
-                let task = task_pool.spawn(async move {
-                    let sigs = [sig];
-                    match client.get_signature_statuses(&sigs) {
-                        Ok(signature_statuses) => {
-                            for signature_status in signature_statuses.value {
-                                if let Some(signature_status) = signature_status.as_ref() {
-                                    return Ok(Some(signature_status.clone()));
-                                } else {
-                                    return Ok(None);
+            if just_finished {
+                if let Some(sig) = tx_processor.signature {
+                    // sigs.push(sig);
+                    let task_pool = IoTaskPool::get();
+                    let client = rpc_connection.rpc.clone();
+                    let task = task_pool.spawn(async move {
+                        let sigs = [sig];
+                        match client.get_signature_statuses(&sigs) {
+                            Ok(signature_statuses) => {
+                                for signature_status in signature_statuses.value {
+                                    if let Some(signature_status) = signature_status.as_ref() {
+                                        return Ok(Some(signature_status.clone()));
+                                    } else {
+                                        return Ok(None);
+                                    }
                                 }
+
+                                return Ok(None);
                             }
 
-                            return Ok(None);
+                            // Handle confirmation errors
+                            Err(err) => {
+                                let e_str = format!("Confirmation Error: {:?}", err.kind().to_string());
+                                return Err(e_str);
+                            }
                         }
+                    });
 
-                        // Handle confirmation errors
-                        Err(err) => {
-                            let e_str = format!("Confirmation Error: {:?}", err.kind().to_string());
-                            return Err(e_str);
-                        }
+                    commands
+                        .entity(entity)
+                        .insert(TaskCheckSigStatus { task });
+                }
+
+                // create the task to send the tx and update the TxProcessor Signature
+                info!("Send tx...");
+                let task_pool = IoTaskPool::get();
+                let client = rpc_connection.rpc.clone();
+                let tx = tx_processor.signed_tx.clone();
+                let task = task_pool.spawn(async move {
+                    let send_cfg = RpcSendTransactionConfig {
+                        skip_preflight: true,
+                        preflight_commitment: Some(CommitmentLevel::Confirmed),
+                        encoding: Some(UiTransactionEncoding::Base64),
+                        max_retries: Some(0),
+                        min_context_slot: None,
+                    };
+
+                    let sig = client.send_transaction_with_config(&tx, send_cfg);
+                    if let Ok(sig) = sig {
+                        return Ok(sig);
+                    } else {
+                        info!("Failed to send initial transaction...");
+                        return Err("Failed to send tx".to_string());
                     }
                 });
 
                 commands
                     .entity(entity)
-                    .insert(TaskCheckSigStatus { task });
-            }
+                    .insert(TaskSendTx { task });
 
-            // create the task to send the tx and update the TxProcessor Signature
-            info!("Send tx...");
-            let task_pool = IoTaskPool::get();
-            let client = rpc_connection.rpc.clone();
-            let tx = tx_processor.signed_tx.clone();
-            let task = task_pool.spawn(async move {
-                let send_cfg = RpcSendTransactionConfig {
-                    skip_preflight: true,
-                    preflight_commitment: Some(CommitmentLevel::Confirmed),
-                    encoding: Some(UiTransactionEncoding::Base64),
-                    max_retries: Some(0),
-                    min_context_slot: None,
-                };
-
-                let sig = client.send_transaction_with_config(&tx, send_cfg);
-                if let Ok(sig) = sig {
-                    return Ok(sig);
-                } else {
-                    info!("Failed to send initial transaction...");
-                    return Err("Failed to send tx".to_string());
                 }
-            });
-
-            commands
-                .entity(entity)
-                .insert(TaskSendTx { task });
-
-            }
+        }
 
     }
 }
@@ -842,6 +846,9 @@ pub fn tx_processor(
 pub fn tx_processor_result_checks(
     mut commands: Commands,
     mut event_writer: EventWriter<EventTxResult>,
+    app_wallet: Res<AppWallet>,
+    miner_status: Res<MinerStatusResource>,
+    proof_res: Res<ProofAccountResource>,
     query_tx: Query<(Entity, &TxProcessor)>,
 ) {
     for (entity, tx_processor) in query_tx.iter() {
@@ -852,19 +859,70 @@ pub fn tx_processor_result_checks(
             } else {
                 "FAILED".to_string()
             };
-            event_writer.send(EventTxResult {
-                tx_type: tx_processor.tx_type.to_string(),
-                sig,
-                hash_status: tx_processor.hash_status,
-                tx_time: 0,
-                tx_status:  TxStatus {
-                    status,
-                    error: tx_processor.error.clone()
+
+            let previous_sol_balance = tx_processor.sol_balance;
+
+            let current_sol_balance = app_wallet.sol_balance;
+
+            match tx_processor.tx_type {
+                TxType::Mine =>  {
+                    let previous_staked_balance = tx_processor.staked_balance;
+                    if let Some(previous_staked_balance) = previous_staked_balance {
+                        let current_staked_balance = proof_res.stake;
+                        if previous_sol_balance != current_sol_balance && current_staked_balance != previous_staked_balance {
+                            // let sol_diff = current_sol_balance - previous_sol_balance;
+                            let staked_diff = current_staked_balance - previous_staked_balance;
+                            let ore_conversion = staked_diff as f64 / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                            let status = format!("{} +{} ORE.", status, ore_conversion.to_string());
+                            
+                            event_writer.send(EventTxResult {
+                                tx_type: tx_processor.tx_type.to_string(),
+                                sig,
+                                hash_status: tx_processor.hash_status,
+                                tx_time: 0,
+                                tx_status:  TxStatus {
+                                    status,
+                                    error: tx_processor.error.clone()
+                                }
+                            });
+
+                            commands.entity(entity).despawn_recursive();
+
+                        }
+                    } else {
+                        error!("Mine tx does not have previous staked balance");
+                        event_writer.send(EventTxResult {
+                            tx_type: tx_processor.tx_type.to_string(),
+                            sig,
+                            hash_status: tx_processor.hash_status,
+                            tx_time: 0,
+                            tx_status:  TxStatus {
+                                status,
+                                error: tx_processor.error.clone()
+                            }
+                        });
+
+                        commands.entity(entity).despawn_recursive();
+                    }
                 }
-            });
+                TxType::ResetEpoch |
+                TxType::Stake |
+                TxType::Claim |
+                TxType::CreateAta =>  {
+                    event_writer.send(EventTxResult {
+                        tx_type: tx_processor.tx_type.to_string(),
+                        sig,
+                        hash_status: tx_processor.hash_status,
+                        tx_time: 0,
+                        tx_status:  TxStatus {
+                            status,
+                            error: tx_processor.error.clone()
+                        }
+                    });
 
-            commands.entity(entity).despawn_recursive();
+                    commands.entity(entity).despawn_recursive();
+                }
+            }
         }
-
     }
 }
