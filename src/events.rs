@@ -5,15 +5,12 @@ use bevy::{
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use chrono::DateTime;
 use cocoon::Cocoon;
-use drillx::{equix, Hash, Solution};
-use ore::state::Proof;
-use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
-use solana_transaction_status::UiTransactionEncoding;
+use drillx::{Solution};
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{
-        get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
+        find_hash_par, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
     }, tasks::{
         TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
         TaskUpdateAppWalletSolBalanceData
@@ -1179,69 +1176,3 @@ pub fn handle_event_save_wallet(
 
 //     (best_nonce, best_difficulty, best_hash_str)
 // }
-
-fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution, u32, Hash) {
-    let handles: Vec<_> = (0..threads)
-        .map(|i| {
-            std::thread::spawn({
-                let proof = proof.clone();
-                let mut memory = equix::SolverMemory::new();
-                move || {
-                    let timer = Instant::now();
-                    let first_nonce = u64::MAX.saturating_div(threads).saturating_mul(i);
-                    let mut nonce = first_nonce;
-                    let mut best_nonce = nonce;
-                    let mut best_difficulty = 0;
-                    let mut best_hash = Hash::default();
-                    loop {
-                        // Create hash
-                        if let Ok(hx) = drillx::hash_with_memory(
-                            &mut memory,
-                            &proof.challenge,
-                            &nonce.to_le_bytes(),
-                        ) {
-                            let difficulty = hx.difficulty();
-                            if difficulty.gt(&best_difficulty) {
-                                best_nonce = nonce;
-                                best_difficulty = difficulty;
-                                best_hash = hx;
-                            }
-                        }
-
-                        // Exit if time has elapsed
-                        if nonce % 100 == 0 {
-                            if timer.elapsed().as_secs().ge(&cutoff_time) {
-                                if best_difficulty.gt(&ore::MIN_DIFFICULTY) {
-                                    // Mine until min difficulty has been met
-                                    break;
-                                }
-                            } 
-                        }
-
-                        // Increment nonce
-                        nonce += 1;
-                    }
-
-                    // Return the best nonce
-                    (best_nonce, best_difficulty, best_hash)
-                }
-            })
-        })
-        .collect();
-
-    // Join handles and return best nonce
-    let mut best_nonce = 0;
-    let mut best_difficulty = 0;
-    let mut best_hash = Hash::default();
-    for h in handles {
-        if let Ok((nonce, difficulty, hash)) = h.join() {
-            if difficulty > best_difficulty {
-                best_difficulty = difficulty;
-                best_nonce = nonce;
-                best_hash = hash;
-            }
-        }
-    }
-
-    (Solution::new(best_hash.d, best_nonce.to_le_bytes()), best_difficulty, best_hash)
-}

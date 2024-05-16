@@ -1,6 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use drillx::Solution;
+use bevy::log::error;
+use drillx::{equix, Hash, Solution};
 use ore::{
     instruction,
     state::{Proof, Treasury},
@@ -198,4 +199,74 @@ pub fn get_cutoff(proof: Proof, buffer_time: u64) -> i64 {
         .saturating_add(60)
         .saturating_sub(buffer_time as i64)
         .saturating_sub(now)
+}
+
+pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution, u32, Hash) {
+    let handles: Vec<_> = (0..threads)
+        .map(|i| {
+            std::thread::spawn({
+                let proof = proof.clone();
+                let mut memory = equix::SolverMemory::new();
+                move || {
+                    let timer = Instant::now();
+                    let first_nonce = u64::MAX.saturating_div(threads).saturating_mul(i);
+                    let mut nonce = first_nonce;
+                    let mut best_nonce = nonce;
+                    let mut best_difficulty = 0;
+                    let mut best_hash = Hash::default();
+                    loop {
+                        // Create hash
+                        if let Ok(hx) = drillx::hash_with_memory(
+                            &mut memory,
+                            &proof.challenge,
+                            &nonce.to_le_bytes(),
+                        ) {
+                            // validate hash
+                            let solution = Solution::new(hx.d, nonce.to_le_bytes());
+                            if solution.is_valid(&proof.challenge) {
+                                let difficulty = hx.difficulty();
+                                if difficulty.gt(&best_difficulty) {
+                                    best_nonce = nonce;
+                                    best_difficulty = difficulty;
+                                    best_hash = hx;
+                                }
+                            }
+                        }
+
+                        // Exit if time has elapsed
+                        if nonce % 100 == 0 {
+                            if timer.elapsed().as_secs().ge(&cutoff_time) {
+                                if best_difficulty.gt(&ore::MIN_DIFFICULTY) {
+                                    // Mine until min difficulty has been met
+                                    break;
+                                }
+                            } 
+                        }
+
+                        // Increment nonce
+                        nonce += 1;
+                    }
+
+                    // Return the best nonce
+                    (best_nonce, best_difficulty, best_hash)
+                }
+            })
+        })
+        .collect();
+
+    // Join handles and return best nonce
+    let mut best_nonce = 0;
+    let mut best_difficulty = 0;
+    let mut best_hash = Hash::default();
+    for h in handles {
+        if let Ok((nonce, difficulty, hash)) = h.join() {
+            if difficulty > best_difficulty {
+                best_difficulty = difficulty;
+                best_nonce = nonce;
+                best_hash = hash;
+            }
+        }
+    }
+
+    (Solution::new(best_hash.d, best_nonce.to_le_bytes()), best_difficulty, best_hash)
 }
