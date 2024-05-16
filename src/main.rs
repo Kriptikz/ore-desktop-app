@@ -3,7 +3,7 @@ use std::{
 };
 
 use bevy::{prelude::*, tasks::IoTaskPool};
-use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use events::*;
 use serde::{Deserialize, Serialize};

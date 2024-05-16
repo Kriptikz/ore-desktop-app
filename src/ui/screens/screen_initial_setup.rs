@@ -248,8 +248,10 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                     NodeBundle {
                                         style: Style {
                                             flex_direction: FlexDirection::Column,
-                                            row_gap: Val::Px(10.0),
+                                            height: Val::Px(268.0),
+                                            width: Val::Px(351.0),
                                             align_items: AlignItems::Start,
+                                            justify_content: JustifyContent::SpaceBetween,
                                             ..default()
                                         },
                                         ..default()
@@ -261,8 +263,8 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                         .spawn((
                                             ButtonBundle {
                                                 style: Style {
-                                                    width: Val::Px(200.0),
-                                                    height: Val::Px(40.0),
+                                                    width: Val::Px(300.0),
+                                                    height: Val::Px(50.0),
                                                     justify_content: JustifyContent::Start,
                                                     align_items: AlignItems::Center,
                                                     overflow: Overflow {
@@ -317,7 +319,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                         .spawn((
                                             ButtonBundle {
                                                 style: Style {
-                                                    width: Val::Px(80.0),
+                                                    width: Val::Px(60.0),
                                                     height: Val::Px(40.0),
                                                     justify_content: JustifyContent::Center,
                                                     align_items: AlignItems::Center,
@@ -367,7 +369,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                         .spawn((
                                             ButtonBundle {
                                                 style: Style {
-                                                    width: Val::Px(80.0),
+                                                    width: Val::Px(60.0),
                                                     height: Val::Px(40.0),
                                                     justify_content: JustifyContent::Center,
                                                     align_items: AlignItems::Center,
@@ -417,7 +419,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                         .spawn((
                                             ButtonBundle {
                                                 style: Style {
-                                                    width: Val::Px(80.0),
+                                                    width: Val::Px(60.0),
                                                     height: Val::Px(40.0),
                                                     justify_content: JustifyContent::Center,
                                                     align_items: AlignItems::Center,
