@@ -5,6 +5,7 @@ use bevy::{
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use chrono::DateTime;
 use cocoon::Cocoon;
+use drillx::{equix, Hash, Solution};
 use ore::state::Proof;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::UiTransactionEncoding;
@@ -27,7 +28,7 @@ use std::{
 };
 
 use solana_sdk::{
-    bs58, commitment_config::CommitmentLevel, derivation_path::DerivationPath, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{read_keypair_file, Keypair, Signer}, signer::SeedDerivable, transaction::Transaction
+    bs58, commitment_config::CommitmentLevel, compute_budget::ComputeBudgetInstruction, derivation_path::DerivationPath, keccak::{hashv, Hash as KeccakHash}, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::{read_keypair_file, Keypair, Signer}, signer::SeedDerivable, transaction::Transaction
 };
 
 // Events
@@ -50,7 +51,7 @@ pub struct EventMineForHash;
 pub struct EventStopMining;
 
 #[derive(Event)]
-pub struct EventSubmitHashTx(pub (solana_program::keccak::Hash, u64, u32, u64));
+pub struct EventSubmitHashTx(pub (Solution, u32, u64));
 
 pub struct TxResult {
     pub sig: String,
@@ -71,9 +72,6 @@ pub struct EventTxResult {
 
 #[derive(Event)]
 pub struct EventFetchUiDataFromRpc;
-
-#[derive(Event)]
-pub struct EventResetEpoch;
 
 #[derive(Event)]
 pub struct EventRegisterWallet;
@@ -104,7 +102,6 @@ pub fn handle_event_start_stop_mining_clicked(
     mut ev_start_stop_mining: EventReader<EventStartStopMining>,
     mut event_writer: EventWriter<EventMineForHash>,
     mut event_writer_register: EventWriter<EventRegisterWallet>,
-    mut event_writer_stop: EventWriter<EventStopMining>,
     app_wallet: Res<AppWallet>,
     mut miner_status: ResMut<MinerStatusResource>,
     rpc_connection: Res<RpcConnection>,
@@ -187,23 +184,24 @@ pub fn handle_event_mine_for_hash(
                 // which results in 0x3 - Hash already submitted. Stale RPC Data...
                 info!("\nMining for a valid hash...");
 
-                let hash_time = Instant::now();
-                let (best_nonce, best_difficulty, best_hash) = find_hash_par(
-                    wallet.pubkey(),
-                    2,
-                    threads,
-                    &client,
-                    proof,
-                );
-                info!("BEST HASH: {}", best_hash.to_string());
-                info!("BEST DIFFICULTY: {}", best_difficulty.to_string());
-                info!("BEST NONCE: {}", best_nonce.to_string());
+                let current_ts = get_unix_timestamp();
 
-                if let Ok(best_hash) = KeccakHash::from_str(&best_hash) {
-                    Ok((best_hash, best_nonce, best_difficulty, hash_time.elapsed().as_secs()))
-                } else {
-                    Err("Failed to convert best_hash to keccakHash".to_string())
-                }
+                let cutoff = proof
+                                    .last_hash_at
+                                    .saturating_add(60)
+                                    .saturating_sub(2 as i64)
+                                    .saturating_sub(current_ts as i64)
+                                    .max(0) as u64;
+
+                let hash_time = Instant::now();
+                let (solution, best_difficulty, best_hash) = find_hash_par(
+                    proof,
+                    cutoff,
+                    threads,
+                );
+                info!("BEST DIFFICULTY: {}", best_difficulty.to_string());
+
+                Ok((solution, best_difficulty, hash_time.elapsed().as_secs()))
             });
             miner_status.miner_status = "MINING".to_string();
 
@@ -278,6 +276,7 @@ pub fn handle_event_submit_hash_tx(
     mut ev_submit_hash_tx: EventReader<EventSubmitHashTx>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     app_wallet: Res<AppWallet>,
+    treasury: Res<TreasuryAccountResource>,
     mut miner_status: ResMut<MinerStatusResource>,
     rpc_connection: Res<RpcConnection>,
     mut busses_res: ResMut<BussesResource>,
@@ -293,19 +292,49 @@ pub fn handle_event_submit_hash_tx(
 
             busses_res.current_bus_id = bus;
 
-            let (_next_hash, nonce, difficulty, hash_time) = ev.0;
+            let solution;
+            let difficulty;
+            let hash_time;
+
+            {
+                let (s, d, ht) = &ev.0;
+                solution = Solution::new(s.d, s.n);
+
+                difficulty = *d;
+                hash_time = *ht;
+            }
+
+            let last_reset_at = treasury.last_reset_at;
+
+            let current_ts = get_unix_timestamp() as i64;
+
+            let time_until_reset = (last_reset_at + 60) - current_ts;
+
             let task = pool.spawn(async move {
                 let signer = wallet;
+
+                let mut ixs = vec![];
                 // TODO: set cu's
-                // let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(CU_LIMIT_MINE);
+                let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(500000);
+
+                ixs.push(cu_limit_ix);
+
+
+                if time_until_reset <= 5 {
+                    let reset_ix = get_reset_ix(signer.pubkey());
+                    ixs.push(reset_ix);
+                }
+
+                
                 // let cu_price_ix =
                 //     ComputeBudgetInstruction::set_compute_unit_price(self.priority_fee);
-                let ix_mine = get_mine_ix(signer.pubkey(), nonce, bus);
+                let ix_mine = get_mine_ix(signer.pubkey(), solution, bus);
+                ixs.push(ix_mine);
                 let latest_blockhash = client
                     .get_latest_blockhash_with_commitment(client.commitment());
 
                 if let Ok((hash, _slot)) = latest_blockhash {
-                    let mut tx = Transaction::new_with_payer(&[ix_mine], Some(&signer.pubkey()));
+                    let mut tx = Transaction::new_with_payer(&ixs, Some(&signer.pubkey()));
 
                     tx.sign(&[&signer], hash);
 
@@ -483,6 +512,9 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                         false
                     };
 
+                    // info!("SPAM TOLERANCE: {}", treasury_account.tolerance_spam);
+                    // info!("LIVENESS TOLERANCE: {}", treasury_account.tolerance_liveness);
+
                     treasury_account_res_data = TreasuryAccountResource {
                         balance: treasury_ore_balance.to_string(),
                         admin: treasury_account.admin.to_string(),
@@ -549,7 +581,6 @@ pub fn handle_event_register_wallet(
                     return None;
                 } else {
                     info!("Failed to get proof account, registering wallet...");
-                    println!("Generating challenge...");
                     let signer = wallet;
 
                     let balance = if let Ok(balance) = client.get_balance(&signer.pubkey()) {
@@ -563,7 +594,9 @@ pub fn handle_event_register_wallet(
                         return None;
                     }
 
+                    info!("Get register ix");
                     let ix = get_register_ix(signer.pubkey());
+                    info!("Got register ix");
                     let latest_blockhash = client
                         .get_latest_blockhash_with_commitment(client.commitment());
 
@@ -572,7 +605,7 @@ pub fn handle_event_register_wallet(
 
                         tx.sign(&[&signer], hash);
 
-                        return Some(tx);
+                        return Some(("Register".to_string(), tx, None));
                     } else {
                         error!("Failed to get latest blockhash. handle_event_submit_hash_tx");
                         return None;
@@ -582,50 +615,9 @@ pub fn handle_event_register_wallet(
 
             commands
                 .entity(task_handler_entity)
-                .insert(TaskRegisterWallet { task });
+                .insert(TaskProcessTx { task });
         } else {
             error!("Failed to get task_entity_handler. handle_event_register_wallet");
-        }
-    }
-}
-
-pub fn handle_event_reset_epoch(
-    mut commands: Commands,
-    mut event_reader: EventReader<EventResetEpoch>,
-    app_wallet: Res<AppWallet>,
-    rpc_connection: ResMut<RpcConnection>,
-    query_task_handler: Query<Entity, With<EntityTaskHandler>>,
-) {
-    for _ev in event_reader.read() {
-        info!("Reset Treasury Event Handler.");
-        if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
-            let task = pool.spawn(async move {
-                let ix = get_reset_ix(wallet.pubkey());
-                let latest_blockhash = client
-                    .get_latest_blockhash_with_commitment(client.commitment());
-                if let Ok((hash, _slot)) = latest_blockhash {
-                    let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
-
-                    tx.sign(&[&wallet], hash);
-
-                    return Some(("Reset".to_string(), tx, None));
-                } else {
-                    error!("Failed to get latest blockhash. handle_event_submit_hash_tx");
-                    return None;
-                    // error
-                }
-            });
-
-            commands
-                .entity(task_handler_entity)
-                .insert(TaskProcessTx { task });
-
-        } else {
-            error!("Failed to get task_handler_entity. handle_event_reset_epoch.");
-            continue;
         }
     }
 }
@@ -683,7 +675,7 @@ pub fn handle_event_claim_ore_rewards(
 
                         tx.sign(&[&wallet], hash);
 
-                        return Some(("Create ATA".to_string(), tx, None));
+                        return Some(("CreateAta".to_string(), tx, None));
                     } else {
                         error!("Failed to get latest blockhash. handle_event_claim_ore_rewards");
                         return None;
@@ -998,160 +990,232 @@ pub fn handle_event_save_wallet(
     }
 }
 
-fn find_next_hash_par(
-    signer: Arc<Keypair>,
-    hash: KeccakHash,
-    difficulty: KeccakHash,
-    threads: u64,
-) -> (KeccakHash, u64) {
-    let found_solution = Arc::new(AtomicBool::new(false));
-    let solution = Arc::new(Mutex::<(KeccakHash, u64)>::new((
-        KeccakHash::new_from_array([0; 32]),
-        0,
-    )));
-    let pubkey = signer.pubkey();
-    let thread_handles: Vec<_> = (0..threads)
-        .map(|i| {
-            std::thread::spawn({
-                let found_solution = found_solution.clone();
-                let solution = solution.clone();
-                let mut stdout = stdout();
-                move || {
-                    let n = u64::MAX.saturating_div(threads).saturating_mul(i);
-                    let mut next_hash: KeccakHash;
-                    let mut nonce: u64 = n;
-                    loop {
-                        next_hash = hashv(&[
-                            hash.to_bytes().as_slice(),
-                            pubkey.to_bytes().as_slice(),
-                            nonce.to_le_bytes().as_slice(),
-                        ]);
-                        if nonce % 10_000 == 0 {
-                            if found_solution.load(std::sync::atomic::Ordering::Relaxed) {
-                                return;
-                            }
-                            if n == 0 {
-                                stdout
-                                    .write_all(format!("\r{}", next_hash.to_string()).as_bytes())
-                                    .ok();
-                            }
-                        }
-                        if next_hash.le(&difficulty) {
-                            stdout
-                                .write_all(format!("\r{}", next_hash.to_string()).as_bytes())
-                                .ok();
-                            found_solution.store(true, std::sync::atomic::Ordering::Relaxed);
-                            let mut w_solution = solution.lock().expect("failed to lock mutex");
-                            *w_solution = (next_hash, nonce);
-                            return;
-                        }
-                        nonce += 1;
-                    }
-                }
-            })
-        })
-        .collect();
+// fn find_next_hash_par(
+//     signer: Arc<Keypair>,
+//     hash: KeccakHash,
+//     difficulty: KeccakHash,
+//     threads: u64,
+// ) -> (KeccakHash, u64) {
+//     let found_solution = Arc::new(AtomicBool::new(false));
+//     let solution = Arc::new(Mutex::<(KeccakHash, u64)>::new((
+//         KeccakHash::new_from_array([0; 32]),
+//         0,
+//     )));
+//     let pubkey = signer.pubkey();
+//     let thread_handles: Vec<_> = (0..threads)
+//         .map(|i| {
+//             std::thread::spawn({
+//                 let found_solution = found_solution.clone();
+//                 let solution = solution.clone();
+//                 let mut stdout = stdout();
+//                 move || {
+//                     let n = u64::MAX.saturating_div(threads).saturating_mul(i);
+//                     let mut next_hash: KeccakHash;
+//                     let mut nonce: u64 = n;
+//                     loop {
+//                         next_hash = hashv(&[
+//                             hash.to_bytes().as_slice(),
+//                             pubkey.to_bytes().as_slice(),
+//                             nonce.to_le_bytes().as_slice(),
+//                         ]);
+//                         if nonce % 10_000 == 0 {
+//                             if found_solution.load(std::sync::atomic::Ordering::Relaxed) {
+//                                 return;
+//                             }
+//                             if n == 0 {
+//                                 stdout
+//                                     .write_all(format!("\r{}", next_hash.to_string()).as_bytes())
+//                                     .ok();
+//                             }
+//                         }
+//                         if next_hash.le(&difficulty) {
+//                             stdout
+//                                 .write_all(format!("\r{}", next_hash.to_string()).as_bytes())
+//                                 .ok();
+//                             found_solution.store(true, std::sync::atomic::Ordering::Relaxed);
+//                             let mut w_solution = solution.lock().expect("failed to lock mutex");
+//                             *w_solution = (next_hash, nonce);
+//                             return;
+//                         }
+//                         nonce += 1;
+//                     }
+//                 }
+//             })
+//         })
+//         .collect();
 
-    for thread_handle in thread_handles {
-        thread_handle.join().unwrap();
-    }
+//     for thread_handle in thread_handles {
+//         thread_handle.join().unwrap();
+//     }
 
-    let r_solution = solution.lock().expect("Failed to get lock");
-    *r_solution
-}
+//     let r_solution = solution.lock().expect("Failed to get lock");
+//     *r_solution
+// }
 
-pub fn register(signer: Keypair, client: &RpcClient) -> bool {
-    // Return early if miner is already registered
-    let proof_address = proof_pubkey(signer.pubkey());
-    if client.get_account(&proof_address).is_ok() {
-        return true;
-    }
-    println!("Generating challenge...");
+// pub fn register(signer: Keypair, client: &RpcClient) -> bool {
+//     // Return early if miner is already registered
+//     let proof_address = proof_pubkey(signer.pubkey());
+//     if client.get_account(&proof_address).is_ok() {
+//         return true;
+//     }
 
-    let balance = if let Ok(balance) = client.get_balance(&signer.pubkey()) {
-        balance
-    } else {
-        return false;
-    };
+//     let balance = if let Ok(balance) = client.get_balance(&signer.pubkey()) {
+//         balance
+//     } else {
+//         return false;
+//     };
 
-    if balance <= 0 {
-        info!("Insufficient Sol Balance!");
-        return false;
-    }
+//     if balance <= 0 {
+//         info!("Insufficient Sol Balance!");
+//         return false;
+//     }
 
-    let ix = get_register_ix(signer.pubkey());
-    let latest_blockhash = client
-        .get_latest_blockhash_with_commitment(client.commitment());
+//     let ix = get_register_ix(signer.pubkey());
+//     let latest_blockhash = client
+//         .get_latest_blockhash_with_commitment(client.commitment());
 
-    if let Ok((hash, _slot)) = latest_blockhash {
-        let mut tx = Transaction::new_with_payer(&[ix], Some(&signer.pubkey()));
+//     if let Ok((hash, _slot)) = latest_blockhash {
+//         let mut tx = Transaction::new_with_payer(&[ix], Some(&signer.pubkey()));
 
-        tx.sign(&[&signer], hash);
-        info!("Sending and confirming tx...");
-        let result = client.send_and_confirm_transaction(&tx);
-        info!("Tx Result: {:?}", result);
-        if result.is_ok() {
-            return true;
-        }
-        return false;
-    } else {
-        error!("Failed to register wallet. Failed to get latest blockhash.");
-        return false;
-    }
-}
+//         tx.sign(&[&signer], hash);
+//         info!("Sending and confirming tx...");
+//         let result = client.send_and_confirm_transaction(&tx);
+//         info!("Tx Result: {:?}", result);
+//         if result.is_ok() {
+//             return true;
+//         }
+//         return false;
+//     } else {
+//         error!("Failed to register wallet. Failed to get latest blockhash.");
+//         return false;
+//     }
+// }
 
-fn find_hash_par(signer: Pubkey, buffer_time: u64, threads: u64, rpc_client: &RpcClient, proof_account: Proof) -> (u64, u32, String) {
-    // Check num threads
-    // self.check_num_cores(threads);
+// fn find_hash_par(signer: Pubkey, buffer_time: u64, threads: u64, rpc_client: &RpcClient, proof_account: Proof) -> (u64, u32, String) {
+//     // Check num threads
+//     // self.check_num_cores(threads);
 
-    // Fetch data
-    let proof = proof_account;
-    println!(
-        "\nStake balance: 0 ORE",
-    );
-    let cutoff_time = get_cutoff(proof, buffer_time);
+//     // Fetch data
+//     let proof = proof_account;
+//     println!(
+//         "\nStake balance: 0 ORE",
+//     );
+//     let cutoff_time = get_cutoff(proof, buffer_time);
 
-    // Dispatch job to each thread
-    // let progress_bar = Arc::new(spinner::new_progress_bar());
-    // progress_bar.set_message("Mining...");
+//     // Dispatch job to each thread
+//     // let progress_bar = Arc::new(spinner::new_progress_bar());
+//     // progress_bar.set_message("Mining...");
+//     let handles: Vec<_> = (0..threads)
+//         .map(|i| {
+//             std::thread::spawn({
+//                 let proof = proof.clone();
+//                 // let progress_bar = progress_bar.clone();
+//                 move || {
+//                     let timer = Instant::now();
+//                     let first_nonce = u64::MAX.saturating_div(threads).saturating_mul(i);
+//                     let mut nonce = first_nonce;
+//                     let mut best_nonce = nonce;
+//                     let mut best_difficulty = 0;
+//                     let mut best_hash = [0; 32];
+//                     loop {
+//                         // Create hash
+//                         let hx = drillx::hash(&proof.challenge, &nonce.to_le_bytes());
+//                         let difficulty = drillx::difficulty(hx);
+
+//                         // Check difficulty
+//                         if difficulty.gt(&best_difficulty) {
+//                             best_nonce = nonce;
+//                             best_difficulty = difficulty;
+//                             best_hash = hx;
+//                         }
+
+//                         // Exit if time has elapsed
+//                         if nonce % 10_000 == 0 {
+//                             if (timer.elapsed().as_secs() as i64).ge(&cutoff_time) {
+//                                 if best_difficulty.gt(&ore::MIN_DIFFICULTY) {
+//                                     // Mine until min difficulty has been met
+//                                     break;
+//                                 }
+//                             } else if i == 0 {
+//                                 // progress_bar.set_message(format!(
+//                                 //     "Mining... ({} sec remaining)",
+//                                 //     cutoff_time
+//                                 //         .saturating_sub(timer.elapsed().as_secs() as i64),
+//                                 // ));
+//                             }
+//                         }
+
+//                         // Increment nonce
+//                         nonce += 1;
+//                     }
+
+//                     // Return the best nonce
+//                     (best_nonce, best_difficulty, best_hash)
+//                 }
+//             })
+//         })
+//         .collect();
+
+//     // Join handles and return best nonce
+//     let mut best_nonce = 0;
+//     let mut best_difficulty = 0;
+//     let mut best_hash = [0; 32];
+//     for h in handles {
+//         if let Ok((nonce, difficulty, hash)) = h.join() {
+//             if difficulty > best_difficulty {
+//                 best_difficulty = difficulty;
+//                 best_nonce = nonce;
+//                 best_hash = hash;
+//             }
+//         }
+//     }
+
+//     let best_hash_str = bs58::encode(best_hash).into_string();
+//     // info!(format!(
+//     //     "Best hash: {} (difficulty: {})",
+//     //     best_hash_str.clone(),
+//     //     best_difficulty
+//     // ));
+
+//     (best_nonce, best_difficulty, best_hash_str)
+// }
+
+fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution, u32, Hash) {
     let handles: Vec<_> = (0..threads)
         .map(|i| {
             std::thread::spawn({
                 let proof = proof.clone();
-                // let progress_bar = progress_bar.clone();
+                let mut memory = equix::SolverMemory::new();
                 move || {
                     let timer = Instant::now();
                     let first_nonce = u64::MAX.saturating_div(threads).saturating_mul(i);
                     let mut nonce = first_nonce;
                     let mut best_nonce = nonce;
                     let mut best_difficulty = 0;
-                    let mut best_hash = [0; 32];
+                    let mut best_hash = Hash::default();
                     loop {
                         // Create hash
-                        let hx = drillx::hash(&proof.challenge, &nonce.to_le_bytes());
-                        let difficulty = drillx::difficulty(hx);
-
-                        // Check difficulty
-                        if difficulty.gt(&best_difficulty) {
-                            best_nonce = nonce;
-                            best_difficulty = difficulty;
-                            best_hash = hx;
+                        if let Ok(hx) = drillx::hash_with_memory(
+                            &mut memory,
+                            &proof.challenge,
+                            &nonce.to_le_bytes(),
+                        ) {
+                            let difficulty = hx.difficulty();
+                            if difficulty.gt(&best_difficulty) {
+                                best_nonce = nonce;
+                                best_difficulty = difficulty;
+                                best_hash = hx;
+                            }
                         }
 
                         // Exit if time has elapsed
-                        if nonce % 10_000 == 0 {
-                            if (timer.elapsed().as_secs() as i64).ge(&cutoff_time) {
+                        if nonce % 100 == 0 {
+                            if timer.elapsed().as_secs().ge(&cutoff_time) {
                                 if best_difficulty.gt(&ore::MIN_DIFFICULTY) {
                                     // Mine until min difficulty has been met
                                     break;
                                 }
-                            } else if i == 0 {
-                                // progress_bar.set_message(format!(
-                                //     "Mining... ({} sec remaining)",
-                                //     cutoff_time
-                                //         .saturating_sub(timer.elapsed().as_secs() as i64),
-                                // ));
-                            }
+                            } 
                         }
 
                         // Increment nonce
@@ -1168,7 +1232,7 @@ fn find_hash_par(signer: Pubkey, buffer_time: u64, threads: u64, rpc_client: &Rp
     // Join handles and return best nonce
     let mut best_nonce = 0;
     let mut best_difficulty = 0;
-    let mut best_hash = [0; 32];
+    let mut best_hash = Hash::default();
     for h in handles {
         if let Ok((nonce, difficulty, hash)) = h.join() {
             if difficulty > best_difficulty {
@@ -1179,12 +1243,5 @@ fn find_hash_par(signer: Pubkey, buffer_time: u64, threads: u64, rpc_client: &Rp
         }
     }
 
-    let best_hash_str = bs58::encode(best_hash).into_string();
-    // info!(format!(
-    //     "Best hash: {} (difficulty: {})",
-    //     best_hash_str.clone(),
-    //     best_difficulty
-    // ));
-
-    (best_nonce, best_difficulty, best_hash_str)
+    (Solution::new(best_hash.d, best_nonce.to_le_bytes()), best_difficulty, best_hash)
 }

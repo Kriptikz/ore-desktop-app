@@ -4,6 +4,7 @@ use bevy::{
     prelude::*,
     tasks::{block_on, futures_lite::future, Task},
 };
+use drillx::Solution;
 use ore::state::Bus;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, transaction::Transaction};
@@ -29,7 +30,7 @@ pub struct TaskUpdateAppWalletSolBalance {
 
 #[derive(Component)]
 pub struct TaskGenerateHash {
-    pub task: Task<Result<(solana_program::keccak::Hash, u64, u32, u64), String>>,
+    pub task: Task<Result<(Solution, u32, u64), String>>,
 }
 
 #[derive(Component)]
@@ -139,6 +140,7 @@ pub fn task_register_wallet(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(tx) = block_on(future::poll_once(&mut task.task)) {
+            info!("Handle task register wallet result");
             if let Some(tx) = tx {
                 ev_process_tx.send(EventProcessTx {
                     tx_type: "Register".to_string(),
@@ -173,9 +175,13 @@ pub fn handle_task_process_tx_result(
                 //     tx,
                 //     hash_status,
                 // });
+                info!("TX TYPE STR: {}", tx_type.clone());
                 let tx_type = match tx_type.as_str() {
                     "Mine" => {
                         TxType::Mine
+                    },
+                    "Register" => {
+                        TxType::Register
                     },
                     "Reset" => {
                         TxType::ResetEpoch
@@ -212,7 +218,7 @@ pub fn handle_task_process_tx_result(
                 let staked_balance = if tx_type == TxType::Mine {
                     let current_ts = get_unix_timestamp();
                     let time_since_last_hash = current_ts - proof_account.last_hash_at as u64;
-                    if time_since_last_hash >= 62 {
+                    if time_since_last_hash >= 62 || time_since_last_hash <= 53 {
                         None
                     } else {
                         Some(proof_account.stake)

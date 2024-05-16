@@ -203,9 +203,6 @@ pub struct ButtonCopyText;
 pub struct ToggleAutoMine(pub bool);
 
 #[derive(Component)]
-pub struct ToggleAutoReset(pub bool);
-
-#[derive(Component)]
 pub struct ButtonGenerateWallet;
 
 #[derive(Component)]

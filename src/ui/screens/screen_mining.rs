@@ -10,11 +10,11 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_RESET_EPOCH, BUTTON_STAKE, BUTTON_START_MINING, CHECKBOX, CHECK_ICON, CURRENT_TX_STATUS_BACKGROUND, FIRE_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, HOVERED_BUTTON, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, BUTTON_CLAIM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
     },
     utils::shorten_string,
@@ -23,15 +23,12 @@ use crate::{
 
 use crate::ui::{
     components::{
-        BaseScreenNode, ButtonClaimOreRewards, ButtonLock, MovingScrollPanel, ScrollingList,
-        TextCurrentChallenge, TextCurrentStake, TextCurrentTxElapsed, TextCurrentTxSig,
-        TextCurrentTxStatus, TextMinerStatusCpuUsage, TextMinerStatusRamUsage,
-        TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes, TextTotalRewards,
-        TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryDifficulty, TextTreasuryLastResetAt,
-        TextTreasuryNeedEpochReset, TextTreasuryRewardRate, TextTreasuryTotalClaimedRewards,
-        TextWalletOreBalance, TextWalletSolBalance, ToggleAutoMine, ToggleAutoReset,
+        BaseScreenNode, ButtonClaimOreRewards, MovingScrollPanel, ScrollingList,
+        TextCurrentChallenge, TextCurrentStake, TextMinerStatusCpuUsage, TextMinerStatusRamUsage,
+        TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes, TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryLastResetAt,
+        TextTreasuryNeedEpochReset, TextTreasuryRewardRate, TextWalletOreBalance, TextWalletSolBalance, ToggleAutoMine,
     },
-    styles::{FONT_SIZE, NORMAL_BUTTON},
+    styles::FONT_SIZE,
 };
 
 pub fn spawn_mining_screen(
@@ -763,7 +760,7 @@ pub fn spawn_mining_screen(
                                                     Name::new("Text Auto-Mine Node"),
                                                 )).with_children(|parent| {
                                                     parent.spawn((TextBundle::from_section(
-                                                            "Auto-Mine",
+                                                            "Mine",
                                                             TextStyle {
                                                                 font: asset_server.load(FONT_ROBOTO),
                                                                 font_size: FONT_SIZE,
@@ -800,101 +797,6 @@ pub fn spawn_mining_screen(
                                                             ));
                                                 });
                                             });
-                                            parent.spawn((
-                                                NodeBundle {
-                                                    style: Style {
-                                                        width: Val::Px(136.0),
-                                                        height: Val::Px(73.0),
-                                                        flex_direction: FlexDirection::Column,
-                                                        align_items: AlignItems::Center,
-                                                        justify_content: JustifyContent::SpaceAround,
-                                                        ..Default::default()
-                                                    },
-                                                    ..Default::default()
-                                                },
-                                                Name::new("Toggle Auto-Reset Node"),
-                                            )).with_children(|parent| {
-                                                parent.spawn((
-                                                    NodeBundle {
-                                                        style: Style {
-                                                            width: Val::Px(68.0),
-                                                            height: Val::Px(16.0),
-                                                            align_items: AlignItems::Center,
-                                                            justify_content: JustifyContent::Center,
-                                                            ..Default::default()
-                                                        },
-                                                        ..Default::default()
-                                                    },
-                                                    Name::new("Text Auto-Reset Node"),
-                                                )).with_children(|parent| {
-                                                    parent.spawn((TextBundle::from_section(
-                                                            "Auto-Reset",
-                                                            TextStyle {
-                                                                font: asset_server.load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                ..default()
-                                                            },
-                                                        ),
-                                                    ));
-                                                });
-                                                parent.spawn((
-                                                    NodeBundle {
-                                                        style: Style {
-                                                            width: Val::Px(49.0),
-                                                            height: Val::Px(26.0),
-                                                            ..Default::default()
-                                                        },
-                                                        ..Default::default()
-                                                    },
-                                                    Name::new("Toggle Auto-Reset"),
-                                                )).with_children(|parent| {
-                                                            parent.spawn((
-                                                                ButtonBundle {
-                                                                    style: Style {
-                                                                        width: Val::Px(49.53),
-                                                                        height: Val::Px(26.0),
-                                                                        ..default()
-                                                                    },
-                                                                    image: UiImage::new(
-                                                                        asset_server.load(TOGGLE_OFF),
-                                                                    ),
-                                                                    ..default()
-                                                                },
-                                                                ToggleAutoReset(false),
-                                                                Name::new("ToggleAutoReset"),
-                                                            ));
-                                                });
-                                            });
-                                            // parent.spawn((
-                                            //     ButtonBundle {
-                                            //         style: Style {
-                                            //             width: Val::Px(164.53),
-                                            //             height: Val::Px(38.0),
-                                            //             ..default()
-                                            //         },
-                                            //         image: UiImage::new(
-                                            //             asset_server.load(BUTTON_START_MINING),
-                                            //         ),
-                                            //         ..default()
-                                            //     },
-                                            //     ButtonStartStopMining,
-                                            //     Name::new("ButtonStartMining"),
-                                            // ));
-                                            // parent.spawn((
-                                            //     ButtonBundle {
-                                            //         style: Style {
-                                            //             width: Val::Px(164.53),
-                                            //             height: Val::Px(38.0),
-                                            //             ..default()
-                                            //         },
-                                            //         image: UiImage::new(
-                                            //             asset_server.load(BUTTON_RESET_EPOCH),
-                                            //         ),
-                                            //         ..default()
-                                            //     },
-                                            //     ButtonResetEpoch,
-                                            //     Name::new("ButtonResetEpoch"),
-                                            // ));
                                         });
                                 });
                         });

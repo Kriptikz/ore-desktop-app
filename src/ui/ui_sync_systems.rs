@@ -40,7 +40,6 @@ use super::components::TextMinerStatusStatus;
 use super::components::TextMinerStatusThreads;
 use super::components::TextMinerStatusTime;
 use super::components::TextTotalHashes;
-use super::components::TextTotalRewards;
 use super::components::TextTreasuryAdmin;
 use super::components::TextTreasuryBalance;
 use super::components::TextTreasuryLastResetAt;
@@ -48,7 +47,6 @@ use super::components::TextTreasuryNeedEpochReset;
 use super::components::TextTreasuryRewardRate;
 use super::components::TextWalletOreBalance;
 use super::components::TextWalletSolBalance;
-use super::components::ToggleAutoReset;
 use super::styles::TOGGLE_OFF;
 use super::styles::TOGGLE_ON;
 
@@ -438,22 +436,6 @@ pub fn update_active_text_input_cursor_vis(
             }
         }
     }
-}
-
-pub fn update_toggle_reset_ui(
-    mut query: Query<(&mut UiImage, &ToggleAutoReset)>,
-    asset_server: Res<AssetServer>,
-) {
-    for (mut image, toggle) in query.iter_mut() {
-        if toggle.0 {
-            *image = UiImage::new(asset_server.load(TOGGLE_ON));
-        } else {
-            *image = UiImage::new(asset_server.load(TOGGLE_OFF));
-                    
-        }
-    }
-
-
 }
 
 pub fn fps_text_update_system(

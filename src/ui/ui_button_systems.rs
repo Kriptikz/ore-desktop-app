@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 use crate::{
-    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventResetEpoch, EventSaveConfig, EventSaveWallet, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
+    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventSaveConfig, EventSaveWallet, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
 };
 
 use super::{
     components::{
-        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextGeneratedKeypair, TextInput, ToggleAutoMine, ToggleAutoReset
+        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextInput, ToggleAutoMine
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -143,33 +143,6 @@ pub fn button_generate_wallet(
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
                 // border_color.0 = Color::WHITE;
-            }
-            Interaction::None => {
-                *color = Color::WHITE.into();
-                // *color = NORMAL_BUTTON.into();
-                // border_color.0 = Color::BLACK;
-            }
-        }
-    }
-}
-
-pub fn button_reset_epoch(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor, &mut ToggleAutoReset),
-        Changed<Interaction>,
-    >,
-    mut event_writer: EventWriter<EventResetEpoch>,
-) {
-    for (interaction, mut color, mut toggle) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-
-                toggle.0 = !toggle.0;
-                // event_writer.send(EventResetEpoch);
-            }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
                 *color = Color::WHITE.into();

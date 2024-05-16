@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use drillx::Solution;
 use ore::{
     instruction,
     state::{Proof, Treasury},
@@ -13,8 +14,8 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
-pub fn get_mine_ix(signer: Pubkey, nonce: u64, bus: usize) -> Instruction {
-    instruction::mine(signer, BUS_ADDRESSES[bus], nonce)
+pub fn get_mine_ix(signer: Pubkey, solution: Solution, bus: usize) -> Instruction {
+    instruction::mine(signer, BUS_ADDRESSES[bus], solution)
 }
 
 pub fn get_register_ix(signer: Pubkey) -> Instruction {

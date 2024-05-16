@@ -1,9 +1,9 @@
 use std::{
-    fmt::{Formatter, Display}, fs, path::Path, sync::Arc, time::{Duration, Instant}
+    fs, path::Path, sync::Arc, time::Duration
 };
 
-use bevy::{input::mouse::MouseButtonInput, prelude::*, tasks::IoTaskPool};
-use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
+use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use events::*;
 use serde::{Deserialize, Serialize};
@@ -16,19 +16,18 @@ use tasks::{
     handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskSendTx
 };
 use ui::{
-    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput, ToggleAutoReset},
+    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput},
     screens::{screen_despawners::{
         despawn_initial_setup_screen, despawn_locked_screen,
         despawn_mining_screen, despawn_wallet_setup_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen, screen_setup_wallet::spawn_wallet_setup_screen},
     ui_button_systems::{
-        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_reset_epoch, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
+        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
-        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_toggle_reset_ui, update_treasury_account_ui
+        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
     },
 };
-use utils::get_unix_timestamp;
 
 // screens::{
 //     spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
@@ -131,7 +130,6 @@ fn main() {
         .add_event::<EventMineForHash>()
         .add_event::<EventRegisterWallet>()
         .add_event::<EventProcessTx>()
-        .add_event::<EventResetEpoch>()
         .add_event::<EventClaimOreRewards>()
         .add_event::<EventStakeOre>()
         .add_event::<EventUnlock>()
@@ -201,7 +199,6 @@ fn main() {
                     button_lock,
                     button_copy_text,
                     button_start_stop_mining,
-                    button_reset_epoch,
                     button_claim_ore_rewards,
                     button_stake_ore,
                     button_auto_scroll,
@@ -213,7 +210,6 @@ fn main() {
                     handle_event_tx_result,
                     handle_event_fetch_ui_data_from_rpc,
                     handle_event_register_wallet,
-                    handle_event_reset_epoch,
                     handle_event_mine_for_hash,
                     handle_event_claim_ore_rewards,
                     handle_event_stake_ore,
@@ -233,13 +229,11 @@ fn main() {
                     update_proof_account_ui,
                     update_treasury_account_ui,
                     update_miner_status_ui,
-                    update_toggle_reset_ui
                 ),
                 (
                     mouse_scroll,
                     tx_processor,
                     tx_processor_result_checks,
-                    auto_reset_epoch,
                     mining_screen_hotkeys,
                     trigger_rpc_calls_for_ui,
                     spin_spinner_icons
@@ -324,6 +318,7 @@ pub struct EntityTaskHandler;
 #[derive(Clone, PartialEq, Eq)]
 pub enum TxType {
     Mine,
+    Register,
     ResetEpoch,
     CreateAta,
     Stake,
@@ -335,6 +330,9 @@ impl ToString for TxType {
         match self {
             TxType::Mine => {
                 "Mine".to_string()
+            },
+            TxType::Register => {
+                "Register".to_string()
             },
             TxType::ResetEpoch => {
                 "Reset".to_string()
@@ -480,46 +478,6 @@ pub struct LocalResetCooldown {
 impl Default for LocalResetCooldown {
     fn default() -> Self {
         Self { reset_timer: Timer::new(Duration::from_secs(5), TimerMode::Once) }
-    }
-}
-
-pub fn auto_reset_epoch(
-    treasury_status: Res<TreasuryAccountResource>,
-    proof_res: Res<ProofAccountResource>,
-    mut event_writer: EventWriter<EventResetEpoch>,
-    // mut last_reset_sent_at: Local<u64>,
-    query: Query<&ToggleAutoReset>,
-    mut reset_cooldown: Local<LocalResetCooldown>,
-    time: Res<Time>,
-) {
-    let current_ts = get_unix_timestamp();
-
-    let last_reset_at = treasury_status.last_reset_at as u64;
-
-    if last_reset_at > 0  && current_ts > last_reset_at{
-        let time_left_for_reset = current_ts - last_reset_at;
-        // let last_reset_sent_at_from_now = current_ts as i64 - *last_reset_sent_at as i64;
-
-        if time_left_for_reset >= 60 {
-            let toggle_reset_epoch = query.single();
-            if toggle_reset_epoch.0 {
-                // check if 5 seconds before proof challenge time limit
-                let last_hash_at = proof_res.last_hash_at;
-
-                let current_ts = get_unix_timestamp();
-
-                let time_since_challenge_issued = current_ts - (last_hash_at as u64);
-
-                if time_since_challenge_issued >= 55 {
-                    reset_cooldown.reset_timer.tick(time.delta());
-
-                    if reset_cooldown.reset_timer.just_finished() {
-                            event_writer.send(EventResetEpoch);
-                            reset_cooldown.reset_timer.reset();
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -861,10 +819,6 @@ pub fn tx_processor_result_checks(
                 "FAILED".to_string()
             };
 
-            let previous_sol_balance = tx_processor.sol_balance;
-
-            let current_sol_balance = app_wallet.sol_balance;
-
             match tx_processor.tx_type {
                 TxType::Mine =>  {
                     if status == "SUCCESS" {
@@ -921,6 +875,7 @@ pub fn tx_processor_result_checks(
                             commands.entity(entity).despawn_recursive();
                     }
                 }
+                TxType::Register |
                 TxType::ResetEpoch |
                 TxType::Stake |
                 TxType::Claim |
