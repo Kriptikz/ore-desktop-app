@@ -13,11 +13,11 @@ This zip should have an assets folder, and an executable. Make sure the assets a
 
 ### Build from Source
 
-To get started you will need to have rust installed. 
+To get started you will need to have rust installed as well as any additional dependencies for Bevy. 
+[Bevy Getting Started Setup](https://bevyengine.org/learn/quick-start/getting-started/setup/)
 
 Drillx and the Ore Program are currently being updated, so you will need to clone those repos. Then make sure to update the paths for these dependencies in the Cargo.toml file for this app.
 Once you have Drillx, Ore, and this app cloned, and have ensured the Cargo.toml paths are correct. Finally, run `cargo run --release` for the desktop app to build and run.
-The build and compile may take a while.
 
 ### Running
 Once the app is successfully running, you should see a config screen. You can provide your own rpc url, or leave it as the default.
@@ -28,11 +28,9 @@ To import a .json wallet. Just drag-and-drop the .json file into the app and it 
 
 Once the password is complete you will be taken to the Unlock screen. Here you must enter your previous password, and then click unlock or press `enter`.
 
-Now you will be on the Mining Screen. Wait for the ui fetch interval to kick in and update all the balance. Then toggle auto-mine and auto-reset to start mining.
+Now you will be on the Mining Screen. Wait for the ui fetch interval to kick in and update all the balance. Then toggle the Mine switch to start mining.
 
 #### Notes:
-Auto-Reset will occur ~5 seconds before your current challenge will need to be submitted. This ensure resets are only done as needed.
-
 The Orange bus is the last bus that was used.
 The Green flash of the bus is when the transaction was sent and processed on it.
 
