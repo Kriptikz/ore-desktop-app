@@ -224,12 +224,12 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution,
                             // validate hash
                             let difficulty = hx.difficulty();
                             if difficulty.gt(&best_difficulty) {
-                                let solution = Solution::new(hx.d, nonce.to_le_bytes());
-                                if solution.is_valid(&proof.challenge) {
+                                // let solution = Solution::new(hx.d, nonce.to_le_bytes());
+                                // if solution.is_valid(&proof.challenge) {
                                     best_nonce = nonce;
                                     best_difficulty = difficulty;
                                     best_hash = hx;
-                                }
+                                // }
                             }
                         }
 

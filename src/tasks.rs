@@ -246,6 +246,7 @@ pub fn handle_task_process_tx_result(
                         signed_tx: tx,
                         hash_status,
                         created_at: Instant::now(),
+                        challenge: proof_account.challenge.clone(),
                         send_and_confirm_interval: timer,
                     },
                 )).with_children(|parent| {
