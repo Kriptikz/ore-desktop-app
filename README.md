@@ -30,6 +30,9 @@ Once the password is complete you will be taken to the Unlock screen. Here you m
 
 Now you will be on the Mining Screen. Wait for the ui fetch interval to kick in and update all the balance. Then toggle the Mine switch to start mining.
 
+If you do not have any sol, you will need to get some. You can try the `Devnet` Airdrop button that is in the app. But there are heavy rate limits on it.
+You can also try the quicknode faucet. [quicknode faucet](https://faucet.quicknode.com/solana/devnet)
+
 #### Notes:
 The Orange bus is the last bus that was used.
 The Green flash of the bus is when the transaction was sent and processed on it.
