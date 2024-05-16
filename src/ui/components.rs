@@ -218,6 +218,9 @@ pub struct ButtonClaimOreRewards;
 pub struct ButtonStakeOre;
 
 #[derive(Component)]
+pub struct ButtonRequestAirdrop;
+
+#[derive(Component)]
 pub struct ButtonCaptureTextInput;
 
 #[derive(Component)]

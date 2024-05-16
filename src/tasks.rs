@@ -58,9 +58,17 @@ pub struct TaskRegisterWallet {
     pub task: Task<Option<Transaction>>,
 }
 
+pub struct TaskProcessTxData {
+    // TODO: change this to enum
+    pub tx_type: String,
+    pub signature: Option<Signature>,
+    pub signed_tx: Option<Transaction>,
+    pub hash_time: Option<(u64, u32)> // hash_time, difficulty
+}
+
 #[derive(Component)]
 pub struct TaskProcessTx {
-    pub task: Task<Option<(String, Transaction, Option<(u64, u32)>)>>,
+    pub task: Task<Option<TaskProcessTxData>>,
 }
 
 #[derive(Component)]
@@ -163,13 +171,16 @@ pub fn handle_task_process_tx_result(
 ) {
     for (entity, mut task) in &mut query_task_handler.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            if let Some((tx_type, tx, hash_status)) = result {
+            if let Some(task_process_tx_data) = result {
                 // spawn transaction entity
                 // ev_process_tx.send(EventProcessTx {
                 //     tx_type,
                 //     tx,
                 //     hash_status,
                 // });
+                let tx_type = task_process_tx_data.tx_type.clone();
+                let tx = task_process_tx_data.signed_tx;
+                let hash_status = task_process_tx_data.hash_time;
                 let tx_type = match tx_type.as_str() {
                     "Mine" => {
                         TxType::Mine
@@ -188,6 +199,9 @@ pub fn handle_task_process_tx_result(
                     },
                     "CreateAta" => {
                         TxType::CreateAta
+                    },
+                    "Airdrop" => {
+                        TxType::Airdrop
                     },
                     _ => {
                         error!("Invalid tx_type, stop using strings....");

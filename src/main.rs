@@ -22,7 +22,7 @@ use ui::{
         despawn_mining_screen, despawn_wallet_setup_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen, screen_setup_wallet::spawn_wallet_setup_screen},
     ui_button_systems::{
-        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
+        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
     },
     ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -104,7 +104,7 @@ fn main() {
                     ..Default::default()
                 })
         )
-        // .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -138,6 +138,7 @@ fn main() {
         .add_event::<EventGenerateWallet>()
         .add_event::<EventSaveWallet>()
         .add_event::<EventLoadKeypairFile>()
+        .add_event::<EventRequestAirdrop>()
         .add_systems(Startup, setup_camera)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -203,6 +204,7 @@ fn main() {
                     button_stake_ore,
                     button_auto_scroll,
                     button_open_web_tx_explorer,
+                    button_request_airdrop
                 ),
                 (
                     handle_event_start_stop_mining_clicked,
@@ -214,6 +216,7 @@ fn main() {
                     handle_event_claim_ore_rewards,
                     handle_event_stake_ore,
                     handle_event_lock,
+                    handle_event_request_airdrop,
                 ),
                 (
                     task_update_app_wallet_sol_balance,
@@ -323,6 +326,7 @@ pub enum TxType {
     CreateAta,
     Stake,
     Claim,
+    Airdrop
 }
 
 impl ToString for TxType {
@@ -346,6 +350,9 @@ impl ToString for TxType {
             TxType::Claim => {
                 "Claim".to_string()
             },
+            TxType::Airdrop => {
+                "Airdrop".to_string()
+            },
         }
     }
 }
@@ -364,7 +371,7 @@ pub struct TxProcessor {
     sol_balance: f64,
     staked_balance: Option<u64>,
     challenge: String,
-    signed_tx: Transaction,
+    signed_tx: Option<Transaction>,
     signature: Option<Signature>,
     hash_status: Option<HashStatus>,
     created_at: Instant,
@@ -772,30 +779,33 @@ pub fn tx_processor(
                 }
 
                 // create the task to send the tx and update the TxProcessor Signature
-                let task_pool = IoTaskPool::get();
-                let client = rpc_connection.rpc.clone();
-                let tx = tx_processor.signed_tx.clone();
-                let task = task_pool.spawn(async move {
-                    let send_cfg = RpcSendTransactionConfig {
-                        skip_preflight: true,
-                        preflight_commitment: Some(CommitmentLevel::Confirmed),
-                        encoding: Some(UiTransactionEncoding::Base64),
-                        max_retries: Some(0),
-                        min_context_slot: None,
-                    };
+                if let Some(signed_tx) = &tx_processor.signed_tx {
+                    let task_pool = IoTaskPool::get();
+                    let client = rpc_connection.rpc.clone();
+                    let tx = signed_tx.clone();
+                    let task = task_pool.spawn(async move {
+                        let send_cfg = RpcSendTransactionConfig {
+                            skip_preflight: true,
+                            preflight_commitment: Some(CommitmentLevel::Confirmed),
+                            encoding: Some(UiTransactionEncoding::Base64),
+                            max_retries: Some(0),
+                            min_context_slot: None,
+                        };
 
-                    let sig = client.send_transaction_with_config(&tx, send_cfg);
-                    if let Ok(sig) = sig {
-                        return Ok(sig);
-                    } else {
-                        error!("Failed to send initial transaction...");
-                        return Err("Failed to send tx".to_string());
-                    }
-                });
+                        let sig = client.send_transaction_with_config(&tx, send_cfg);
+                        if let Ok(sig) = sig {
+                            return Ok(sig);
+                        } else {
+                            error!("Failed to send initial transaction...");
+                            return Err("Failed to send tx".to_string());
+                        }
+                    });
 
-                commands
-                    .entity(entity)
-                    .insert(TaskSendTx { task });
+                    commands
+                        .entity(entity)
+                        .insert(TaskSendTx { task });
+
+                }
 
                 }
         }
@@ -875,6 +885,7 @@ pub fn tx_processor_result_checks(
                 }
                 TxType::Register |
                 TxType::ResetEpoch |
+                TxType::Airdrop |
                 TxType::Stake |
                 TxType::Claim |
                 TxType::CreateAta =>  {

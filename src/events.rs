@@ -12,8 +12,7 @@ use crate::{
     ore_utils::{
         find_hash_par, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
     }, tasks::{
-        TaskGenerateHash, TaskProcessTx, TaskRegisterWallet, TaskUpdateAppWalletSolBalance,
-        TaskUpdateAppWalletSolBalanceData
+        TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
         components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
@@ -46,6 +45,9 @@ pub struct EventMineForHash;
 
 #[derive(Event)]
 pub struct EventStopMining;
+
+#[derive(Event)]
+pub struct EventRequestAirdrop;
 
 #[derive(Event)]
 pub struct EventSubmitHashTx(pub (Solution, u32, u64));
@@ -275,8 +277,15 @@ pub fn handle_event_submit_hash_tx(
                     let mut tx = Transaction::new_with_payer(&ixs, Some(&signer.pubkey()));
 
                     tx.sign(&[&signer], hash);
+                    
+                    let process_data = TaskProcessTxData {
+                        tx_type: "Mine".to_string(),
+                        signature: None,
+                        signed_tx: Some(tx),
+                        hash_time: Some((hash_time, difficulty)),
+                    };
 
-                    return Some(("Mine".to_string(), tx, Some((hash_time, difficulty))));
+                    return Some(process_data);
                 } else {
                     error!("Failed to get latest blockhash. handle_event_submit_hash_tx");
                     return None;
@@ -533,7 +542,14 @@ pub fn handle_event_register_wallet(
 
                         tx.sign(&[&signer], hash);
 
-                        return Some(("Register".to_string(), tx, None));
+                        let process_data = TaskProcessTxData {
+                            tx_type: "Register".to_string(),
+                            signature: None,
+                            signed_tx: Some(tx),
+                            hash_time: None,
+                        };
+
+                        return Some(process_data);
                     } else {
                         error!("Failed to get latest blockhash. handle_event_submit_hash_tx");
                         return None;
@@ -579,8 +595,14 @@ pub fn handle_event_claim_ore_rewards(
                         let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
 
                         tx.sign(&[&wallet], hash);
+                        let process_data = TaskProcessTxData {
+                            tx_type: "Claim".to_string(),
+                            signature: None,
+                            signed_tx: Some(tx),
+                            hash_time: None,
+                        };
 
-                        return Some(("Claim".to_string(), tx, None));
+                        return Some(process_data);
                     } else {
                         error!("Failed to get latest blockhash. handle_event_claim_ore_rewards");
                         return None;
@@ -602,7 +624,14 @@ pub fn handle_event_claim_ore_rewards(
 
                         tx.sign(&[&wallet], hash);
 
-                        return Some(("CreateAta".to_string(), tx, None));
+                        let process_data = TaskProcessTxData {
+                            tx_type: "CreateAta".to_string(),
+                            signature: None,
+                            signed_tx: Some(tx),
+                            hash_time: None,
+                        };
+
+                        return Some(process_data);
                     } else {
                         error!("Failed to get latest blockhash. handle_event_claim_ore_rewards");
                         return None;
@@ -648,9 +677,14 @@ pub fn handle_event_stake_ore(
                         if let Ok((hash, _slot)) = latest_blockhash {
                             let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
 
-                            tx.sign(&[&wallet], hash);
+                            let process_data = TaskProcessTxData {
+                                tx_type: "Stake".to_string(),
+                                signature: None,
+                                signed_tx: Some(tx),
+                                hash_time: None,
+                            };
 
-                            return Some(("Stake".to_string(), tx, None));
+                            return Some(process_data);
                         } else {
                             error!("Failed to stake. handle_event_stake_ore.");
                             return None;
@@ -677,7 +711,14 @@ pub fn handle_event_stake_ore(
 
                         tx.sign(&[&wallet], hash);
 
-                        return Some(("Create ATA".to_string(), tx, None));
+                        let process_data = TaskProcessTxData {
+                            tx_type: "CreateAta".to_string(),
+                            signature: None,
+                            signed_tx: Some(tx),
+                            hash_time: None,
+                        };
+
+                        return Some(process_data);
                     } else {
                         error!("Failed to get latest blockhash. handle_event_claim_ore_rewards");
                         return None;
@@ -758,8 +799,17 @@ pub fn handle_event_save_config(
         let mut f = File::create("config.toml").expect("Unable to create file");
         f.write_all(&data).expect("Unable to write data");
 
+
+        let new_state;
+        let wallet_path = Path::new("save.data");
+        if wallet_path.exists() {
+            new_state = GameState::Locked;
+        } else {
+            new_state = GameState::WalletSetup;
+        }
+
         ore_app_state.config = new_config;
-        next_state.set(GameState::Locked);
+        next_state.set(new_state);
     }
 }
 
@@ -894,6 +944,50 @@ pub fn handle_event_save_wallet(
             }
         } else {
             error!("Error: failed to create file at path: {}", wallet_path.display());
+        }
+    }
+}
+
+pub fn handle_event_request_airdrop(
+    mut commands: Commands,
+    mut event_reader: EventReader<EventRequestAirdrop>,
+    app_wallet: Res<AppWallet>,
+    rpc_connection: ResMut<RpcConnection>,
+    query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+) {
+    for _ev in event_reader.read() {
+        if let Ok(task_handler_entity) = query_task_handler.get_single() {
+            let pool = IoTaskPool::get();
+            let wallet = app_wallet.wallet.clone();
+            let client = rpc_connection.rpc.clone();
+            let task = pool.spawn(async move {
+                let airdrop_request = client.request_airdrop(&wallet.pubkey(), LAMPORTS_PER_SOL / 4);
+
+                match airdrop_request {
+                    Ok(sig) => {
+                        info!("SIGG: {}", sig.to_string());
+                        let process_data = TaskProcessTxData {
+                            tx_type: "Airdrop".to_string(),
+                            signature: Some(sig),
+                            signed_tx: None,
+                            hash_time: None,
+                        };
+
+                        return Some(process_data);
+                    },
+                    Err(e) => {
+                        error!("Failed to request airdrop. handle_event_request_airdrop");
+                        error!("Error: {}", e.to_string());
+                        return None;
+                    }
+                }
+            });
+
+            commands
+                .entity(task_handler_entity)
+                .insert(TaskProcessTx { task });
+        } else {
+            error!("Failed to get task_handler_entity. handle_event_claim_ore_rewards.");
         }
     }
 }

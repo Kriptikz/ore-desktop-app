@@ -10,7 +10,7 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonStakeOre, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonRequestAirdrop, ButtonStakeOre, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
@@ -56,6 +56,71 @@ pub fn spawn_mining_screen(
             BaseScreenNode,
         ))
         .with_children(|parent| {
+            // devnet airdrop
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        width: Val::Px(250.0),
+                        height: Val::Px(100.0),
+                        margin: UiRect {
+                            top: Val::Px(-20.0),
+                            left: Val::Percent(40.0),
+                            right: Val::Px(0.0),
+                            bottom: Val::Px(0.0),
+                        },
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceAround,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    z_index: ZIndex::Global(14),
+                    ..default()
+                },
+                Name::new("Devnet Node"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        "DEVNET",
+                        TextStyle {
+                            font: asset_server.load(FONT_ROBOTO),
+                            font_size: FONT_SIZE_TITLE,
+                            color: Color::YELLOW.into()
+                        },
+                    ),
+                    Name::new("TextDevnet"),
+                ));
+                parent.spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(129.0),
+                            height: Val::Px(37.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        image: UiImage::new(
+                            asset_server.load(BUTTON_GREEN_MEDIUM),
+                        ),
+                        ..default()
+                    },
+                    ButtonRequestAirdrop,
+                    Name::new("ButtonRequestAirdrop"),
+                )).with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Airdrop",
+                            TextStyle {
+                                font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                font_size: FONT_SIZE,
+                                color: Color::BLACK.into(),
+                            },
+                        ),
+                        Name::new("TextAirdrop"),
+                    ));
+
+                });
+            });
             // pop-up area
             parent.spawn((
                 NodeBundle {

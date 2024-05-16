@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 use crate::{
-    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventSaveConfig, EventSaveWallet, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
+    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventRequestAirdrop, EventSaveConfig, EventSaveWallet, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
 };
 
 use super::{
     components::{
-        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextInput, ToggleAutoMine
+        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonRequestAirdrop, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextInput, ToggleAutoMine
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -443,6 +443,34 @@ pub fn button_auto_scroll(
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
                 // }
+            }
+        }
+    }
+}
+
+pub fn button_request_airdrop(
+    mut ev: EventWriter<EventRequestAirdrop>,
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
+        (Changed<Interaction>, With<ButtonRequestAirdrop>),
+    >,
+) {
+    for (_entity, interaction, mut color, mut border_color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+                // border_color.0 = Color::RED;
+
+                ev.send(EventRequestAirdrop);
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+                // border_color.0 = Color::WHITE;
+            }
+            Interaction::None => {
+                *color = Color::WHITE.into();
+                // *color = NORMAL_BUTTON.into();
+                // border_color.0 = Color::BLACK;
             }
         }
     }
