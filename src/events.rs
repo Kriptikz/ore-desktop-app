@@ -158,7 +158,11 @@ pub fn handle_event_mine_for_hash(
             let pool = AsyncComputeTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
-            let threads = miner_status.miner_threads;
+
+            let sys_info = &miner_status.sys_info;
+            let cpu_count = sys_info.cpus().len() as u64;
+            let threads = miner_status.miner_threads.max(cpu_count);
+
             let task = pool.spawn(async move {
                 // TODO: use proof resource cached proof. May need LatestHash Resource to ensure a new proof if loaded before mining.
                 //  get proof account data
