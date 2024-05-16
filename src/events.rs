@@ -161,7 +161,7 @@ pub fn handle_event_mine_for_hash(
 
             let sys_info = &miner_status.sys_info;
             let cpu_count = sys_info.cpus().len() as u64;
-            let threads = miner_status.miner_threads.max(cpu_count);
+            let threads = miner_status.miner_threads.clamp(1, cpu_count);
 
             let task = pool.spawn(async move {
                 // TODO: use proof resource cached proof. May need LatestHash Resource to ensure a new proof if loaded before mining.
