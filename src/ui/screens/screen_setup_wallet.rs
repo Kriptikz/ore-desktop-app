@@ -200,7 +200,7 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                             ));
                                             parent.spawn((
                                                 TextBundle::from_section(
-                                                    "Click Generate to make a new key.",
+                                                    "Click Generate to make a new key. OR Drag-&-Drop a `.json` key file to import it.",
                                                     TextStyle {
                                                         font: asset_server.load(FONT_ROBOTO),
                                                         font_size: FONT_SIZE,

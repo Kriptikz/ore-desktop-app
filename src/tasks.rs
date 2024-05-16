@@ -115,12 +115,9 @@ pub fn task_generate_hash(
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
             match result {
                 Ok(result) => {
-                    info!("TaskGenerateHash Got Result.");
                     if status == "MINING" {
-                        info!("Miner status is mining, submitting hash.");
                         ev_submit_hash_tx.send(EventSubmitHashTx(result));
                     } else {
-                        info!("Miner status is not MINING, discarding hash.");
                     }
                 },
                 Err(e) => {
@@ -140,7 +137,6 @@ pub fn task_register_wallet(
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(tx) = block_on(future::poll_once(&mut task.task)) {
-            info!("Handle task register wallet result");
             if let Some(tx) = tx {
                 ev_process_tx.send(EventProcessTx {
                     tx_type: "Register".to_string(),
@@ -148,7 +144,7 @@ pub fn task_register_wallet(
                     hash_status: None,
                 });
             } else {
-                info!("Failed to confirm register wallet tx...");
+                error!("Failed to confirm register wallet tx...");
             }
 
             commands.entity(entity).remove::<TaskRegisterWallet>();
@@ -167,7 +163,6 @@ pub fn handle_task_process_tx_result(
 ) {
     for (entity, mut task) in &mut query_task_handler.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            info!("Handle task process tx...");
             if let Some((tx_type, tx, hash_status)) = result {
                 // spawn transaction entity
                 // ev_process_tx.send(EventProcessTx {
@@ -175,7 +170,6 @@ pub fn handle_task_process_tx_result(
                 //     tx,
                 //     hash_status,
                 // });
-                info!("TX TYPE STR: {}", tx_type.clone());
                 let tx_type = match tx_type.as_str() {
                     "Mine" => {
                         TxType::Mine
@@ -297,7 +291,7 @@ pub fn handle_task_process_tx_result(
                 commands.entity(pop_up_area).add_child(new_tx);
 
             } else {
-                info!("Failed to process tx...");
+                error!("Failed to process tx...");
             }
 
             commands.entity(entity).remove::<TaskProcessTx>();
@@ -312,7 +306,6 @@ pub fn handle_task_send_tx_result(
     for (entity, mut task, mut tx_processor) in &mut query.iter_mut() {
         if let Some(send_tx_result) = block_on(future::poll_once(&mut task.task)) {
             if let Ok(sig) = send_tx_result {
-                info!("Tx sent, sig updated");
                 tx_processor.signature = Some(sig);
             }
             commands.entity(entity).remove::<TaskSendTx>();
@@ -326,7 +319,6 @@ pub fn handle_task_tx_sig_check_results(
 ) {
     for (entity, mut task, mut tx_processor) in &mut query.iter_mut() {
         if let Some(signature_status) = block_on(future::poll_once(&mut task.task)) {
-            info!("Tx status check result");
             match signature_status {
                 Ok(sig_status) => {
                     if let Some(sig_status) = sig_status {
@@ -336,11 +328,6 @@ pub fn handle_task_tx_sig_check_results(
                             let mut error = "".to_string();
                             match current_commitment {
                                 TransactionConfirmationStatus::Processed => {
-                                    info!("Transaction landed!");
-                                    info!("SIG: {:?}", tx_processor.signature.unwrap().to_string());
-                                    info!("SIG STATUS: {:?}", sig_status);
-                                    info!("TX TYPE: {}", tx_processor.tx_type.to_string());
-                                    info!("Stake Balance: {:?}", tx_processor.staked_balance);
                                     match &sig_status.status {
                                         Ok(_) => {
                                             status = "PROCESSED".to_string();
@@ -353,11 +340,6 @@ pub fn handle_task_tx_sig_check_results(
                                 }
                                 TransactionConfirmationStatus::Confirmed
                                 | TransactionConfirmationStatus::Finalized => {
-                                    info!("Transaction landed!");
-                                    info!("SIG: {:?}", tx_processor.signature.unwrap().to_string());
-                                    info!("SIG STATUS: {:?}", sig_status);
-                                    info!("TX TYPE: {}", tx_processor.tx_type.to_string());
-                                    info!("Stake Balance: {:?}", tx_processor.staked_balance);
                                     match &sig_status.status {
                                         Ok(_) => {
                                             status = "SUCCESS".to_string();

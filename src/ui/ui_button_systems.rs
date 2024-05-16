@@ -36,16 +36,13 @@ pub fn button_copy_text(
                     let mut ctx = ClipboardContext::new();
                     if let Ok(mut ctx) = ctx {
                         if let Err(_) = ctx.set_contents(text) {
-                            info!("Failed to set clipboard content.");
-                        } else {
-                            info!("Succesfully copied to clipboard");
-                        }
-
+                            error!("Failed to set clipboard content.");
+                        } 
                     } else {
                         error!("Failed to get clipboard context.");
                     }
                 } else {
-                    info!("Failed to find copyable_text.");
+                    error!("Failed to find copyable_text.");
                 }
             }
             Interaction::Hovered => {
@@ -84,7 +81,7 @@ pub fn button_open_web_tx_explorer(
                         error!("Failed to open web tx explorer with default web browser.");
                     }
                 } else {
-                    info!("Failed to find copyable_text.");
+                    error!("Failed to find copyable_text.");
                 }
             }
             Interaction::Hovered => {
@@ -300,7 +297,6 @@ pub fn button_save_config(
     for (_entity, interaction, mut ui_image, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                info!("pressed");
                 *color = PRESSED_BUTTON.into();
                 // if !ui_image.flip_y {
                 //     ui_image.flip_y = true;
@@ -357,14 +353,12 @@ pub fn button_save_config(
                 }));
             }
             Interaction::Hovered => {
-                info!("hovered");
                 *color = HOVERED_BUTTON.into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
                 // }
             }
             Interaction::None => {
-                info!("none");
                 *color = Color::WHITE.into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
@@ -384,7 +378,6 @@ pub fn button_save_wallet(
     for (_entity, interaction, mut ui_image, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                info!("pressed");
                 *color = PRESSED_BUTTON.into();
                 // if !ui_image.flip_y {
                 //     ui_image.flip_y = true;
@@ -393,14 +386,12 @@ pub fn button_save_wallet(
                 event_writer.send(EventSaveWallet);
             }
             Interaction::Hovered => {
-                info!("hovered");
                 *color = HOVERED_BUTTON.into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
                 // }
             }
             Interaction::None => {
-                info!("none");
                 *color = Color::WHITE.into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
@@ -421,7 +412,6 @@ pub fn button_auto_scroll(
     for (_entity, interaction, mut ui_image, mut color, mut button_auto_scroll) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                info!("pressed");
                 *color = PRESSED_BUTTON.into();
                 // if !ui_image.flip_y {
                 //     ui_image.flip_y = true;
@@ -443,14 +433,12 @@ pub fn button_auto_scroll(
                 
             }
             Interaction::Hovered => {
-                info!("hovered");
                 *color = Color::WHITE.into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
                 // }
             }
             Interaction::None => {
-                info!("none");
                 *color = HOVERED_BUTTON.into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;

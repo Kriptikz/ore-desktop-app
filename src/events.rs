@@ -106,7 +106,6 @@ pub fn handle_event_start_stop_mining_clicked(
     mut query: Query<(&mut UiImage, &mut ToggleAutoMine)>,
 ) {
     for _ev in ev_start_stop_mining.read() {
-        info!("Start/Stop Mining Event Handler.");
         match miner_status.miner_status.as_str() {
             "MINING" |
             "PROCESSING" => {
@@ -123,14 +122,11 @@ pub fn handle_event_start_stop_mining_clicked(
                 let client = rpc_connection.rpc.clone();
                 let proof_address = proof_pubkey(app_wallet.wallet.pubkey());
                 if client.get_account(&proof_address).is_ok() {
-                    info!("Is Successfully registered!!!");
-                    info!("Sending EventMineForHash");
                     event_writer.send(EventMineForHash);
                     let (mut btn, mut toggle) = query.single_mut();
                     toggle.0 = true;
                     *btn = UiImage::new(asset_server.load(TOGGLE_ON));
                 } else {
-                    info!("Sending Register Event.");
                     event_writer_register.send(EventRegisterWallet);
                 }
             },
@@ -151,11 +147,8 @@ pub fn handle_event_mine_for_hash(
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
 ) {
     for _ev in event_reader.read() {
-        info!("Mine For Hash Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = AsyncComputeTaskPool::get();
-            let threads = pool.thread_num();
-            info!("TASK POOL THREADS: {}", threads);
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
             let threads = miner_status.miner_threads;
@@ -179,7 +172,6 @@ pub fn handle_event_mine_for_hash(
 
                 // ensure proof account is hash is not the same as the last generated one.
                 // which results in 0x3 - Hash already submitted. Stale RPC Data...
-                info!("\nMining for a valid hash...");
 
                 let current_ts = get_unix_timestamp();
 
@@ -196,7 +188,6 @@ pub fn handle_event_mine_for_hash(
                     cutoff,
                     threads,
                 );
-                info!("BEST DIFFICULTY: {}", best_difficulty.to_string());
 
                 Ok((solution, best_difficulty, hash_time.elapsed().as_secs()))
             });
@@ -208,55 +199,6 @@ pub fn handle_event_mine_for_hash(
         }
     }
 }
-
-// pub fn handle_event_process_tx(
-//     mut commands: Commands,
-//     mut ev_submit_hash_tx: EventReader<EventProcessTx>,
-//     mut miner_status: ResMut<MinerStatusResource>,
-//     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
-//     rpc_connection: Res<RpcConnection>,
-// ) {
-//     for ev in ev_submit_hash_tx.read() {
-//         info!("ProcessTx Event Handler.");
-//         let tx_type = ev.tx_type.clone();
-//         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-//             let pool = IoTaskPool::get();
-
-//             let client = rpc_connection.rpc.clone();
-//             let tx_type_task = tx_type.clone();
-//             let tx = ev.tx.clone();
-//             let hash_time = ev.hash_status.clone();
-//             let task = pool.spawn(async move {
-//                 let tx_type = tx_type_task.clone();
-//                 let send_cfg = RpcSendTransactionConfig {
-//                     skip_preflight: true,
-//                     preflight_commitment: Some(CommitmentLevel::Confirmed),
-//                     encoding: Some(UiTransactionEncoding::Base64),
-//                     max_retries: Some(0),
-//                     min_context_slot: None,
-//                 };
-
-//                 let sig = client.send_transaction_with_config(&tx, send_cfg);
-//                 if let Ok(sig) = sig {
-//                     return Some((tx_type, tx, sig, hash_time));
-//                 } else {
-//                     info!("Failed to send initial transaction...");
-//                     return None;
-//                 }
-//             });
-//             if tx_type.as_str() == "Mine" {
-//                 miner_status.miner_status = "PROCESSING".to_string();
-//             }
-
-//             commands
-//                 .entity(task_handler_entity)
-//                 .insert(TaskUpdateCurrentTx { task });
-
-//         } else {
-//             error!("Failed to get task entity. handle_event_process_tx");
-//         }
-//     }
-// }
 
 pub struct CurrentBus {
     bus: usize
@@ -279,7 +221,6 @@ pub fn handle_event_submit_hash_tx(
     mut busses_res: ResMut<BussesResource>,
 ) {
     for ev in ev_submit_hash_tx.read() {
-        info!("Submit Hash Tx Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
@@ -364,7 +305,6 @@ pub fn handle_event_tx_result(
     query_toggle: Query<&ToggleAutoMine>,
 ) {
     for ev in ev_tx_result.read() {
-        info!("Tx Result Event Handler.");
         let (hash_time, difficulty) = if let Some(ht) = &ev.hash_status {
             (ht.hash_time.to_string(), ht.hash_difficulty.to_string())
         } else {
@@ -399,7 +339,6 @@ pub fn handle_event_tx_result(
 
         if auto_scroll.0 {
             let items_height = list_node.size().y + 20.0;
-            info!("ITEMS HEIGHT: {}", items_height);
             if let Ok(query_node_parent) = query_node.get(parent.get()) {
                 let container_height = query_node_parent.size().y;
 
@@ -509,9 +448,6 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                         false
                     };
 
-                    // info!("SPAM TOLERANCE: {}", treasury_account.tolerance_spam);
-                    // info!("LIVENESS TOLERANCE: {}", treasury_account.tolerance_liveness);
-
                     treasury_account_res_data = TreasuryAccountResource {
                         balance: treasury_ore_balance.to_string(),
                         admin: treasury_account.admin.to_string(),
@@ -565,7 +501,6 @@ pub fn handle_event_register_wallet(
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
 ) {
     for _ev in event_reader.read() {
-        info!("RegisterWallet Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
@@ -574,10 +509,8 @@ pub fn handle_event_register_wallet(
                 let proof = get_proof(&client, wallet.pubkey());
 
                 if let Ok(_) = proof {
-                    info!("Proof account already exists!");
                     return None;
                 } else {
-                    info!("Failed to get proof account, registering wallet...");
                     let signer = wallet;
 
                     let balance = if let Ok(balance) = client.get_balance(&signer.pubkey()) {
@@ -587,13 +520,11 @@ pub fn handle_event_register_wallet(
                     };
 
                     if balance <= 0 {
-                        info!("Insufficient Sol Balance!");
+                        error!("Insufficient Sol Balance!");
                         return None;
                     }
 
-                    info!("Get register ix");
                     let ix = get_register_ix(signer.pubkey());
-                    info!("Got register ix");
                     let latest_blockhash = client
                         .get_latest_blockhash_with_commitment(client.commitment());
 
@@ -628,7 +559,6 @@ pub fn handle_event_claim_ore_rewards(
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
 ) {
     for _ev in event_reader.read() {
-        info!("Claim Ore Rewards Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
@@ -699,7 +629,6 @@ pub fn handle_event_stake_ore(
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
 ) {
     for _ev in event_reader.read() {
-        info!("Stake Ore Rewards Event Handler.");
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
@@ -772,7 +701,6 @@ pub fn handle_event_lock(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for _ev in event_reader.read() {
-        info!("Lock Event Handler.");
         commands.remove_resource::<AppWallet>();
         next_state.set(GameState::Locked);
     }
@@ -785,7 +713,6 @@ pub fn handle_event_unlock(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for _ev in event_reader.read() {
-        info!("Unlock Event Handler.");
         let text = query.get_single();
         if let Ok(text_input) = text {
             let password = text_input.text.clone();
@@ -805,16 +732,15 @@ pub fn handle_event_unlock(
                         sol_balance: 0.0,
                         ore_balance: 0.0,
                     });
-                    info!("Successfully loaded wallet!");
                     next_state.set(GameState::Mining);
                 } else {
-                    info!("Failed to parse keypair from bytes. (events.rs: handle_event_unlock)");
+                    error!("Failed to parse keypair from bytes. (events.rs: handle_event_unlock)");
                 }
             } else {
-                info!("Failed to decrypt file. (events.rs: handle_event_unlock)");
+                error!("Failed to decrypt file. (events.rs: handle_event_unlock)");
             }
         } else {
-            info!("Failed to get_single on TextPasswordInput (events.rs: handle_event_unlock)");
+            error!("Failed to get_single on TextPasswordInput (events.rs: handle_event_unlock)");
         }
     }
 }
@@ -825,7 +751,6 @@ pub fn handle_event_save_config(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for ev in event_reader.read() {
-        info!("Save Config Event Handler.");
         let new_config = ev.0.clone();
         let toml_string = toml::to_string(&new_config).unwrap();
         let data = toml_string.into_bytes();
@@ -850,19 +775,13 @@ pub fn handle_event_generate_wallet(
         Query<&mut Text, With<TextMnemonicLine3>>,
     )>,
 ) {
-    for ev in event_reader.read() {
-        info!("Generate Wallet Event Handler.");
-
-        // let new_key = Keypair::new();
+    for _ev in event_reader.read() {
         let new_mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
 
         let phrase = new_mnemonic.clone().into_phrase();
 
         let words: Vec<&str> = phrase.split(" ").collect();
 
-        info!("Generated Mnemonic: {}", new_mnemonic.clone().into_phrase());
-
-        // let mnemonic_bytes = new_mnemonic.phrase().as_bytes();
         let seed = Seed::new(&new_mnemonic, "");
 
         let derivation_path = DerivationPath::from_absolute_path_str("m/44'/501'/0'/0'").unwrap();
@@ -918,9 +837,6 @@ pub fn handle_event_load_keypair_file(
     )>,
 ) {
     for ev in event_reader.read() {
-        info!("Load Keypair File Event Handler.");
-
-
         let path = &ev.0;
         if let Ok(keypair) = read_keypair_file(path) {
             let keypair = Arc::new(keypair);
@@ -956,15 +872,11 @@ pub fn handle_event_save_wallet(
     )>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    for ev in event_reader.read() {
-        info!("Save Wallet Event Handler.");
-
-        // create the app wallet resource and go to the unlock screen.
+    for _ev in event_reader.read() {
         let generated_keypair = set.p0().single().0.clone();
 
         let password = set.p1().single().text.clone();
 
-        info!("Saving wallet pubkey: {}", generated_keypair.pubkey().to_string());
         let wallet_path = Path::new("save.data");
 
         let cocoon = Cocoon::new(password.as_bytes());
@@ -975,7 +887,6 @@ pub fn handle_event_save_wallet(
             let container = cocoon.dump(wallet_bytes.to_vec(), &mut file);
 
             if let Ok(_) = container {
-                info!("Successfully saved wallet.");
                 // go to locked screen
                 next_state.set(GameState::Locked);
             } else {
@@ -986,193 +897,3 @@ pub fn handle_event_save_wallet(
         }
     }
 }
-
-// fn find_next_hash_par(
-//     signer: Arc<Keypair>,
-//     hash: KeccakHash,
-//     difficulty: KeccakHash,
-//     threads: u64,
-// ) -> (KeccakHash, u64) {
-//     let found_solution = Arc::new(AtomicBool::new(false));
-//     let solution = Arc::new(Mutex::<(KeccakHash, u64)>::new((
-//         KeccakHash::new_from_array([0; 32]),
-//         0,
-//     )));
-//     let pubkey = signer.pubkey();
-//     let thread_handles: Vec<_> = (0..threads)
-//         .map(|i| {
-//             std::thread::spawn({
-//                 let found_solution = found_solution.clone();
-//                 let solution = solution.clone();
-//                 let mut stdout = stdout();
-//                 move || {
-//                     let n = u64::MAX.saturating_div(threads).saturating_mul(i);
-//                     let mut next_hash: KeccakHash;
-//                     let mut nonce: u64 = n;
-//                     loop {
-//                         next_hash = hashv(&[
-//                             hash.to_bytes().as_slice(),
-//                             pubkey.to_bytes().as_slice(),
-//                             nonce.to_le_bytes().as_slice(),
-//                         ]);
-//                         if nonce % 10_000 == 0 {
-//                             if found_solution.load(std::sync::atomic::Ordering::Relaxed) {
-//                                 return;
-//                             }
-//                             if n == 0 {
-//                                 stdout
-//                                     .write_all(format!("\r{}", next_hash.to_string()).as_bytes())
-//                                     .ok();
-//                             }
-//                         }
-//                         if next_hash.le(&difficulty) {
-//                             stdout
-//                                 .write_all(format!("\r{}", next_hash.to_string()).as_bytes())
-//                                 .ok();
-//                             found_solution.store(true, std::sync::atomic::Ordering::Relaxed);
-//                             let mut w_solution = solution.lock().expect("failed to lock mutex");
-//                             *w_solution = (next_hash, nonce);
-//                             return;
-//                         }
-//                         nonce += 1;
-//                     }
-//                 }
-//             })
-//         })
-//         .collect();
-
-//     for thread_handle in thread_handles {
-//         thread_handle.join().unwrap();
-//     }
-
-//     let r_solution = solution.lock().expect("Failed to get lock");
-//     *r_solution
-// }
-
-// pub fn register(signer: Keypair, client: &RpcClient) -> bool {
-//     // Return early if miner is already registered
-//     let proof_address = proof_pubkey(signer.pubkey());
-//     if client.get_account(&proof_address).is_ok() {
-//         return true;
-//     }
-
-//     let balance = if let Ok(balance) = client.get_balance(&signer.pubkey()) {
-//         balance
-//     } else {
-//         return false;
-//     };
-
-//     if balance <= 0 {
-//         info!("Insufficient Sol Balance!");
-//         return false;
-//     }
-
-//     let ix = get_register_ix(signer.pubkey());
-//     let latest_blockhash = client
-//         .get_latest_blockhash_with_commitment(client.commitment());
-
-//     if let Ok((hash, _slot)) = latest_blockhash {
-//         let mut tx = Transaction::new_with_payer(&[ix], Some(&signer.pubkey()));
-
-//         tx.sign(&[&signer], hash);
-//         info!("Sending and confirming tx...");
-//         let result = client.send_and_confirm_transaction(&tx);
-//         info!("Tx Result: {:?}", result);
-//         if result.is_ok() {
-//             return true;
-//         }
-//         return false;
-//     } else {
-//         error!("Failed to register wallet. Failed to get latest blockhash.");
-//         return false;
-//     }
-// }
-
-// fn find_hash_par(signer: Pubkey, buffer_time: u64, threads: u64, rpc_client: &RpcClient, proof_account: Proof) -> (u64, u32, String) {
-//     // Check num threads
-//     // self.check_num_cores(threads);
-
-//     // Fetch data
-//     let proof = proof_account;
-//     println!(
-//         "\nStake balance: 0 ORE",
-//     );
-//     let cutoff_time = get_cutoff(proof, buffer_time);
-
-//     // Dispatch job to each thread
-//     // let progress_bar = Arc::new(spinner::new_progress_bar());
-//     // progress_bar.set_message("Mining...");
-//     let handles: Vec<_> = (0..threads)
-//         .map(|i| {
-//             std::thread::spawn({
-//                 let proof = proof.clone();
-//                 // let progress_bar = progress_bar.clone();
-//                 move || {
-//                     let timer = Instant::now();
-//                     let first_nonce = u64::MAX.saturating_div(threads).saturating_mul(i);
-//                     let mut nonce = first_nonce;
-//                     let mut best_nonce = nonce;
-//                     let mut best_difficulty = 0;
-//                     let mut best_hash = [0; 32];
-//                     loop {
-//                         // Create hash
-//                         let hx = drillx::hash(&proof.challenge, &nonce.to_le_bytes());
-//                         let difficulty = drillx::difficulty(hx);
-
-//                         // Check difficulty
-//                         if difficulty.gt(&best_difficulty) {
-//                             best_nonce = nonce;
-//                             best_difficulty = difficulty;
-//                             best_hash = hx;
-//                         }
-
-//                         // Exit if time has elapsed
-//                         if nonce % 10_000 == 0 {
-//                             if (timer.elapsed().as_secs() as i64).ge(&cutoff_time) {
-//                                 if best_difficulty.gt(&ore::MIN_DIFFICULTY) {
-//                                     // Mine until min difficulty has been met
-//                                     break;
-//                                 }
-//                             } else if i == 0 {
-//                                 // progress_bar.set_message(format!(
-//                                 //     "Mining... ({} sec remaining)",
-//                                 //     cutoff_time
-//                                 //         .saturating_sub(timer.elapsed().as_secs() as i64),
-//                                 // ));
-//                             }
-//                         }
-
-//                         // Increment nonce
-//                         nonce += 1;
-//                     }
-
-//                     // Return the best nonce
-//                     (best_nonce, best_difficulty, best_hash)
-//                 }
-//             })
-//         })
-//         .collect();
-
-//     // Join handles and return best nonce
-//     let mut best_nonce = 0;
-//     let mut best_difficulty = 0;
-//     let mut best_hash = [0; 32];
-//     for h in handles {
-//         if let Ok((nonce, difficulty, hash)) = h.join() {
-//             if difficulty > best_difficulty {
-//                 best_difficulty = difficulty;
-//                 best_nonce = nonce;
-//                 best_hash = hash;
-//             }
-//         }
-//     }
-
-//     let best_hash_str = bs58::encode(best_hash).into_string();
-//     // info!(format!(
-//     //     "Best hash: {} (difficulty: {})",
-//     //     best_hash_str.clone(),
-//     //     best_difficulty
-//     // ));
-
-//     (best_nonce, best_difficulty, best_hash_str)
-// }

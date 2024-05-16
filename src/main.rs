@@ -636,12 +636,11 @@ pub fn text_input(
                             }
                         }
                     }
-                    info!("Succesfully pasted from clipboard");
                 } else {
-                    info!("Failed to paste clipboard contents.");
+                    error!("Failed to paste clipboard contents.");
                 }
             } else {
-                info!("Failed to create clipboard context.");
+                error!("Failed to create clipboard context.");
             }
 
         }
@@ -771,7 +770,6 @@ pub fn tx_processor(
                 }
 
                 // create the task to send the tx and update the TxProcessor Signature
-                info!("Send tx...");
                 let task_pool = IoTaskPool::get();
                 let client = rpc_connection.rpc.clone();
                 let tx = tx_processor.signed_tx.clone();
@@ -788,7 +786,7 @@ pub fn tx_processor(
                     if let Ok(sig) = sig {
                         return Ok(sig);
                     } else {
-                        info!("Failed to send initial transaction...");
+                        error!("Failed to send initial transaction...");
                         return Err("Failed to send tx".to_string());
                     }
                 });
