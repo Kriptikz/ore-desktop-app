@@ -245,6 +245,7 @@ pub fn handle_task_process_tx_result(
                         signature: None,
                         signed_tx: tx,
                         hash_status,
+                        created_at: Instant::now(),
                         send_and_confirm_interval: timer,
                     },
                 )).with_children(|parent| {

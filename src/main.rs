@@ -1,5 +1,5 @@
 use std::{
-    fs, path::Path, sync::Arc, time::Duration
+    fs, path::Path, sync::Arc, time::{Duration, Instant}
 };
 
 use bevy::{prelude::*, tasks::IoTaskPool};
@@ -366,6 +366,7 @@ pub struct TxProcessor {
     signed_tx: Transaction,
     signature: Option<Signature>,
     hash_status: Option<HashStatus>,
+    created_at: Instant,
     send_and_confirm_interval: Timer,
 }
 
@@ -833,7 +834,7 @@ pub fn tx_processor_result_checks(
                                     tx_type: tx_processor.tx_type.to_string(),
                                     sig,
                                     hash_status: tx_processor.hash_status,
-                                    tx_time: 0,
+                                    tx_time: tx_processor.created_at.elapsed().as_secs(),
                                     tx_status:  TxStatus {
                                         status,
                                         error: tx_processor.error.clone()
