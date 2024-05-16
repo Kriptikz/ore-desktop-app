@@ -56,7 +56,6 @@ pub enum GameState {
 }
 
 fn main() {
-    // TODO: put rpc_url in save.data and let user input from UI.
     let mut starting_state = GameState::ConfigSetup;
     let config_path = Path::new("config.toml");
     let config: Option<Config> = if config_path.exists() {
@@ -81,10 +80,10 @@ fn main() {
     }
 
     let config = config.unwrap_or(Config {
-        rpc_url: "".to_string(),
+        rpc_url: "https://api.devnet.solana.com".to_string(),
         threads: 1,
-        fetch_ui_data_from_rpc_interval_ms: 3000,
-        tx_check_status_and_resend_interval_ms: 10000,
+        fetch_ui_data_from_rpc_interval_ms: 1000,
+        tx_check_status_and_resend_interval_ms: 3000,
     });
 
     let tx_send_interval = config.tx_check_status_and_resend_interval_ms;
@@ -275,8 +274,8 @@ fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetSer
     let config = config.unwrap_or(Config {
         rpc_url: "https://api.devnet.solana.com".to_string(),
         threads: 1,
-        fetch_ui_data_from_rpc_interval_ms: 3000,
-        tx_check_status_and_resend_interval_ms: 10000,
+        fetch_ui_data_from_rpc_interval_ms: 1000,
+        tx_check_status_and_resend_interval_ms: 3000,
     });
 
     spawn_initial_setup_screen(commands.reborrow(), asset_server, config);
