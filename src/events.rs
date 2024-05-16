@@ -1061,7 +1061,7 @@ pub fn handle_event_request_airdrop(
                 let devnet_url = "https://api.devnet.solana.com".to_string();
                 let client = RpcClient::new(devnet_url);
 
-                let airdrop_request = client.request_airdrop(&wallet.pubkey(), LAMPORTS_PER_SOL / 4);
+                let airdrop_request = client.request_airdrop(&wallet.pubkey(), LAMPORTS_PER_SOL);
 
                 match airdrop_request {
                     Ok(sig) => {
