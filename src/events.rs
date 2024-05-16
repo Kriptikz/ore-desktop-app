@@ -725,7 +725,6 @@ pub fn handle_event_stake_ore(
     mut event_reader: EventReader<EventStakeOre>,
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
-    proof_account: Res<ProofAccountResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
 ) {
     for _ev in event_reader.read() {
@@ -748,6 +747,7 @@ pub fn handle_event_stake_ore(
                         if let Ok((hash, _slot)) = latest_blockhash {
                             let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
 
+                            tx.sign(&[&wallet], hash);
                             let process_data = TaskProcessTxData {
                                 tx_type: "Stake".to_string(),
                                 signature: None,
@@ -1075,8 +1075,8 @@ pub fn handle_event_request_airdrop(
                         return Ok(process_data);
                     },
                     Err(e) => {
-                        error!("Failed to request airdrop. handle_event_request_airdrop");
-                        error!("Error: {}", e.to_string());
+                        // error!("Failed to request airdrop. handle_event_request_airdrop");
+                        // error!("Error: {}", e.to_string());
                         let process_data = TaskProcessTxData {
                             tx_type: "Airdrop".to_string(),
                             signature: None,
