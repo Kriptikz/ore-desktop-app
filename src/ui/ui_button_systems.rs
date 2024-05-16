@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
@@ -7,7 +9,7 @@ use crate::{
 
 use super::{
     components::{
-        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonRequestAirdrop, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextInput, ToggleAutoMine
+        AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCooldownSpinner, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonRequestAirdrop, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextInput, ToggleAutoMine
     },
     styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
@@ -448,27 +450,79 @@ pub fn button_auto_scroll(
     }
 }
 
+pub struct ButtonCooldown {
+    clicked: bool,
+    timer: Timer
+}
+
+impl Default for ButtonCooldown {
+    fn default() -> Self {
+        Self { 
+            clicked: false,
+            timer: Timer::new(Duration::from_secs(5), TimerMode::Once)
+        }
+    }
+}
+
+pub fn tick_button_cooldowns(
+    mut query: Query<(&mut ButtonRequestAirdrop, &mut BackgroundColor, &Children)>,
+    mut query_spinner: Query<&mut Visibility, With<ButtonCooldownSpinner>>,
+    time: Res<Time>
+) {
+    for (mut button_cooldown, mut color, children) in query.iter_mut() {
+        if button_cooldown.clicked {
+            button_cooldown.timer.tick(time.delta());
+
+            if button_cooldown.timer.finished() {
+                button_cooldown.clicked = false;
+                    for child in children {
+                        if let Ok(mut spinner_vis) = query_spinner.get_mut(*child) {
+                            *spinner_vis = Visibility::Hidden;
+                            *color = Color::WHITE.into();
+                        }
+                    }
+            }
+        }
+    }
+
+}
+
 pub fn button_request_airdrop(
     mut ev: EventWriter<EventRequestAirdrop>,
     mut interaction_query: Query<
-        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ButtonRequestAirdrop>),
+        (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor, &mut ButtonRequestAirdrop, &Children),
+        Changed<Interaction>,
     >,
+    mut query_spinner: Query<&mut Visibility, With<ButtonCooldownSpinner>>
 ) {
-    for (_entity, interaction, mut color, mut border_color) in &mut interaction_query {
+    for (_entity, interaction, mut color, mut border_color, mut button_cooldown, children) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
                 // border_color.0 = Color::RED;
 
-                ev.send(EventRequestAirdrop);
+                if !button_cooldown.clicked {
+                    ev.send(EventRequestAirdrop);
+                    button_cooldown.clicked = true;
+                    button_cooldown.timer.reset();
+
+                    for child in children {
+                        if let Ok(mut spinner_vis) = query_spinner.get_mut(*child) {
+                            *spinner_vis = Visibility::Visible;
+                        }
+                    }
+                }
             }
             Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
+                if !button_cooldown.clicked {
+                    *color = HOVERED_BUTTON.into();
+                }
                 // border_color.0 = Color::WHITE;
             }
             Interaction::None => {
-                *color = Color::WHITE.into();
+                if !button_cooldown.clicked {
+                    *color = Color::WHITE.into();
+                }
                 // *color = NORMAL_BUTTON.into();
                 // border_color.0 = Color::BLACK;
             }

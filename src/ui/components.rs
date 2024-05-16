@@ -218,7 +218,10 @@ pub struct ButtonClaimOreRewards;
 pub struct ButtonStakeOre;
 
 #[derive(Component)]
-pub struct ButtonRequestAirdrop;
+pub struct ButtonRequestAirdrop {
+    pub clicked: bool,
+    pub timer: Timer,
+}
 
 #[derive(Component)]
 pub struct ButtonCaptureTextInput;
@@ -228,3 +231,6 @@ pub struct ButtonSaveConfig;
 
 #[derive(Component)]
 pub struct SpinnerIcon;
+
+#[derive(Component)]
+pub struct ButtonCooldownSpinner;

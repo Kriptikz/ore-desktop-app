@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
     a11y::{
         accesskit::{NodeBuilder, Role},
@@ -10,11 +12,11 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonRequestAirdrop, ButtonStakeOre, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonCooldownSpinner, ButtonRequestAirdrop, ButtonStakeOre, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_GREEN_MEDIUM, BUTTON_RED_MEDIUM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, BUTTON_CLAIM, BUTTON_GREEN_MEDIUM, BUTTON_RED_MEDIUM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
     },
     utils::shorten_string,
@@ -104,7 +106,10 @@ pub fn spawn_mining_screen(
                         ),
                         ..default()
                     },
-                    ButtonRequestAirdrop,
+                    ButtonRequestAirdrop {
+                        clicked: false,
+                        timer: Timer::new(Duration::from_secs(5), TimerMode::Once),
+                    },
                     Name::new("ButtonRequestAirdrop"),
                 )).with_children(|parent| {
                     parent.spawn((
@@ -117,6 +122,24 @@ pub fn spawn_mining_screen(
                             },
                         ),
                         Name::new("TextAirdrop"),
+                    ));
+                    parent.spawn((
+                        NodeBundle {
+                            visibility: Visibility::Hidden,
+                            background_color: Color::WHITE.into(),
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                width: Val::Px(24.0),
+                                height: Val::Px(24.0),
+                                margin: UiRect::left(Val::Px(160.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        Name::new("SpinnerIcon"),
+                        UiImage::new(asset_server.load(SPINNER_ICON)),
+                        SpinnerIcon,
+                        ButtonCooldownSpinner,
                     ));
 
                 });

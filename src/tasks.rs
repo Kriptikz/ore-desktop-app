@@ -48,6 +48,17 @@ pub struct TaskCheckSigStatus {
     pub task: Task<Result<Option<TransactionStatus>, String>>,
 }
 
+pub struct SigCheckResults {
+    pub ents: Vec<Entity>,
+    pub sigs: Vec<Signature>,
+    pub sig_statuses: Vec<Option<TransactionStatus>>,
+}
+
+#[derive(Component)]
+pub struct TaskSigChecks {
+    pub task: Task<Result<SigCheckResults, String>>,
+}
+
 #[derive(Component)]
 pub struct TaskConfirmTx {
     pub task: Task<Result<Signature, String>>,
@@ -68,7 +79,7 @@ pub struct TaskProcessTxData {
 
 #[derive(Component)]
 pub struct TaskProcessTx {
-    pub task: Task<Option<TaskProcessTxData>>,
+    pub task: Task<Result<TaskProcessTxData, (TaskProcessTxData, String)>>,
 }
 
 #[derive(Component)]
@@ -166,148 +177,182 @@ pub fn handle_task_process_tx_result(
     app_wallet: Res<AppWallet>,
     proof_account: Res<ProofAccountResource>,
     mut query_task_handler: Query<(Entity, &mut TaskProcessTx)>,
+    mut event_writer: EventWriter<EventTxResult>,
     mut query_pop_up: Query<Entity, With<TxPopUpArea>>,
     // mut query: Query<(Entity, &mut TaskProcessTx)>,
 ) {
     for (entity, mut task) in &mut query_task_handler.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
-            if let Some(task_process_tx_data) = result {
-                // spawn transaction entity
-                // ev_process_tx.send(EventProcessTx {
-                //     tx_type,
-                //     tx,
-                //     hash_status,
-                // });
-                let tx_type = task_process_tx_data.tx_type.clone();
-                let tx = task_process_tx_data.signed_tx;
-                let hash_status = task_process_tx_data.hash_time;
-                let tx_type = match tx_type.as_str() {
-                    "Mine" => {
-                        TxType::Mine
-                    },
-                    "Register" => {
-                        TxType::Register
-                    },
-                    "Reset" => {
-                        TxType::ResetEpoch
-                    },
-                    "Claim" => {
-                        TxType::Claim
-                    },
-                    "Stake" => {
-                        TxType::Stake
-                    },
-                    "CreateAta" => {
-                        TxType::CreateAta
-                    },
-                    "Airdrop" => {
-                        TxType::Airdrop
-                    },
-                    _ => {
-                        error!("Invalid tx_type, stop using strings....");
-                        continue;
-                    }
-                };
-
-                let hash_status = if let Some(hash_status) = hash_status {
-                    Some(HashStatus {
-                        hash_time: hash_status.0,
-                        hash_difficulty: hash_status.1,
-                    })
-                } else {
-                    None
-                };
-
-                let timer = Timer::new(Duration::from_millis(1000), TimerMode::Once);
-
-                let pop_up_area = query_pop_up.single_mut();
-
-                let sol_balance = app_wallet.sol_balance;
-                let staked_balance = if tx_type == TxType::Mine {
-                    let current_ts = get_unix_timestamp();
-                    let time_since_last_hash = current_ts - proof_account.last_hash_at as u64;
-                    if time_since_last_hash >= 62 || time_since_last_hash <= 53 {
-                        None
-                    } else {
-                        Some(proof_account.stake)
-                    }
-                } else {
-                    None
-                };
-
-                let new_tx = commands.spawn((
-                    NodeBundle {
-                        background_color: Color::WHITE.into(),
-                        style: Style {
-                            width: Val::Percent(100.0),
-                            height: Val::Px(40.0),
-                            flex_direction: FlexDirection::Row,
-                            // row_gap: Val::Px(20.0),
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::SpaceAround,
-                            ..default()
+            match result {
+                Ok(task_process_tx_data) => {
+                    // spawn transaction entity
+                    // ev_process_tx.send(EventProcessTx {
+                    //     tx_type,
+                    //     tx,
+                    //     hash_status,
+                    // });
+                    let tx_type = task_process_tx_data.tx_type.clone();
+                    let tx = task_process_tx_data.signed_tx;
+                    let hash_status = task_process_tx_data.hash_time;
+                    let tx_type = match tx_type.as_str() {
+                        "Mine" => {
+                            TxType::Mine
                         },
-                        ..default()
-                    },
-                    UiImage::new(asset_server.load(TX_POP_UP_BACKGROUND)),
-                    TxProcessor {
-                        tx_type: tx_type.clone(),
-                        status: "SENDING".to_string(),
-                        error: "".to_string(),
-                        sol_balance,
-                        staked_balance,
-                        signature: None,
-                        signed_tx: tx,
-                        hash_status,
-                        created_at: Instant::now(),
-                        challenge: proof_account.challenge.clone(),
-                        send_and_confirm_interval: timer,
-                    },
-                )).with_children(|parent| {
-                    parent.spawn((
-                        TextBundle::from_section(
-                            tx_type.to_string(),
-                            TextStyle {
-                                font: asset_server.load(FONT_ROBOTO),
-                                font_size: FONT_SIZE_TITLE,
-                                color: Color::hex("#FFFFFF").unwrap(),
-                            },
-                        ),
-                        Name::new("TextTxProcessorTxType"),
-                        TextTxProcessorTxType,
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "SENDING".to_string(),
-                            TextStyle {
-                                font: asset_server.load(FONT_ROBOTO),
-                                font_size: FONT_SIZE_TITLE,
-                                color: Color::ORANGE.into(),
-                            },
-                        ),
-                        Name::new("TextTxProcessorTxType"),
-                        TextTxProcessorTxType,
-                    ));
-                    parent.spawn((
+                        "Register" => {
+                            TxType::Register
+                        },
+                        "Reset" => {
+                            TxType::ResetEpoch
+                        },
+                        "Claim" => {
+                            TxType::Claim
+                        },
+                        "Stake" => {
+                            TxType::Stake
+                        },
+                        "CreateAta" => {
+                            TxType::CreateAta
+                        },
+                        "Airdrop" => {
+                            let tx_result = EventTxResult {
+                                tx_type: task_process_tx_data.tx_type,
+                                sig: task_process_tx_data.signature.unwrap().to_string(),
+                                tx_time: 0,
+                                hash_status: None,
+                                tx_status: TxStatus {
+                                    status: "SUCCESS".to_string(),
+                                    error: "".to_string(),
+                                }
+
+                            };
+                            event_writer.send(tx_result);
+                            commands.entity(entity).remove::<TaskProcessTx>();
+                            continue;
+                        },
+                        _ => {
+                            error!("Invalid tx_type, stop using strings....");
+                            commands.entity(entity).remove::<TaskProcessTx>();
+                            continue;
+                        }
+                    };
+
+                    let hash_status = if let Some(hash_status) = hash_status {
+                        Some(HashStatus {
+                            hash_time: hash_status.0,
+                            hash_difficulty: hash_status.1,
+                        })
+                    } else {
+                        None
+                    };
+
+                    let timer = Timer::new(Duration::from_millis(3000), TimerMode::Once);
+
+                    let pop_up_area = query_pop_up.single_mut();
+
+                    let sol_balance = app_wallet.sol_balance;
+                    let staked_balance = if tx_type == TxType::Mine {
+                        let current_ts = get_unix_timestamp();
+                        let time_since_last_hash = current_ts - proof_account.last_hash_at as u64;
+                        if time_since_last_hash >= 62 || time_since_last_hash <= 53 {
+                            None
+                        } else {
+                            Some(proof_account.stake)
+                        }
+                    } else {
+                        None
+                    };
+
+                    let new_tx = commands.spawn((
                         NodeBundle {
                             background_color: Color::WHITE.into(),
                             style: Style {
-                                width: Val::Px(24.0),
-                                height: Val::Px(24.0),
+                                width: Val::Percent(100.0),
+                                height: Val::Px(40.0),
+                                flex_direction: FlexDirection::Row,
+                                // row_gap: Val::Px(20.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::SpaceAround,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(asset_server.load(TX_POP_UP_BACKGROUND)),
+                        TxProcessor {
+                            tx_type: tx_type.clone(),
+                            status: "SENDING".to_string(),
+                            error: "".to_string(),
+                            sol_balance,
+                            staked_balance,
+                            signature: None,
+                            signed_tx: tx,
+                            hash_status,
+                            created_at: Instant::now(),
+                            challenge: proof_account.challenge.clone(),
+                            send_and_confirm_interval: timer,
+                        },
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                tx_type.to_string(),
+                                TextStyle {
+                                    font: asset_server.load(FONT_ROBOTO),
+                                    font_size: FONT_SIZE_TITLE,
+                                    color: Color::hex("#FFFFFF").unwrap(),
+                                },
+                            ),
+                            Name::new("TextTxProcessorTxType"),
+                            TextTxProcessorTxType,
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "SENDING".to_string(),
+                                TextStyle {
+                                    font: asset_server.load(FONT_ROBOTO),
+                                    font_size: FONT_SIZE_TITLE,
+                                    color: Color::ORANGE.into(),
+                                },
+                            ),
+                            Name::new("TextTxProcessorTxType"),
+                            TextTxProcessorTxType,
+                        ));
+                        parent.spawn((
+                            NodeBundle {
+                                background_color: Color::WHITE.into(),
+                                style: Style {
+                                    width: Val::Px(24.0),
+                                    height: Val::Px(24.0),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        Name::new("SpinnerIcon"),
-                        UiImage::new(asset_server.load(SPINNER_ICON)),
-                        SpinnerIcon,
-                    ));
-                }).id();
+                            Name::new("SpinnerIcon"),
+                            UiImage::new(asset_server.load(SPINNER_ICON)),
+                            SpinnerIcon,
+                        ));
+                    }).id();
 
-                commands.entity(pop_up_area).add_child(new_tx);
+                    commands.entity(pop_up_area).add_child(new_tx);
+                },
+                Err((task_process_tx_data, error_str)) => {
+                    error!("Failed to process tx...");
+                    let sig = if let Some(sig) = &task_process_tx_data.signature {
+                        sig.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    let tx_result = EventTxResult {
+                        tx_type: task_process_tx_data.tx_type,
+                        sig,
+                        tx_time: 0,
+                        hash_status: None,
+                        tx_status: TxStatus {
+                            status: "FAILED".to_string(),
+                            error: error_str.clone(),
+                        }
 
-            } else {
-                error!("Failed to process tx...");
+                    };
+                    event_writer.send(tx_result);
+                }
             }
 
             commands.entity(entity).remove::<TaskProcessTx>();
@@ -377,6 +422,76 @@ pub fn handle_task_tx_sig_check_results(
                 }
             }
             commands.entity(entity).remove::<TaskCheckSigStatus>();
+        }
+    }
+}
+
+pub fn handle_task_got_sig_checks(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut TaskSigChecks)>,
+    mut query_tx_processors: Query<&mut TxProcessor>,
+) {
+    for (entity, mut task) in &mut query.iter_mut() {
+        if let Some(signature_status) = block_on(future::poll_once(&mut task.task)) {
+            match signature_status {
+                Ok(sig_check_results) => {
+                    let ents = sig_check_results.ents;
+                    let sigs = sig_check_results.sigs;
+                    let sig_statuses = sig_check_results.sig_statuses;
+
+                    if ents.len() == sigs.len() && sigs.len() == sig_statuses.len() {
+                        for i in 0..ents.len() {
+                            let ent = ents[i];
+                            let sig_status = &sig_statuses[i];
+
+                            if let Some(sig_status) = sig_status {
+                                if let Some(confirmation_status) = &sig_status.confirmation_status {
+                                    let current_commitment = confirmation_status;
+                                    let status;
+                                    let mut error = "".to_string();
+                                    match current_commitment {
+                                        TransactionConfirmationStatus::Processed => {
+                                            match &sig_status.status {
+                                                Ok(_) => {
+                                                    status = "PROCESSED".to_string();
+                                                }
+                                                Err(e) => {
+                                                    status = "FAILED".to_string();
+                                                    error = e.to_string();
+                                                }
+                                            }
+                                        }
+                                        TransactionConfirmationStatus::Confirmed
+                                        | TransactionConfirmationStatus::Finalized => {
+                                            match &sig_status.status {
+                                                Ok(_) => {
+                                                    status = "SUCCESS".to_string();
+                                                }
+                                                Err(e) => {
+                                                    status = "FAILED".to_string();
+                                                    error = e.to_string();
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // let tx_processor = query_tx_processors.get_mut(ent);
+                                    if let Ok(mut tx_processor) = query_tx_processors.get_mut(ent) {
+                                        tx_processor.status = status;
+                                        tx_processor.error = error;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        error!("Error: sigs check ents, sigs, sig_statuses lengths missmatch.");
+                    }
+                },
+                Err(e) => {
+                    error!("Error checking tx status: {}", e);
+                }
+            }
+            commands.entity(entity).remove::<TaskSigChecks>();
         }
     }
 }

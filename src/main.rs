@@ -13,7 +13,7 @@ use solana_sdk::{
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::{
-    handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskSendTx
+    handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskSendTx
 };
 use ui::{
     components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput},
@@ -22,7 +22,7 @@ use ui::{
         despawn_mining_screen, despawn_wallet_setup_screen, 
     }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen, screen_setup_wallet::spawn_wallet_setup_screen},
     ui_button_systems::{
-        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock
+        button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     },
     ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -104,7 +104,7 @@ fn main() {
                     ..Default::default()
                 })
         )
-        .add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(OreAppState {
             config,
@@ -139,6 +139,7 @@ fn main() {
         .add_event::<EventSaveWallet>()
         .add_event::<EventLoadKeypairFile>()
         .add_event::<EventRequestAirdrop>()
+        .add_event::<EventCheckSigs>()
         .add_systems(Startup, setup_camera)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -146,6 +147,7 @@ fn main() {
         .add_systems(Update, update_text_input_ui)
         .add_systems(Update, button_capture_text)
         .add_systems(Update, update_active_text_input_cursor_vis)
+        .add_systems(Update, tick_button_cooldowns)
         .add_systems(OnEnter(GameState::ConfigSetup), setup_initial_setup_screen)
         .add_systems(
             OnExit(GameState::ConfigSetup),
@@ -217,6 +219,7 @@ fn main() {
                     handle_event_stake_ore,
                     handle_event_lock,
                     handle_event_request_airdrop,
+                    handle_event_check_sigs,
                 ),
                 (
                     task_update_app_wallet_sol_balance,
@@ -225,6 +228,7 @@ fn main() {
                     handle_task_process_tx_result,
                     handle_task_send_tx_result,
                     handle_task_tx_sig_check_results,
+                    handle_task_got_sig_checks,
                 ),
                 (
                     update_app_wallet_ui,
@@ -235,8 +239,9 @@ fn main() {
                 ),
                 (
                     mouse_scroll,
-                    tx_processor,
                     tx_processor_result_checks,
+                    tx_processors_send,
+                    tx_processors_sigs_check,
                     mining_screen_hotkeys,
                     trigger_rpc_calls_for_ui,
                     spin_spinner_icons
@@ -287,8 +292,8 @@ fn setup_mining_screen(
     app_wallet: Res<AppWallet>,
     app_state: Res<OreAppState>,
 ) {
-    commands.spawn(EntityTaskHandler);
-    commands.spawn(EntityTaskFetchUiData);
+    commands.spawn((EntityTaskHandler, Name::new("EntityTaskHandler")));
+    commands.spawn((EntityTaskFetchUiData, Name::new("EntityFetchUiData")));
     let config = &app_state.config;
 
     let rpc_connection = Arc::new(RpcClient::new_with_commitment(
@@ -726,13 +731,12 @@ fn file_drop(
     }
 }
 
-pub fn tx_processor(
+pub fn tx_processors_send(
     mut commands: Commands,
     mut query_tx: Query<(Entity, &mut TxProcessor)>,
     rpc_connection: Res<RpcConnection>,
     time: Res<Time>
 ) {
-    // let mut sigs: Vec<Signature> = Vec::new();
     for (entity, mut tx_processor) in query_tx.iter_mut() {
         if tx_processor.status.as_str() != "SUCCESS" && tx_processor.status.as_str() != "FAILED" {
             let mut just_finished = false;
@@ -746,39 +750,6 @@ pub fn tx_processor(
             }
 
             if just_finished {
-                if let Some(sig) = tx_processor.signature {
-                    // sigs.push(sig);
-                    let task_pool = IoTaskPool::get();
-                    let client = rpc_connection.rpc.clone();
-                    let task = task_pool.spawn(async move {
-                        let sigs = [sig];
-                        match client.get_signature_statuses(&sigs) {
-                            Ok(signature_statuses) => {
-                                for signature_status in signature_statuses.value {
-                                    if let Some(signature_status) = signature_status.as_ref() {
-                                        return Ok(Some(signature_status.clone()));
-                                    } else {
-                                        return Ok(None);
-                                    }
-                                }
-
-                                return Ok(None);
-                            }
-
-                            // Handle confirmation errors
-                            Err(err) => {
-                                let e_str = format!("Confirmation Error: {:?}", err.kind().to_string());
-                                return Err(e_str);
-                            }
-                        }
-                    });
-
-                    commands
-                        .entity(entity)
-                        .insert(TaskCheckSigStatus { task });
-                }
-
-                // create the task to send the tx and update the TxProcessor Signature
                 if let Some(signed_tx) = &tx_processor.signed_tx {
                     let task_pool = IoTaskPool::get();
                     let client = rpc_connection.rpc.clone();
@@ -804,12 +775,33 @@ pub fn tx_processor(
                     commands
                         .entity(entity)
                         .insert(TaskSendTx { task });
-
                 }
-
-                }
+            }
         }
+    }
+}
 
+pub struct SigChecksTimer {
+    timer: Timer,
+}
+
+impl Default for SigChecksTimer {
+    fn default() -> Self {
+        Self {
+            timer: Timer::new(Duration::from_millis(1000), TimerMode::Once)
+        }
+    }
+}
+
+pub fn tx_processors_sigs_check(
+    mut event_writer: EventWriter<EventCheckSigs>,
+    mut sig_checks_timer: Local<SigChecksTimer>,
+    time: Res<Time>
+) {
+    sig_checks_timer.timer.tick(time.delta());
+    if sig_checks_timer.timer.just_finished() {
+        event_writer.send(EventCheckSigs);
+        sig_checks_timer.timer.reset();
     }
 }
 
@@ -859,7 +851,7 @@ pub fn tx_processor_result_checks(
                                 tx_type: tx_processor.tx_type.to_string(),
                                 sig,
                                 hash_status: tx_processor.hash_status,
-                                tx_time: 0,
+                                tx_time: tx_processor.created_at.elapsed().as_secs(),
                                 tx_status:  TxStatus {
                                     status,
                                     error: tx_processor.error.clone()
@@ -873,7 +865,7 @@ pub fn tx_processor_result_checks(
                                 tx_type: tx_processor.tx_type.to_string(),
                                 sig,
                                 hash_status: tx_processor.hash_status,
-                                tx_time: 0,
+                                tx_time: tx_processor.created_at.elapsed().as_secs(),
                                 tx_status:  TxStatus {
                                     status,
                                     error: tx_processor.error.clone()
@@ -883,9 +875,22 @@ pub fn tx_processor_result_checks(
                             commands.entity(entity).despawn_recursive();
                     }
                 }
+                TxType::Airdrop => {
+                    event_writer.send(EventTxResult {
+                        tx_type: tx_processor.tx_type.to_string(),
+                        sig: tx_processor.signature.unwrap().to_string(),
+                        hash_status: tx_processor.hash_status,
+                        tx_time: tx_processor.created_at.elapsed().as_secs(),
+                        tx_status:  TxStatus {
+                            status,
+                            error: tx_processor.error.clone()
+                        }
+                    });
+
+                    commands.entity(entity).despawn_recursive();
+                },
                 TxType::Register |
                 TxType::ResetEpoch |
-                TxType::Airdrop |
                 TxType::Stake |
                 TxType::Claim |
                 TxType::CreateAta =>  {
@@ -893,7 +898,7 @@ pub fn tx_processor_result_checks(
                         tx_type: tx_processor.tx_type.to_string(),
                         sig,
                         hash_status: tx_processor.hash_status,
-                        tx_time: 0,
+                        tx_time: tx_processor.created_at.elapsed().as_secs(),
                         tx_status:  TxStatus {
                             status,
                             error: tx_processor.error.clone()

@@ -174,14 +174,14 @@ pub fn spawn_new_list_item(
             parent.spawn((
                 NodeBundle {
                     style: Style {
-                        height: Val::Px(20.0),
+                        min_height: Val::Px(20.0),
+                        max_height: Val::Px(60.0),
                         width: Val::Px(400.0),
                         overflow: Overflow {
                             x: OverflowAxis::Clip,
                             y: OverflowAxis::Clip,
                         },
                         margin: UiRect::left(Val::Px(10.0)),
-                        align_items: AlignItems::Center,
                         justify_content: JustifyContent::Start,
                         ..default()
                     },
