@@ -64,8 +64,8 @@ pub fn spawn_mining_screen(
                         width: Val::Percent(100.0),
                         height: Val::Percent(100.0),
                         padding: UiRect {
-                            top: Val::Px(25.0),
-                            right: Val::Px(0.0),
+                            top: Val::Px(10.0),
+                            right: Val::Px(25.0),
                             left: Val::Px(0.0),
                             bottom: Val::Px(10.0),
                         },
