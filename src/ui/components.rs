@@ -116,9 +116,6 @@ pub struct TextTreasuryDifficulty;
 pub struct TextTreasuryLastResetAt;
 
 #[derive(Component)]
-pub struct TextTreasuryNeedEpochReset;
-
-#[derive(Component)]
 pub struct TextTreasuryRewardRate;
 
 #[derive(Component)]

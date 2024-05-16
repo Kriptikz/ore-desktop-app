@@ -43,12 +43,9 @@ use super::components::TextTotalHashes;
 use super::components::TextTreasuryAdmin;
 use super::components::TextTreasuryBalance;
 use super::components::TextTreasuryLastResetAt;
-use super::components::TextTreasuryNeedEpochReset;
 use super::components::TextTreasuryRewardRate;
 use super::components::TextWalletOreBalance;
 use super::components::TextWalletSolBalance;
-use super::styles::TOGGLE_OFF;
-use super::styles::TOGGLE_ON;
 
 pub fn mouse_scroll(
     mut mouse_wheel_events: EventReader<MouseWheel>,
@@ -271,7 +268,6 @@ pub fn update_treasury_account_ui(
         Query<&mut Text, With<TextTreasuryAdmin>>,
         Query<&mut Text, With<TextTreasuryLastResetAt>>,
         Query<&mut Text, With<TextTreasuryRewardRate>>,
-        Query<&mut Text, With<TextTreasuryNeedEpochReset>>,
     )>,
 ) {
     let mut text_query_0 = set.p0();
@@ -283,31 +279,25 @@ pub fn update_treasury_account_ui(
     text_1.sections[0].value = treasury_account_res.admin.clone();
 
 
-    let mut text_query_3 = set.p2();
-    let mut text_3 = text_query_3.single_mut();
-    let date_time =
-        if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
-            dt.to_string()
-        } else {
-            "Err".to_string()
-        };
+    if treasury_account_res.last_reset_at != 0 {
+        let mut text_query_3 = set.p2();
+        let mut text_3 = text_query_3.single_mut();
 
-    text_3.sections[0].value = format!("{}", date_time);
+        let date_time =
+            if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
+                dt.to_string()
+            } else {
+                "Err".to_string()
+            };
+        text_3.sections[0].value = format!("{}", date_time);
+
+    }
 
     let mut text_query_4 = set.p3();
     let mut text_4 = text_query_4.single_mut();
     text_4.sections[0].value =
         treasury_account_res.base_reward_rate.to_string();
 
-    let mut text_query_6 = set.p4();
-    let mut text_6 = text_query_6.single_mut();
-    let needs_reset_string = if treasury_account_res.need_epoch_reset {
-        "TRUE"
-    } else {
-        "FALSE"
-    };
-
-    text_6.sections[0].value = format!("{}", needs_reset_string);
 }
 
 pub fn update_miner_status_ui(

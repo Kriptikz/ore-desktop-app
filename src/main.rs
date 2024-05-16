@@ -844,7 +844,6 @@ pub fn tx_processor_result_checks(
 
                             }
                         } else {
-                            error!("Mine tx does not have previous staked balance");
                             event_writer.send(EventTxResult {
                                 tx_type: tx_processor.tx_type.to_string(),
                                 sig,

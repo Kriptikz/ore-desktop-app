@@ -26,7 +26,7 @@ use crate::ui::{
         BaseScreenNode, ButtonClaimOreRewards, MovingScrollPanel, ScrollingList,
         TextCurrentChallenge, TextCurrentStake, TextMinerStatusCpuUsage, TextMinerStatusRamUsage,
         TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes, TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryLastResetAt,
-        TextTreasuryNeedEpochReset, TextTreasuryRewardRate, TextWalletOreBalance, TextWalletSolBalance, ToggleAutoMine,
+        TextTreasuryRewardRate, TextWalletOreBalance, TextWalletSolBalance, ToggleAutoMine,
     },
     styles::FONT_SIZE,
 };
@@ -376,19 +376,6 @@ pub fn spawn_mining_screen(
 
                                                     parent.spawn((
                                                         TextBundle::from_section(
-                                                            "Need Epoch Reset:",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new("TextTreasuryNeedEpochReset"),
-                                                    ));
-
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
                                                             "Base Reward Rate:",
                                                             TextStyle {
                                                                 font: asset_server
@@ -454,20 +441,6 @@ pub fn spawn_mining_screen(
                                                         ),
                                                         Name::new("TextTreasuryLastResetAt"),
                                                         TextTreasuryLastResetAt,
-                                                    ));
-
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "loading...",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new("TextTreasuryNeedEpochReset"),
-                                                        TextTreasuryNeedEpochReset,
                                                     ));
 
                                                     parent.spawn((
