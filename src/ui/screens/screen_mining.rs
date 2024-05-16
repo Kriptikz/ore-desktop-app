@@ -14,7 +14,7 @@ use crate::{
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, BUTTON_CLAIM, BUTTON_GREEN_MEDIUM, BUTTON_RED_MEDIUM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
     },
     utils::shorten_string,
@@ -63,7 +63,12 @@ pub fn spawn_mining_screen(
                     style: Style {
                         width: Val::Percent(100.0),
                         height: Val::Percent(100.0),
-                        padding: UiRect::right(Val::Px(25.0)),
+                        padding: UiRect {
+                            top: Val::Px(25.0),
+                            right: Val::Px(0.0),
+                            left: Val::Px(0.0),
+                            bottom: Val::Px(10.0),
+                        },
                         position_type: PositionType::Absolute,
                         align_content: AlignContent::End,
                         justify_content: JustifyContent::End,
@@ -77,7 +82,7 @@ pub fn spawn_mining_screen(
                     NodeBundle {
                         style: Style {
                             width: Val::Px(250.0),
-                            height: Val::Percent(90.0),
+                            height: Val::Percent(100.0),
                             flex_direction: FlexDirection::ColumnReverse,
                             row_gap: Val::Px(10.0),
                             ..default()
@@ -1680,7 +1685,7 @@ pub fn spawn_mining_screen(
                                                                     font: asset_server
                                                                         .load(FONT_ROBOTO),
                                                                     font_size: FONT_SIZE,
-                                                                    color: Color::rgb(0.9, 0.9, 0.9),
+                                                                    color: Color::RED.into(),
                                                                 },
                                                             ),
                                                             Name::new("TextBurnAmount"),
@@ -1724,6 +1729,7 @@ pub fn spawn_mining_screen(
                                                     flex_direction: FlexDirection::Row,
                                                     width: Val::Percent(100.0),
                                                     height: Val::Percent(30.0),
+                                                    justify_content: JustifyContent::SpaceAround,
                                                     ..default()
                                                 },
                                                 ..default()
@@ -1734,37 +1740,62 @@ pub fn spawn_mining_screen(
                                             parent.spawn((
                                                 ButtonBundle {
                                                     style: Style {
-                                                        width: Val::Px(108.0),
+                                                        width: Val::Px(129.0),
                                                         height: Val::Px(37.0),
-                                                        align_self: AlignSelf::Center,
-                                                        justify_self: JustifySelf::Center,
+                                                        justify_content: JustifyContent::Center,
+                                                        align_items: AlignItems::Center,
                                                         ..default()
                                                     },
                                                     image: UiImage::new(
-                                                        asset_server.load(BUTTON_CLAIM),
+                                                        asset_server.load(BUTTON_RED_MEDIUM),
                                                     ),
                                                     ..default()
                                                 },
                                                 ButtonClaimOreRewards,
                                                 Name::new("ButtonClaimOreRewards"),
-                                            ));
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Burn & Claim",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font_size: FONT_SIZE,
+                                                            color: Color::BLACK.into(),
+                                                        },
+                                                    ),
+                                                    Name::new("TextBurnAndClaim"),
+                                                ));
+                                            });
                                             parent.spawn((
                                                 ButtonBundle {
                                                     style: Style {
-                                                        width: Val::Px(218.0),
+                                                        width: Val::Px(129.0),
                                                         height: Val::Px(37.0),
-                                                        align_self: AlignSelf::Center,
-                                                        justify_self: JustifySelf::Center,
+                                                        justify_content: JustifyContent::Center,
+                                                        align_items: AlignItems::Center,
                                                         ..default()
                                                     },
                                                     image: UiImage::new(
-                                                        asset_server.load(BUTTON_STAKE),
+                                                        asset_server.load(BUTTON_GREEN_MEDIUM),
                                                     ),
                                                     ..default()
                                                 },
                                                 ButtonStakeOre,
                                                 Name::new("ButtonStakeOre"),
-                                            ));
+                                            )).with_children(|parent| {
+                                                parent.spawn((
+                                                    TextBundle::from_section(
+                                                        "Stake",
+                                                        TextStyle {
+                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font_size: FONT_SIZE,
+                                                            color: Color::BLACK.into(),
+                                                        },
+                                                    ),
+                                                    Name::new("TextStake"),
+                                                ));
+
+                                            });
                                         });
                                 });
                         });

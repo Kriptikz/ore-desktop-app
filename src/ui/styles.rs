@@ -9,6 +9,8 @@ pub static TOGGLE_ON: &str = "design_1/toggle_on.png";
 pub static TOGGLE_OFF: &str = "design_1/toggle_off.png";
 
 pub static BUTTON: &str = "button.png";
+pub static BUTTON_GREEN_MEDIUM: &str = "design_1/button_green_medium.png";
+pub static BUTTON_RED_MEDIUM: &str = "design_1/button_red_medium.png";
 pub static BUTTON_SAVE_CONFIG: &str = "design_1/button_save_config.png";
 pub static BUTTON_SAVE_WALLET: &str = "design_1/button_save_wallet.png";
 pub static BUTTON_GENERATE: &str = "design_1/button_generate.png";
