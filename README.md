@@ -7,7 +7,7 @@
 ## Getting Started
 
 ### Download
-To quickly get started, build are provided as releases. This project is currently in alpha.
+To quickly get started, build are provided as releases. This project is currently in alpha. [Download Here](https://github.com/Kriptikz/ore-desktop-app/releases)
 Navigate to the Release, download the zip for your platform. Extract the zip into a folder at your desired location (A folder on Desktop will work).
 This zip should have an assets folder, and an executable. Make sure the assets are always right next to your executable or it won't be able to find them and your screen will just be blank.
 
@@ -20,7 +20,7 @@ Drillx and the Ore Program are currently being updated, so you will need to clon
 Once you have Drillx, Ore, and this app cloned, and have ensured the Cargo.toml paths are correct. Finally, run `cargo run --release` for the desktop app to build and run.
 
 ### Running
-First you will need to download the release and extract it.
+First you will need to download the release and extract it. [releases](https://github.com/Kriptikz/ore-desktop-app/releases)
 
 ![GIF 5-16-2024 7-31-25 PM](https://github.com/Kriptikz/ore-desktop-app/assets/17520593/36e847c7-6d55-4b03-a41e-7a307f67fce9)
 
