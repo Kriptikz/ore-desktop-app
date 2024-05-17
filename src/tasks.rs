@@ -334,7 +334,6 @@ pub fn handle_task_process_tx_result(
                     commands.entity(pop_up_area).add_child(new_tx);
                 },
                 Err((task_process_tx_data, error_str)) => {
-                    error!("Failed to process tx...");
                     let sig = if let Some(sig) = &task_process_tx_data.signature {
                         sig.to_string()
                     } else {

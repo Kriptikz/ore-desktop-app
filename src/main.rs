@@ -40,11 +40,26 @@ pub mod ui;
 pub mod utils;
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Config {
+pub struct AppConfig {
     pub rpc_url: String,
+    pub is_devnet: bool,
     pub threads: u64,
-    pub fetch_ui_data_from_rpc_interval_ms: u64,
-    pub tx_check_status_and_resend_interval_ms: u64,
+    pub ui_fetch_interval: u64,
+    pub tx_send_interval: u64,
+    pub tx_sigs_check_interval: u64,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            rpc_url: "https://floral-dawn-pallet.solana-devnet.quiknode.pro/8b38be5427b44d3b42dc67c891dea71a56cd3a8c/".to_string(),
+            is_devnet: true,
+            threads: 1,
+            ui_fetch_interval: 1000,
+            tx_send_interval: 3000,
+            tx_sigs_check_interval: 1000,
+        }
+    }
 }
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -58,7 +73,7 @@ pub enum GameState {
 fn main() {
     let mut starting_state = GameState::ConfigSetup;
     let config_path = Path::new("config.toml");
-    let config: Option<Config> = if config_path.exists() {
+    let config: Option<AppConfig> = if config_path.exists() {
         let config_string = fs::read_to_string(config_path).unwrap();
         let config = match toml::from_str(&config_string) {
             Ok(d) => {
@@ -79,14 +94,9 @@ fn main() {
         }
     }
 
-    let config = config.unwrap_or(Config {
-        rpc_url: "https://api.devnet.solana.com".to_string(),
-        threads: 1,
-        fetch_ui_data_from_rpc_interval_ms: 1000,
-        tx_check_status_and_resend_interval_ms: 3000,
-    });
+    let config = config.unwrap_or(AppConfig::default());
 
-    let tx_send_interval = config.tx_check_status_and_resend_interval_ms;
+    // let tx_send_interval = config.tx_send_interval;
     let threads = config.threads;
     App::new()
         .insert_state(starting_state)
@@ -258,7 +268,7 @@ fn setup_camera(mut commands: Commands) {
 
 fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let config_path = Path::new("config.toml");
-    let config: Option<Config> = if config_path.exists() {
+    let config: Option<AppConfig> = if config_path.exists() {
         let config_string = fs::read_to_string(config_path).unwrap();
         let config = match toml::from_str(&config_string) {
             Ok(d) => {
@@ -271,12 +281,7 @@ fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetSer
         None
     };
 
-    let config = config.unwrap_or(Config {
-        rpc_url: "https://api.devnet.solana.com".to_string(),
-        threads: 1,
-        fetch_ui_data_from_rpc_interval_ms: 1000,
-        tx_check_status_and_resend_interval_ms: 3000,
-    });
+    let config = config.unwrap_or(AppConfig::default());
 
     spawn_initial_setup_screen(commands.reborrow(), asset_server, config);
 }
@@ -302,11 +307,11 @@ fn setup_mining_screen(
     commands.insert_resource(RpcConnection {
         rpc: rpc_connection,
         fetch_ui_data_timer: Timer::new(
-            Duration::from_millis(config.fetch_ui_data_from_rpc_interval_ms),
+            Duration::from_millis(config.ui_fetch_interval),
             TimerMode::Once,
         ),
     });
-    spawn_mining_screen(commands.reborrow(), asset_server, app_wallet);
+    spawn_mining_screen(commands.reborrow(), asset_server, app_wallet, app_state.config.clone());
 }
 
 fn setup_locked_screen(
@@ -480,7 +485,7 @@ pub struct TxStatus {
 
 #[derive(Resource)]
 pub struct OreAppState {
-    config: Config,
+    config: AppConfig,
     active_input_node: Option<Entity>,
 }
 

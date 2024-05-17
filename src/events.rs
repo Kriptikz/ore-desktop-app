@@ -18,7 +18,7 @@ use crate::{
     }, ui::{
         components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, Config, EntityTaskFetchUiData, EntityTaskHandler, GameState, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
+    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, AppConfig, EntityTaskFetchUiData, EntityTaskHandler, GameState, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
 
 use std::{
@@ -100,7 +100,7 @@ pub struct EventLock;
 pub struct EventUnlock;
 
 #[derive(Event)]
-pub struct EventSaveConfig(pub Config);
+pub struct EventSaveConfig(pub AppConfig);
 
 pub fn handle_event_start_stop_mining_clicked(
     mut ev_start_stop_mining: EventReader<EventStartStopMining>,

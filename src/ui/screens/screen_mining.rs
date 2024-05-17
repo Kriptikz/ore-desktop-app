@@ -20,7 +20,7 @@ use crate::{
         },
     },
     utils::shorten_string,
-    AppWallet,
+    AppWallet, AppConfig,
 };
 
 use crate::ui::{
@@ -37,6 +37,7 @@ pub fn spawn_mining_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     app_wallet: Res<AppWallet>,
+    config: AppConfig,
 ) {
     let full_addr = app_wallet.wallet.pubkey().to_string();
     let wallet_str = shorten_string(full_addr, 10);
@@ -58,92 +59,93 @@ pub fn spawn_mining_screen(
             BaseScreenNode,
         ))
         .with_children(|parent| {
-            // devnet airdrop
-            parent.spawn((
-                NodeBundle {
-                    style: Style {
-                        position_type: PositionType::Absolute,
-                        width: Val::Px(250.0),
-                        height: Val::Px(100.0),
-                        margin: UiRect {
-                            top: Val::Px(-20.0),
-                            left: Val::Percent(40.0),
-                            right: Val::Px(0.0),
-                            bottom: Val::Px(0.0),
-                        },
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::SpaceAround,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    z_index: ZIndex::Global(14),
-                    ..default()
-                },
-                Name::new("Devnet Node"),
-            )).with_children(|parent| {
+            if config.is_devnet {
+                // devnet airdrop
                 parent.spawn((
-                    TextBundle::from_section(
-                        "DEVNET",
-                        TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE_TITLE,
-                            color: Color::YELLOW.into()
-                        },
-                    ),
-                    Name::new("TextDevnet"),
-                ));
-                parent.spawn((
-                    ButtonBundle {
+                    NodeBundle {
                         style: Style {
-                            width: Val::Px(129.0),
-                            height: Val::Px(37.0),
-                            justify_content: JustifyContent::Center,
+                            position_type: PositionType::Absolute,
+                            width: Val::Px(250.0),
+                            height: Val::Px(100.0),
+                            margin: UiRect {
+                                top: Val::Px(-20.0),
+                                left: Val::Percent(40.0),
+                                right: Val::Px(0.0),
+                                bottom: Val::Px(0.0),
+                            },
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceAround,
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        image: UiImage::new(
-                            asset_server.load(BUTTON_GREEN_MEDIUM),
-                        ),
+                        z_index: ZIndex::Global(14),
                         ..default()
                     },
-                    ButtonRequestAirdrop {
-                        clicked: false,
-                        timer: Timer::new(Duration::from_secs(5), TimerMode::Once),
-                    },
-                    Name::new("ButtonRequestAirdrop"),
+                    Name::new("Devnet Node"),
                 )).with_children(|parent| {
                     parent.spawn((
                         TextBundle::from_section(
-                            "Airdrop",
+                            "DEVNET",
                             TextStyle {
-                                font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                                font_size: FONT_SIZE,
-                                color: Color::BLACK.into(),
+                                font: asset_server.load(FONT_ROBOTO),
+                                font_size: FONT_SIZE_TITLE,
+                                color: Color::YELLOW.into()
                             },
                         ),
-                        Name::new("TextAirdrop"),
+                        Name::new("TextDevnet"),
                     ));
                     parent.spawn((
-                        NodeBundle {
-                            visibility: Visibility::Hidden,
-                            background_color: Color::WHITE.into(),
+                        ButtonBundle {
                             style: Style {
-                                position_type: PositionType::Absolute,
-                                width: Val::Px(24.0),
-                                height: Val::Px(24.0),
-                                margin: UiRect::left(Val::Px(160.0)),
+                                width: Val::Px(129.0),
+                                height: Val::Px(37.0),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            image: UiImage::new(
+                                asset_server.load(BUTTON_GREEN_MEDIUM),
+                            ),
+                            ..default()
+                        },
+                        ButtonRequestAirdrop {
+                            clicked: false,
+                            timer: Timer::new(Duration::from_secs(5), TimerMode::Once),
+                        },
+                        Name::new("ButtonRequestAirdrop"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Airdrop",
+                                TextStyle {
+                                    font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                    font_size: FONT_SIZE,
+                                    color: Color::BLACK.into(),
+                                },
+                            ),
+                            Name::new("TextAirdrop"),
+                        ));
+                        parent.spawn((
+                            NodeBundle {
+                                visibility: Visibility::Hidden,
+                                background_color: Color::WHITE.into(),
+                                style: Style {
+                                    position_type: PositionType::Absolute,
+                                    width: Val::Px(24.0),
+                                    height: Val::Px(24.0),
+                                    margin: UiRect::left(Val::Px(160.0)),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        Name::new("SpinnerIcon"),
-                        UiImage::new(asset_server.load(SPINNER_ICON)),
-                        SpinnerIcon,
-                        ButtonCooldownSpinner,
-                    ));
-
+                            Name::new("SpinnerIcon"),
+                            UiImage::new(asset_server.load(SPINNER_ICON)),
+                            SpinnerIcon,
+                            ButtonCooldownSpinner,
+                        ));
+                    });
                 });
-            });
+            }
             // pop-up area
             parent.spawn((
                 NodeBundle {
@@ -1667,7 +1669,7 @@ pub fn spawn_mining_screen(
                                                             NodeBundle {
                                                                 style: Style {
                                                                     width: Val::Px(200.0),
-                                                                    height: Val::Px(37.0),
+                                                                    height: Val::Px(40.0),
                                                                     ..default()
                                                                 },
                                                                 ..default()

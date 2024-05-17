@@ -9,9 +9,9 @@ use crate::{ui::{
     styles::{
         BUTTON, BUTTON_SAVE_CONFIG, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE, FONT_SIZE_LARGE, FONT_SIZE_TITLE, MENU_BACKGROUND, SCREEN_BACKGROUND_1, SETTINGS_ICON, TITLE_BACKGROUND, TREASURY_BACKGROUND
     },
-}, Config};
+}, AppConfig};
 
-pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>, config: Config) {
+pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>, config: AppConfig) {
     commands
         .spawn((
             NodeBundle {
@@ -226,7 +226,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 },
                                             ));
                                             parent.spawn(TextBundle::from_section(
-                                                "RPC Fetch Accounts Interval (ms): ",
+                                                "UI Fetch Interval (ms): ",
                                                 TextStyle {
                                                     font: asset_server.load(FONT_ROBOTO_MEDIUM),
                                                     font_size: FONT_SIZE_TITLE,
@@ -234,7 +234,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 },
                                             ));
                                             parent.spawn(TextBundle::from_section(
-                                                "RPC Send Interval (ms): ",
+                                                "Tx Send Interval (ms): ",
                                                 TextStyle {
                                                     font: asset_server.load(FONT_ROBOTO_MEDIUM),
                                                     font_size: FONT_SIZE_TITLE,
@@ -396,7 +396,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: true,
-                                                    text: config.fetch_ui_data_from_rpc_interval_ms.to_string(),
+                                                    text: config.ui_fetch_interval.to_string(),
                                                 },
                                                 TextConfigInputRpcFetchAccountsInterval,
                                             ));
@@ -446,7 +446,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextInput {
                                                     hidden: false,
                                                     numbers_only: true,
-                                                    text: config.tx_check_status_and_resend_interval_ms.to_string(),
+                                                    text: config.tx_send_interval.to_string(),
                                                 },
                                                 TextConfigInputRpcSendTxInterval,
                                             ));

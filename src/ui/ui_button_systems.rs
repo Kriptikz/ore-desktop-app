@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 use crate::{
-    Config, EventClaimOreRewards, EventGenerateWallet, EventLock, EventRequestAirdrop, EventSaveConfig, EventSaveWallet, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
+    AppConfig, EventClaimOreRewards, EventGenerateWallet, EventLock, EventRequestAirdrop, EventSaveConfig, EventSaveWallet, EventStakeOre, EventStartStopMining, EventUnlock, OreAppState
 };
 
 use super::{
@@ -347,11 +347,14 @@ pub fn button_save_config(
                     break;
                 };
 
-                event_writer.send(EventSaveConfig(Config {
+                event_writer.send(EventSaveConfig(AppConfig {
                     rpc_url: text_rpc_url.clone(),
+                    // TODO: fix for mainnet
+                    is_devnet: true,
                     threads,
-                    fetch_ui_data_from_rpc_interval_ms: text_rpc_fetch_interval,
-                    tx_check_status_and_resend_interval_ms: text_rpc_send_interval,
+                    ui_fetch_interval: text_rpc_fetch_interval,
+                    tx_send_interval: text_rpc_send_interval,
+                    ..Default::default()
                 }));
             }
             Interaction::Hovered => {
