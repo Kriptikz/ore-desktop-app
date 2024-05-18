@@ -1,3 +1,4 @@
+use async_compat::Compat;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, IoTaskPool},
@@ -6,7 +7,7 @@ use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use chrono::DateTime;
 use cocoon::Cocoon;
 use drillx::{Solution};
-use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
+use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
 
@@ -128,14 +129,15 @@ pub fn handle_event_start_stop_mining_clicked(
                 // start mining
                 let client = rpc_connection.rpc.clone();
                 let proof_address = proof_pubkey(app_wallet.wallet.pubkey());
-                if client.get_account(&proof_address).is_ok() {
+                // TODO: set this up with register properly
+                // if client.get_account(&proof_address).is_ok() {
                     event_writer.send(EventMineForHash);
                     let (mut btn, mut toggle) = query.single_mut();
                     toggle.0 = true;
                     *btn = UiImage::new(asset_server.load(TOGGLE_ON));
-                } else {
-                    event_writer_register.send(EventRegisterWallet);
-                }
+                // } else {
+                //     event_writer_register.send(EventRegisterWallet);
+                // }
             },
             _ => {
                 error!("Invalid Miner Status in handle_event_start_stop_mining_clicked");
@@ -163,22 +165,13 @@ pub fn handle_event_mine_for_hash(
             let cpu_count = sys_info.cpus().len() as u64;
             let threads = miner_status.miner_threads.clamp(1, cpu_count);
 
-            let task = pool.spawn(async move {
+            let task = pool.spawn(Compat::new(async move {
                 // TODO: use proof resource cached proof. May need LatestHash Resource to ensure a new proof if loaded before mining.
                 //  get proof account data
-                let proof = if let Ok(result) = get_proof(&client, wallet.pubkey()) {
+                let proof = if let Ok(result) = get_proof(&client, wallet.pubkey()).await {
                     result
                 } else {
                     return Err("Failed to get proof account. Please Retry.".to_string());
-                };
-
-                // TODO: use treasury resource cached difficulty
-                let treasury =
-                    get_treasury(&client);
-                let treasury = if let Ok(result) = get_treasury(&client) {
-                    result
-                } else {
-                    return Err("Failed to get treasury account. Please Retry.".to_string());
                 };
 
                 // ensure proof account is hash is not the same as the last generated one.
@@ -201,7 +194,7 @@ pub fn handle_event_mine_for_hash(
                 );
 
                 Ok((solution, best_difficulty, hash_time.elapsed().as_secs()))
-            });
+            }));
             miner_status.miner_status = "MINING".to_string();
 
             commands
@@ -259,7 +252,7 @@ pub fn handle_event_submit_hash_tx(
 
             let time_until_reset = (last_reset_at + 60) - current_ts;
 
-            let task = pool.spawn(async move {
+            let task = pool.spawn(Compat::new(async move {
                 let signer = wallet;
 
                 let mut ixs = vec![];
@@ -280,7 +273,7 @@ pub fn handle_event_submit_hash_tx(
                 let ix_mine = get_mine_ix(signer.pubkey(), solution, bus);
                 ixs.push(ix_mine);
                 let latest_blockhash = client
-                    .get_latest_blockhash_with_commitment(client.commitment());
+                    .get_latest_blockhash_with_commitment(client.commitment()).await;
 
                 if let Ok((hash, _slot)) = latest_blockhash {
                     let mut tx = Transaction::new_with_payer(&ixs, Some(&signer.pubkey()));
@@ -308,7 +301,7 @@ pub fn handle_event_submit_hash_tx(
                         "Failed to get latest blockhash".to_string()
                     ));
                 }
-            });
+            }));
 
             miner_status.miner_status = "PROCESSING".to_string();
             commands
@@ -401,8 +394,8 @@ pub fn handle_event_fetch_ui_data_from_rpc(
 
             let connection = rpc_connection.rpc.clone();
             let ore_mint = get_ore_mint();
-            let task = pool.spawn(async move {
-                let balance = if let Ok(result) = connection.get_balance(&pubkey) {
+            let task = pool.spawn(Compat::new(async move {
+                let balance = if let Ok(result) = connection.get_balance(&pubkey).await {
                     result
                 } else {
                     return Err("Failed to get balance. Please retry.".to_string());
@@ -411,7 +404,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 let token_account = get_associated_token_address(&pubkey, &ore_mint);
 
                 let ore_balance =
-                    if let Ok(response) = connection.get_token_account_balance(&token_account) {
+                    if let Ok(response) = connection.get_token_account_balance(&token_account).await {
                         if let Some(amount) = response.ui_amount {
                             amount
                         } else {
@@ -422,7 +415,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     };
 
                 // TODO: condense as many solana accounts into one rpc get_multiple_accounts call as possible
-                let (proof_account, treasury_account, treasury_config, busses) = get_proof_and_treasury_with_busses(&connection, pubkey);
+                let (proof_account, treasury_account, treasury_config, busses) = get_proof_and_treasury_with_busses(&connection, pubkey).await;
 
                 let proof_account_res_data;
                 if let Ok(proof_account) = proof_account {
@@ -443,7 +436,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     };
                 }
 
-                let treasury_ore_balance = if let Ok(token_balance) = connection.get_token_account_balance(&treasury_tokens_pubkey()) {
+                let treasury_ore_balance = if let Ok(token_balance) = connection.get_token_account_balance(&treasury_tokens_pubkey()).await {
                     if let Some(ui_amount) = token_balance.ui_amount {
                         ui_amount
                     } else {
@@ -459,7 +452,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     let base_reward_rate =
                         (treasury_account.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
 
-                    let clock = if let Ok(clock) =  get_clock_account(&connection) {
+                    let clock = if let Ok(clock) =  get_clock_account(&connection).await {
                         clock
                     } else {
                         return Err("Failed to get clock account. fetch ui data.".to_string());
@@ -508,7 +501,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                     treasury_account_data: treasury_account_res_data,
                     busses: busses_res_data,
                 })
-            });
+            }));
 
             commands
                 .entity(task_handler_entity)
@@ -531,8 +524,11 @@ pub fn handle_event_register_wallet(
             let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
-            let task = pool.spawn(async move {
-                let proof = get_proof(&client, wallet.pubkey());
+            let task = pool.spawn(Compat::new(async move {
+                let proof = get_proof(&client, wallet.pubkey()).await;
+
+                // TODO: Register is first button that pops up. Disappears when Proof Account resource has valid data.
+                // try to load proof account before showing the mining screen?
 
                 if let Ok(_) = proof {
                     let process_data = TaskProcessTxData {
@@ -548,7 +544,7 @@ pub fn handle_event_register_wallet(
                 } else {
                     let signer = wallet;
 
-                    let balance = if let Ok(balance) = client.get_balance(&signer.pubkey()) {
+                    let balance = if let Ok(balance) = client.get_balance(&signer.pubkey()).await {
                         balance
                     } else {
                         let process_data = TaskProcessTxData {
@@ -579,7 +575,7 @@ pub fn handle_event_register_wallet(
 
                     let ix = get_register_ix(signer.pubkey());
                     let latest_blockhash = client
-                        .get_latest_blockhash_with_commitment(client.commitment());
+                        .get_latest_blockhash_with_commitment(client.commitment()).await;
 
                     if let Ok((hash, _slot)) = latest_blockhash {
                         let mut tx = Transaction::new_with_payer(&[ix], Some(&signer.pubkey()));
@@ -608,7 +604,7 @@ pub fn handle_event_register_wallet(
                         ));
                     }
                 }
-            });
+            }));
 
             commands
                 .entity(task_handler_entity)
@@ -633,16 +629,17 @@ pub fn handle_event_claim_ore_rewards(
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
             let claim_amount = proof_account.stake;
-            let task = pool.spawn(async move {
+            let task = pool.spawn(Compat::new(async move {
                 let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
                     &wallet.pubkey(),
                     &get_ore_mint(),
                 );
 
-                if let Ok(Some(_ata)) = client.get_token_account(&token_account_pubkey) {
+                // TODO: use proof account data
+                if let Ok(Some(_ata)) = client.get_token_account(&token_account_pubkey).await {
                     let ix = get_claim_ix(wallet.pubkey(), token_account_pubkey, claim_amount);
                     let latest_blockhash = client
-                        .get_latest_blockhash_with_commitment(client.commitment());
+                        .get_latest_blockhash_with_commitment(client.commitment()).await;
 
                     if let Ok((hash, _slot)) = latest_blockhash {
                         let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
@@ -679,7 +676,7 @@ pub fn handle_event_claim_ore_rewards(
                     );
 
                     let latest_blockhash = client
-                        .get_latest_blockhash_with_commitment(client.commitment());
+                        .get_latest_blockhash_with_commitment(client.commitment()).await;
 
                     if let Ok((hash, _slot)) = latest_blockhash {
                         let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
@@ -709,7 +706,7 @@ pub fn handle_event_claim_ore_rewards(
                         ));
                     }
                 }
-            });
+            }));
 
             commands
                 .entity(task_handler_entity)
@@ -732,17 +729,17 @@ pub fn handle_event_stake_ore(
             let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
             let client = rpc_connection.rpc.clone();
-            let task = pool.spawn(async move {
+            let task = pool.spawn(Compat::new(async move {
                 let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
                     &wallet.pubkey(),
                     &get_ore_mint(),
                 );
 
-                if let Ok(Some(ata)) = client.get_token_account(&token_account_pubkey) {
+                if let Ok(Some(ata)) = client.get_token_account(&token_account_pubkey).await {
                     if let Ok(stake_amount) = ata.token_amount.amount.parse::<u64>() {
                         let ix = get_stake_ix(wallet.pubkey(), token_account_pubkey, stake_amount);
                         let latest_blockhash = client
-                            .get_latest_blockhash_with_commitment(client.commitment());
+                            .get_latest_blockhash_with_commitment(client.commitment()).await;
 
                         if let Ok((hash, _slot)) = latest_blockhash {
                             let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
@@ -794,7 +791,7 @@ pub fn handle_event_stake_ore(
                     );
 
                     let latest_blockhash = client
-                        .get_latest_blockhash_with_commitment(client.commitment());
+                        .get_latest_blockhash_with_commitment(client.commitment()).await;
 
                     if let Ok((hash, _slot)) = latest_blockhash {
                         let mut tx = Transaction::new_with_payer(&[ix], Some(&wallet.pubkey()));
@@ -824,7 +821,7 @@ pub fn handle_event_stake_ore(
                         ));
                     }
                 }
-            });
+            }));
 
             commands
                 .entity(task_handler_entity)
@@ -1057,11 +1054,11 @@ pub fn handle_event_request_airdrop(
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
             let wallet = app_wallet.wallet.clone();
-            let task = pool.spawn(async move {
+            let task = pool.spawn(Compat::new(async move {
                 let devnet_url = "https://api.devnet.solana.com".to_string();
                 let client = RpcClient::new(devnet_url);
 
-                let airdrop_request = client.request_airdrop(&wallet.pubkey(), LAMPORTS_PER_SOL);
+                let airdrop_request = client.request_airdrop(&wallet.pubkey(), LAMPORTS_PER_SOL).await;
 
                 match airdrop_request {
                     Ok(sig) => {
@@ -1090,7 +1087,7 @@ pub fn handle_event_request_airdrop(
                         ));
                     }
                 }
-            });
+            }));
 
             commands
                 .entity(task_handler_entity)
@@ -1122,8 +1119,8 @@ pub fn handle_event_check_sigs(
         if sigs.len() > 0 {
             let task_pool = IoTaskPool::get();
             let client = rpc_connection.rpc.clone();
-            let task = task_pool.spawn(async move {
-                match client.get_signature_statuses(&sigs) {
+            let task = task_pool.spawn(Compat::new(async move {
+                match client.get_signature_statuses(&sigs).await {
                     Ok(signature_statuses) => {
                         let scr = SigCheckResults {
                             ents: processor_entities,
@@ -1137,7 +1134,7 @@ pub fn handle_event_check_sigs(
                         return Err(e_str);
                     }
                 }
-            });
+            }));
             let task_handler_entity = query_task_handler.single();
             commands
                 .entity(task_handler_entity)

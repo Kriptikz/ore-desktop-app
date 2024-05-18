@@ -1,6 +1,6 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use bevy::log::error;
+use bevy::log::{error, info};
 use drillx::{equix, Hash, Solution};
 use ore::{
     instruction,
@@ -9,7 +9,7 @@ use ore::{
     BUS_ADDRESSES, CONFIG_ADDRESS, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF,
     TOKEN_DECIMALS, TREASURY_ADDRESS,
 };
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     account::ReadableAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, sysvar,
 };
@@ -47,7 +47,7 @@ pub fn get_ore_decimals() -> u8 {
     TOKEN_DECIMALS
 }
 
-pub fn get_proof_and_treasury_with_busses(
+pub async fn get_proof_and_treasury_with_busses(
     client: &RpcClient,
     authority: Pubkey,
 ) -> (
@@ -69,7 +69,7 @@ pub fn get_proof_and_treasury_with_busses(
         BUS_ADDRESSES[6],
         BUS_ADDRESSES[7],
     ];
-    let datas = client.get_multiple_accounts(&account_pubkeys);
+    let datas = client.get_multiple_accounts(&account_pubkeys).await;
     if let Ok(datas) = datas {
         let treasury = if let Some(data) = &datas[0] {
             Ok(*Treasury::try_from_bytes(data.data()).expect("Failed to parse treasury account"))
@@ -144,8 +144,8 @@ pub fn get_proof_and_treasury_with_busses(
     }
 }
 
-pub fn get_treasury(client: &RpcClient) -> Result<Treasury, ()> {
-    let data = client.get_account_data(&TREASURY_ADDRESS);
+pub async fn get_treasury(client: &RpcClient) -> Result<Treasury, ()> {
+    let data = client.get_account_data(&TREASURY_ADDRESS).await;
     if let Ok(data) = data {
         Ok(*Treasury::try_from_bytes(&data).expect("Failed to parse treasury account"))
     } else {
@@ -153,9 +153,9 @@ pub fn get_treasury(client: &RpcClient) -> Result<Treasury, ()> {
     }
 }
 
-pub fn get_proof(client: &RpcClient, authority: Pubkey) -> Result<Proof, String> {
+pub async fn get_proof(client: &RpcClient, authority: Pubkey) -> Result<Proof, String> {
     let proof_address = proof_pubkey(authority);
-    let data = client.get_account_data(&proof_address);
+    let data = client.get_account_data(&proof_address).await;
     match data {
         Ok(data) => {
             let proof = Proof::try_from_bytes(&data);
@@ -177,8 +177,8 @@ pub fn treasury_tokens_pubkey() -> Pubkey {
     get_associated_token_address(&TREASURY_ADDRESS, &MINT_ADDRESS)
 }
 
-pub fn get_clock_account(client: &RpcClient) -> Result<Clock, ()> {
-    if let Ok(data) = client.get_account_data(&sysvar::clock::ID) {
+pub async fn get_clock_account(client: &RpcClient) -> Result<Clock, ()> {
+    if let Ok(data) = client.get_account_data(&sysvar::clock::ID).await {
         if let Ok(data) = bincode::deserialize::<Clock>(&data) {
             Ok(data)
         } else {

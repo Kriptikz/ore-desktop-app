@@ -36,13 +36,15 @@ use crate::ui::{
 pub fn spawn_mining_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    app_wallet: Res<AppWallet>,
+    address: String,
+    sol_balance: f64,
+    ore_balance: f64,
     config: AppConfig,
 ) {
-    let full_addr = app_wallet.wallet.pubkey().to_string();
+    let full_addr = address.clone();
     let wallet_str = shorten_string(full_addr, 10);
-    let sol_balance_str = app_wallet.sol_balance.to_string();
-    let ore_balance_str = app_wallet.ore_balance.to_string();
+    let sol_balance_str = sol_balance.to_string();
+    let ore_balance_str = ore_balance.to_string();
     commands
         .spawn((
             NodeBundle {
@@ -575,7 +577,7 @@ pub fn spawn_mining_screen(
                                             spawn_copyable_text(
                                                 parent,
                                                 &asset_server,
-                                                app_wallet.wallet.pubkey().to_string(),
+                                                address,
                                                 wallet_str,
                                             );
                                             parent

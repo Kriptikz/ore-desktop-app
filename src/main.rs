@@ -1,15 +1,20 @@
 use std::{
-    fs, path::Path, sync::Arc, time::{Duration, Instant}
+    borrow::BorrowMut, fs, path::Path, str::FromStr, sync::{mpsc, Arc, Mutex}, time::{Duration, Instant}
 };
 
-use bevy::{prelude::*, tasks::IoTaskPool};
+use async_compat::{Compat, CompatExt};
+use bevy::{prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
+use crossbeam_channel::{unbounded, Receiver};
 use events::*;
+use ore::{state::{Bus, Proof, Treasury}, utils::AccountDeserialize};
+use ore_utils::proof_pubkey;
 use serde::{Deserialize, Serialize};
-use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
+use solana_account_decoder::UiAccountEncoding;
+use solana_client::{nonblocking::{pubsub_client::PubsubClient, rpc_client::RpcClient}, rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig}, rpc_filter::RpcFilterType, rpc_response::{Response, RpcKeyedAccount}};
 use solana_sdk::{
-    commitment_config::{CommitmentConfig, CommitmentLevel}, signature::{read_keypair_file, Keypair, Signature}, signer::Signer, transaction::Transaction
+    commitment_config::{CommitmentConfig, CommitmentLevel}, pubkey::Pubkey, signature::{read_keypair_file, Keypair, Signature}, signer::Signer, transaction::Transaction, keccak::Hash as KeccakHash
 };
 use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
 use tasks::{
@@ -42,6 +47,7 @@ pub mod utils;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     pub rpc_url: String,
+    pub ws_url: String,
     pub is_devnet: bool,
     pub threads: u64,
     pub ui_fetch_interval: u64,
@@ -53,6 +59,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             rpc_url: "https://floral-dawn-pallet.solana-devnet.quiknode.pro/8b38be5427b44d3b42dc67c891dea71a56cd3a8c/".to_string(),
+            ws_url: "wss://floral-dawn-pallet.solana-devnet.quiknode.pro/8b38be5427b44d3b42dc67c891dea71a56cd3a8c/".to_string(),
             is_devnet: true,
             threads: 1,
             ui_fetch_interval: 1000,
@@ -252,8 +259,8 @@ fn main() {
                     tx_processors_send,
                     tx_processors_sigs_check,
                     mining_screen_hotkeys,
-                    trigger_rpc_calls_for_ui,
-                    spin_spinner_icons
+                    spin_spinner_icons,
+                    read_accounts_update_channel,
                 ),
             )
                 .run_if(in_state(GameState::Mining)),
@@ -295,6 +302,7 @@ fn setup_mining_screen(
     asset_server: Res<AssetServer>,
     app_wallet: Res<AppWallet>,
     app_state: Res<OreAppState>,
+    mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
 ) {
     commands.spawn((EntityTaskHandler, Name::new("EntityTaskHandler")));
     commands.spawn((EntityTaskFetchUiData, Name::new("EntityFetchUiData")));
@@ -304,6 +312,7 @@ fn setup_mining_screen(
         config.rpc_url.clone(),
         CommitmentConfig::confirmed(),
     ));
+
     commands.insert_resource(RpcConnection {
         rpc: rpc_connection,
         fetch_ui_data_timer: Timer::new(
@@ -311,7 +320,141 @@ fn setup_mining_screen(
             TimerMode::Once,
         ),
     });
-    spawn_mining_screen(commands.reborrow(), asset_server, app_wallet, app_state.config.clone());
+    spawn_mining_screen(commands.reborrow(), asset_server, app_wallet.wallet.pubkey().to_string(), app_wallet.sol_balance, app_wallet.ore_balance, app_state.config.clone());
+
+    // let (mut account_subscription_client, account_subscription_receiver)
+
+    let task_pool = IoTaskPool::get();
+
+    let (sender, receiver) = unbounded::<AccountUpdatesData>();
+
+    let account_update_channel = AccountUpdatesChannel {
+        channel: receiver.clone(),
+    };
+
+
+    // TODO: use an entity here, we need to unsubscribe and cleanup this task when switching screens.
+    commands.insert_resource(account_update_channel);
+
+    let wallet_pubkey = app_wallet.wallet.pubkey().clone();
+
+    let ws_url = config.ws_url.clone();
+
+    task_pool.spawn(Compat::new(async move {
+        let sender = sender.clone();
+        let ps_client = PubsubClient::new(&ws_url).await;
+        if let Ok(ps_client) = ps_client {
+            let ps_client = Arc::new(ps_client);
+
+            let sender_c = sender.clone();
+            let ps_client_c = ps_client.clone();
+            task_pool.spawn(async move {
+                let ps_client = ps_client_c;
+                let sender = sender_c;
+                let account_pubkey = proof_pubkey(wallet_pubkey);
+                let mut pubsub =
+                    ps_client.account_subscribe(
+                        &account_pubkey,
+                    Some(
+                        RpcAccountInfoConfig {
+                                encoding: Some(UiAccountEncoding::Base64),
+                                data_slice: None,
+                                commitment: Some(CommitmentConfig::confirmed()),
+                                min_context_slot: None,
+                        }
+                    )).await;
+
+                    loop {
+                        if let Ok((account_sub_client, _account_sub_receiver)) = pubsub.as_mut() {
+                            if let Some(response) = account_sub_client.next().await {
+                                let data = response.value.data.decode();
+                                if let Some(data_bytes) = data {
+                                    let proof = Proof::try_from_bytes(&data_bytes);
+                                    if let Ok(proof) = proof {
+                                        let _ = sender.send(AccountUpdatesData::ProofData(*proof));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }).detach();
+
+            let sender_c = sender.clone();
+            let ps_client_c = ps_client.clone();
+            task_pool.spawn(async move {
+                let ps_client = ps_client_c;
+                let sender = sender_c;
+                let account_pubkey = ore::CONFIG_ADDRESS;
+                let mut pubsub =
+                    ps_client.account_subscribe(
+                        &account_pubkey,
+                    Some(
+                        RpcAccountInfoConfig {
+                                encoding: Some(UiAccountEncoding::Base64),
+                                data_slice: None,
+                                commitment: Some(CommitmentConfig::confirmed()),
+                                min_context_slot: None,
+                        }
+                    )).await;
+
+                    loop {
+                        if let Ok((account_sub_client, _account_sub_receiver)) = pubsub.as_mut() {
+                            if let Some(response) = account_sub_client.next().await {
+                                let data = response.value.data.decode();
+                                if let Some(data_bytes) = data {
+                                    let ore_config = ore::state::Config::try_from_bytes(&data_bytes);
+                                    if let Ok(ore_config) = ore_config {
+                                        let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }).detach();
+
+            let sender_c = sender.clone();
+            let ps_client_c = ps_client.clone();
+            task_pool.spawn(async move {
+                let ps_client = ps_client_c;
+                let sender = sender_c;
+                let account_pubkey = ore::ID;
+                let mut pubsub =
+                    ps_client.program_subscribe(
+                        &account_pubkey,
+                        Some(RpcProgramAccountsConfig {
+                            filters: Some(vec![RpcFilterType::DataSize(32)]),
+                            account_config: RpcAccountInfoConfig {
+                                encoding: Some(UiAccountEncoding::Base64),
+                                data_slice: None,
+                                commitment: Some(CommitmentConfig::confirmed()),
+                                min_context_slot: None,
+                            },
+                            with_context: None,
+                        })
+                    ).await;
+
+                    loop {
+                        if let Ok((account_sub_client, _account_sub_receiver)) = pubsub.as_mut() {
+                            if let Some(response) = account_sub_client.next().await {
+
+                                let data = response.value.account.data.decode();
+                                if let Some(data_bytes) = data {
+                                    let bus = Bus::try_from_bytes(&data_bytes);
+                                    if let Ok(bus) = bus {
+                                        let _ = sender.send(AccountUpdatesData::BusData(*bus));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }).detach();
+        }
+    })).detach();
+
+
+    event_writer.send(EventFetchUiDataFromRpc);
 }
 
 fn setup_locked_screen(
@@ -477,6 +620,18 @@ pub struct RpcConnection {
     pub fetch_ui_data_timer: Timer,
 }
 
+#[derive(Debug)]
+pub enum AccountUpdatesData {
+    ProofData(Proof),
+    BusData(Bus),
+    TreasuryConfigData(ore::state::Config)
+}
+
+#[derive(Resource)]
+pub struct AccountUpdatesChannel {
+    pub channel: Receiver<AccountUpdatesData>
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct TxStatus {
     pub status: String,
@@ -513,11 +668,11 @@ pub fn trigger_rpc_calls_for_ui(
     mut rpc_connection: ResMut<RpcConnection>,
     mut event_fetch_ui_rpc_data: EventWriter<EventFetchUiDataFromRpc>,
 ) {
-    rpc_connection.fetch_ui_data_timer.tick(time.delta());
-    if rpc_connection.fetch_ui_data_timer.just_finished() {
+    // rpc_connection.fetch_ui_data_timer.tick(time.delta());
+    // if rpc_connection.fetch_ui_data_timer.just_finished() {
         event_fetch_ui_rpc_data.send(EventFetchUiDataFromRpc);
         rpc_connection.fetch_ui_data_timer.reset();
-    }
+    // }
 }
 
 pub struct BackspaceTimer {
@@ -758,7 +913,7 @@ pub fn tx_processors_send(
                     let task_pool = IoTaskPool::get();
                     let client = rpc_connection.rpc.clone();
                     let tx = signed_tx.clone();
-                    let task = task_pool.spawn(async move {
+                    let task = task_pool.spawn(Compat::new(async move {
                         let send_cfg = RpcSendTransactionConfig {
                             skip_preflight: true,
                             preflight_commitment: Some(CommitmentLevel::Confirmed),
@@ -767,14 +922,14 @@ pub fn tx_processors_send(
                             min_context_slot: None,
                         };
 
-                        let sig = client.send_transaction_with_config(&tx, send_cfg);
+                        let sig = client.send_transaction_with_config(&tx, send_cfg).await;
                         if let Ok(sig) = sig {
                             return Ok(sig);
                         } else {
                             error!("Failed to send initial transaction...");
                             return Err("Failed to send tx".to_string());
                         }
-                    });
+                    }));
 
                     commands
                         .entity(entity)
@@ -925,5 +1080,44 @@ pub fn spin_spinner_icons(
 
         let scaled_rotation = rotation_rate * time.delta().as_secs_f32();
         transform.rotate_z(scaled_rotation);
+    }
+}
+
+pub fn read_accounts_update_channel(
+    account_update_channel: ResMut<AccountUpdatesChannel>,
+    mut proof_account: ResMut<ProofAccountResource>,
+    mut treasury_account: ResMut<TreasuryAccountResource>,
+    mut busses_res: ResMut<BussesResource>,
+) {
+    let receiver = account_update_channel.channel.clone();
+
+    if let Ok(data) = receiver.try_recv() {
+        match data {
+            AccountUpdatesData::BusData(new_bus_data) => {
+                for bus in &mut busses_res.busses {
+                    if bus.id == new_bus_data.id {
+                        *bus = new_bus_data;
+                    }
+                }
+            },
+            AccountUpdatesData::ProofData(new_proof_data) => {
+                let new_proof = ProofAccountResource {
+                    challenge: KeccakHash::new_from_array(new_proof_data.challenge).to_string(),
+                    stake: new_proof_data.balance,
+                    last_hash_at: new_proof_data.last_hash_at,
+                    last_claim_at: new_proof_data.last_claim_at,
+                    total_hashes: new_proof_data.total_hashes,
+                };
+
+                *proof_account = new_proof;
+            },
+            AccountUpdatesData::TreasuryConfigData(new_treasury_data) => {
+                treasury_account.last_reset_at = new_treasury_data.last_reset_at;
+                let base_reward_rate =
+                    (new_treasury_data.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                treasury_account.base_reward_rate = base_reward_rate;
+
+            },
+        }
     }
 }
