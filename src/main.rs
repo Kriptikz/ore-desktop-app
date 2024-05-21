@@ -3,7 +3,7 @@ use std::{
 };
 
 use async_compat::{Compat, CompatExt};
-use bevy::{prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}};
+use bevy::{prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, diagnostic::FrameTimeDiagnosticsPlugin, winit::WinitSettings};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use crossbeam_channel::{unbounded, Receiver};
@@ -21,7 +21,7 @@ use tasks::{
     handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskSendTx
 };
 use ui::{
-    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput},
+    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput, FpsRoot, FpsText},
     screens::{screen_despawners::{
         despawn_initial_setup_screen, despawn_locked_screen,
         despawn_mining_screen, despawn_wallet_setup_screen, 
@@ -122,6 +122,7 @@ fn main() {
         )
         // .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .insert_resource(WinitSettings::desktop_app())
         .insert_resource(OreAppState {
             config,
             active_input_node: None,
@@ -270,7 +271,7 @@ fn main() {
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
-    //setup_fps_counter(commands);
+    // setup_fps_counter(commands);
 }
 
 fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -1121,3 +1122,4 @@ pub fn read_accounts_update_channel(
         }
     }
 }
+
