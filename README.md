@@ -2,6 +2,7 @@
 
 - OreV2 is under active development. The on-chain program can be changed, updated, or deleted at any time causing this desktop app to stop functioning properly.
 - This desktop app is also under active development. Use at your own discretion.
+- *Mac Not Supported* - An issue with Bevy results in excessively high usage. [Bevy Issue 10261](https://github.com/bevyengine/bevy/issues/10261)
 
 
 ## Getting Started
