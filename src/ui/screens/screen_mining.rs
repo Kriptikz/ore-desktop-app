@@ -1276,10 +1276,8 @@ pub fn spawn_mining_screen(
                                         // border_color: Color::ORANGE.into(),
                                         style: Style {
                                             width: Val::Percent(100.0),
-                                            height: Val::Percent(60.0),
+                                            height: Val::Percent(100.0),
                                             flex_direction: FlexDirection::Column,
-                                            padding: UiRect::all(Val::Px(10.0)),
-                                            margin: UiRect::left(Val::Px(35.0)),
                                             // border: UiRect::all(Val::Px(1.0)),
                                             ..default()
                                         },
@@ -1294,7 +1292,9 @@ pub fn spawn_mining_screen(
                                             NodeBundle {
                                                 style: Style {
                                                     flex_direction: FlexDirection::Row,
-                                                    align_items: AlignItems::Start,
+                                                    width: Val::Percent(100.0),
+                                                    height: Val::Percent(100.0),
+                                                    padding: UiRect::top(Val::Px(20.0)),
                                                     ..default()
                                                 },
                                                 ..default()
@@ -1307,8 +1307,10 @@ pub fn spawn_mining_screen(
                                                     NodeBundle {
                                                         style: Style {
                                                             flex_direction: FlexDirection::Column,
+                                                            width: Val::Percent(40.0),
+                                                            height: Val::Percent(100.0),
                                                             row_gap: Val::Px(10.0),
-                                                            align_items: AlignItems::Start,
+                                                            align_items: AlignItems::End,
                                                             ..default()
                                                         },
                                                         ..default()
@@ -1345,7 +1347,7 @@ pub fn spawn_mining_screen(
                                                     ),));
 
                                                     parent.spawn((TextBundle::from_section(
-                                                        format!("CPU Usage:"),
+                                                        format!("Total CPU Usage:"),
                                                         TextStyle {
                                                             font: asset_server.load(FONT_ROBOTO),
                                                             font_size: FONT_SIZE,
@@ -1353,7 +1355,7 @@ pub fn spawn_mining_screen(
                                                         },
                                                     ),));
                                                     parent.spawn((TextBundle::from_section(
-                                                        format!("RAM Usage:"),
+                                                        format!("Total RAM Usage:"),
                                                         TextStyle {
                                                             font: asset_server.load(FONT_ROBOTO),
                                                             font_size: FONT_SIZE,
@@ -1367,8 +1369,11 @@ pub fn spawn_mining_screen(
                                                     NodeBundle {
                                                         style: Style {
                                                             flex_direction: FlexDirection::Column,
+                                                            width: Val::Percent(60.0),
+                                                            height: Val::Percent(100.0),
                                                             row_gap: Val::Px(10.0),
                                                             align_items: AlignItems::Start,
+                                                            padding: UiRect::left(Val::Px(10.0)),
                                                             ..default()
                                                         },
                                                         ..default()
