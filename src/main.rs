@@ -3,7 +3,7 @@ use std::{
 };
 
 use async_compat::{Compat, CompatExt};
-use bevy::{prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, diagnostic::FrameTimeDiagnosticsPlugin, winit::WinitSettings};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, window::RequestRedraw, winit::{UpdateMode, WinitSettings}};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use crossbeam_channel::{unbounded, Receiver};
@@ -37,6 +37,10 @@ use ui::{
 // screens::{
 //     spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
 // },
+
+pub const FAST_DURATION: Duration = Duration::from_millis(30);
+pub const REGULAR_DURATION: Duration = Duration::from_millis(100);
+pub const SLOW_DURATION: Duration = Duration::from_millis(1000);
 
 pub mod events;
 pub mod ore_utils;
@@ -122,7 +126,10 @@ fn main() {
         )
         // .add_plugins(WorldInspectorPlugin::new())
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
-        .insert_resource(WinitSettings::desktop_app())
+        .insert_resource(WinitSettings {
+            focused_mode: bevy::winit::UpdateMode::ReactiveLowPower { wait: REGULAR_DURATION },
+            unfocused_mode: bevy::winit::UpdateMode::ReactiveLowPower { wait: REGULAR_DURATION },
+        })
         .insert_resource(OreAppState {
             config,
             active_input_node: None,
@@ -1073,14 +1080,59 @@ pub fn tx_processor_result_checks(
 }
 
 pub fn spin_spinner_icons(
-    mut query: Query<&mut Transform, With<SpinnerIcon>>,
+    mut query: Query<(&mut Transform, &Visibility), With<SpinnerIcon>>,
+    mut winit_setting: ResMut<WinitSettings>,
     time: Res<Time>,
 ) {
-    for mut transform in query.iter_mut() {
-        let rotation_rate = 6.0;
+    let mut is_visible = false;
+    for (mut transform, visibility) in query.iter_mut() {
+        if visibility == Visibility::Visible  || visibility == Visibility::Inherited {
 
-        let scaled_rotation = rotation_rate * time.delta().as_secs_f32();
-        transform.rotate_z(scaled_rotation);
+            is_visible = true;
+            let rotation_rate = 6.0;
+
+            let scaled_rotation = rotation_rate * time.delta().as_secs_f32();
+            transform.rotate_z(scaled_rotation);
+        }
+    }
+
+    let current_focused_mode = winit_setting.focused_mode;
+    if is_visible {
+        match &current_focused_mode {
+            UpdateMode::Continuous => {},
+            UpdateMode::Reactive { wait } => {
+                if *wait != FAST_DURATION {
+                    winit_setting.focused_mode = UpdateMode::Reactive {
+                        wait: FAST_DURATION 
+                    };
+                    winit_setting.unfocused_mode = UpdateMode::Reactive {
+                        wait: FAST_DURATION
+                    };
+                }
+            },
+            UpdateMode::ReactiveLowPower { wait } => {
+                if *wait != FAST_DURATION {
+                    winit_setting.focused_mode = UpdateMode::ReactiveLowPower { wait: FAST_DURATION };
+                    winit_setting.unfocused_mode = UpdateMode::ReactiveLowPower { wait: FAST_DURATION};
+                }
+            }
+        }
+    } else {
+        match &current_focused_mode {
+            UpdateMode::Continuous => {},
+            UpdateMode::Reactive { wait } => {
+                if *wait != REGULAR_DURATION {
+                    winit_setting.focused_mode = UpdateMode::Reactive { wait: REGULAR_DURATION };
+                    winit_setting.unfocused_mode = UpdateMode::Reactive { wait: REGULAR_DURATION };
+                }
+            },
+            UpdateMode::ReactiveLowPower { wait } => {
+                if *wait != REGULAR_DURATION {
+                    winit_setting.focused_mode = UpdateMode::ReactiveLowPower { wait: REGULAR_DURATION };
+                    winit_setting.unfocused_mode = UpdateMode::ReactiveLowPower { wait: REGULAR_DURATION };
+                }
+            }
+        }
     }
 }
 
@@ -1092,7 +1144,7 @@ pub fn read_accounts_update_channel(
 ) {
     let receiver = account_update_channel.channel.clone();
 
-    if let Ok(data) = receiver.try_recv() {
+    while let Ok(data) = receiver.try_recv() {
         match data {
             AccountUpdatesData::BusData(new_bus_data) => {
                 for bus in &mut busses_res.busses {

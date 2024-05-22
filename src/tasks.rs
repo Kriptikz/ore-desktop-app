@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use bevy::{
     prelude::*,
-    tasks::{block_on, futures_lite::future, Task},
+    tasks::{block_on, futures_lite::future, Task}, winit::{UpdateMode, WinitSettings},
 };
 use drillx::Solution;
 use ore::state::Bus;
@@ -11,7 +11,7 @@ use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, trans
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType
+    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
 };
 
 // Task Components
@@ -176,6 +176,7 @@ pub fn handle_task_process_tx_result(
     asset_server: Res<AssetServer>,
     app_wallet: Res<AppWallet>,
     proof_account: Res<ProofAccountResource>,
+    mut winit_settings: ResMut<WinitSettings>,
     mut query_task_handler: Query<(Entity, &mut TaskProcessTx)>,
     mut event_writer: EventWriter<EventTxResult>,
     mut query_pop_up: Query<Entity, With<TxPopUpArea>>,
@@ -332,6 +333,9 @@ pub fn handle_task_process_tx_result(
                     }).id();
 
                     commands.entity(pop_up_area).add_child(new_tx);
+
+                    winit_settings.focused_mode = UpdateMode::ReactiveLowPower { wait: FAST_DURATION };
+                    winit_settings.unfocused_mode = UpdateMode::ReactiveLowPower { wait: FAST_DURATION };
                 },
                 Err((task_process_tx_data, error_str)) => {
                     let sig = if let Some(sig) = &task_process_tx_data.signature {
