@@ -20,9 +20,8 @@ bevy-inspector-egui = "0.24.0"
 cocoon = "=0.3.1"
 copypasta = "0.10.1"
 serde = "1.0.199"
-# ore = { version = "1.2.1", package = "ore-program" }
-ore = { path = "../ore", package = "ore-program" }
-drillx = { path = "../drillx/drillx" }
+ore = { package = "ore-program", git = "https://github.com/regolith-labs/ore", branch = "hardhat/v2", features = ["no-entrypoint"]}
+drillx = { git = "https://github.com/regolith-labs/drillx", branch = "master", features = ["solana"] }
 solana-client = "1.18.12"
 solana-sdk = "1.18.12"
 spl-token = { version = "^4", features = ["no-entrypoint"] }

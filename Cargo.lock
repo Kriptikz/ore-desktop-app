@@ -2704,6 +2704,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 [[package]]
 name = "drillx"
 version = "0.2.0"
+source = "git+https://github.com/regolith-labs/drillx?branch=master#ce0330957a2153c9191bdbcbcf4acce031ccd6bf"
 dependencies = [
  "blake3",
  "equix",
@@ -4951,6 +4952,7 @@ dependencies = [
 [[package]]
 name = "ore-program"
 version = "2.0.0"
+source = "git+https://github.com/regolith-labs/ore?branch=hardhat/v2#bc68d45cfc528a2fa18c4ade97d0ad5a876fda4d"
 dependencies = [
  "array-const-fn-init",
  "bs58 0.5.1",
