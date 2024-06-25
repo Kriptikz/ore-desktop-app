@@ -11,7 +11,7 @@ use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, trans
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
+    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_REGULAR, FONT_SIZE_MEDIUM, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
 };
 
 // Task Components
@@ -303,8 +303,8 @@ pub fn handle_task_process_tx_result(
                             TextBundle::from_section(
                                 tx_type.to_string(),
                                 TextStyle {
-                                    font: asset_server.load(FONT_ROBOTO),
-                                    font_size: FONT_SIZE_TITLE,
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
                                     color: Color::hex("#FFFFFF").unwrap(),
                                 },
                             ),
@@ -315,8 +315,8 @@ pub fn handle_task_process_tx_result(
                             TextBundle::from_section(
                                 "SENDING".to_string(),
                                 TextStyle {
-                                    font: asset_server.load(FONT_ROBOTO),
-                                    font_size: FONT_SIZE_TITLE,
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
                                     color: Color::ORANGE.into(),
                                 },
                             ),

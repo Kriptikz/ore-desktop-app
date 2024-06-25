@@ -59,8 +59,8 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.id,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
                             ..default()
                         },
                     ),
@@ -94,8 +94,8 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                             value,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
                             ..default()
                         },
                     ),
@@ -136,8 +136,8 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.tx_time,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
                             ..default()
                         },
                     ),
@@ -162,8 +162,8 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.hash_time,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
                             ..default()
                         },
                     ),
@@ -193,8 +193,8 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.status,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
                             ..default()
                         },
                     ),
@@ -241,8 +241,8 @@ pub fn spawn_copyable_text(
                 TextBundle::from_section(
                     &display_text,
                     TextStyle {
-                        font: asset_server.load(FONT_ROBOTO),
-                        font_size: FONT_SIZE,
+                        font: asset_server.load(FONT_REGULAR),
+                        font_size: FONT_SIZE_MEDIUM,
                         color: Color::rgb(0.9, 0.9, 0.9),
                     },
                 ),
@@ -304,8 +304,8 @@ pub fn spawn_web_link_icon(
                 TextBundle::from_section(
                     &display_text,
                     TextStyle {
-                        font: asset_server.load(FONT_ROBOTO),
-                        font_size: FONT_SIZE,
+                        font: asset_server.load(FONT_REGULAR),
+                        font_size: FONT_SIZE_MEDIUM,
                         color: Color::rgb(0.9, 0.9, 0.9),
                     },
                 ),
