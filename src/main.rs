@@ -14,18 +14,15 @@ use serde::{Deserialize, Serialize};
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{nonblocking::{pubsub_client::PubsubClient, rpc_client::RpcClient}, rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig}, rpc_filter::RpcFilterType, rpc_response::{Response, RpcKeyedAccount}};
 use solana_sdk::{
-    commitment_config::{CommitmentConfig, CommitmentLevel}, pubkey::Pubkey, signature::{read_keypair_file, Keypair, Signature}, signer::Signer, transaction::Transaction, keccak::Hash as KeccakHash
+    commitment_config::{CommitmentConfig, CommitmentLevel}, signature::{Keypair, Signature}, signer::Signer, transaction::Transaction, keccak::Hash as KeccakHash
 };
-use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEncoding};
+use solana_transaction_status::UiTransactionEncoding;
 use tasks::{
-    handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskCheckSigStatus, TaskSendTx
+    handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskSendTx
 };
 use ui::{
-    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput, FpsRoot, FpsText},
-    screens::{screen_despawners::{
-        despawn_initial_setup_screen, despawn_locked_screen,
-        despawn_mining_screen, despawn_wallet_setup_screen, 
-    }, screen_initial_setup::spawn_initial_setup_screen, screen_locked::spawn_locked_screen, screen_mining::spawn_mining_screen, screen_setup_wallet::spawn_wallet_setup_screen},
+    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput},
+    screens::screen_base::spawn_base_screen,
     ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     },
@@ -164,7 +161,7 @@ fn main() {
         .add_event::<EventLoadKeypairFile>()
         .add_event::<EventRequestAirdrop>()
         .add_event::<EventCheckSigs>()
-        .add_systems(Startup, setup_camera)
+        .add_systems(Startup, setup_base_screen)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
         .add_systems(Update, text_input)
@@ -172,20 +169,20 @@ fn main() {
         .add_systems(Update, button_capture_text)
         .add_systems(Update, update_active_text_input_cursor_vis)
         .add_systems(Update, tick_button_cooldowns)
-        .add_systems(OnEnter(GameState::ConfigSetup), setup_initial_setup_screen)
-        .add_systems(
-            OnExit(GameState::ConfigSetup),
-            (
-                despawn_initial_setup_screen,
-            )
-        )
-        .add_systems(OnExit(GameState::ConfigSetup), despawn_locked_screen)
-        .add_systems(OnEnter(GameState::WalletSetup), setup_wallet_setup_screen)
-        .add_systems(OnExit(GameState::WalletSetup), despawn_wallet_setup_screen)
-        .add_systems(OnEnter(GameState::Locked), setup_locked_screen)
-        .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
-        .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
-        .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
+        // .add_systems(OnEnter(GameState::ConfigSetup), setup_initial_setup_screen)
+        // .add_systems(
+        //     OnExit(GameState::ConfigSetup),
+        //     (
+        //         despawn_initial_setup_screen,
+        //     )
+        // )
+        // .add_systems(OnExit(GameState::ConfigSetup), despawn_locked_screen)
+        // .add_systems(OnEnter(GameState::WalletSetup), setup_wallet_setup_screen)
+        // .add_systems(OnExit(GameState::WalletSetup), despawn_wallet_setup_screen)
+        // .add_systems(OnEnter(GameState::Locked), setup_locked_screen)
+        // .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
+        // .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
+        // .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
         .add_systems(
             Update,
             (
@@ -276,202 +273,21 @@ fn main() {
         .run();
 }
 
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-    // setup_fps_counter(commands);
-}
-
-fn setup_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let config_path = Path::new("config.toml");
-    let config: Option<AppConfig> = if config_path.exists() {
-        let config_string = fs::read_to_string(config_path).unwrap();
-        let config = match toml::from_str(&config_string) {
-            Ok(d) => {
-                Some(d)
-            }
-            Err(_) => None,
-        };
-        config
-    } else {
-        None
-    };
-
-    let config = config.unwrap_or(AppConfig::default());
-
-    spawn_initial_setup_screen(commands.reborrow(), asset_server, config);
-}
-
-fn setup_wallet_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
-    spawn_wallet_setup_screen(commands.reborrow(), asset_server);
-}
-
-fn setup_mining_screen(
+fn setup_base_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    app_wallet: Res<AppWallet>,
     app_state: Res<OreAppState>,
     mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
 ) {
+    // Spawn Camera
+    commands.spawn(Camera2dBundle::default());
+
+    // Spawn Task Entities
     commands.spawn((EntityTaskHandler, Name::new("EntityTaskHandler")));
     commands.spawn((EntityTaskFetchUiData, Name::new("EntityFetchUiData")));
-    let config = &app_state.config;
 
-    let rpc_connection = Arc::new(RpcClient::new_with_commitment(
-        config.rpc_url.clone(),
-        CommitmentConfig::confirmed(),
-    ));
-
-    commands.insert_resource(RpcConnection {
-        rpc: rpc_connection,
-        fetch_ui_data_timer: Timer::new(
-            Duration::from_millis(config.ui_fetch_interval),
-            TimerMode::Once,
-        ),
-    });
-    spawn_mining_screen(commands.reborrow(), asset_server, app_wallet.wallet.pubkey().to_string(), app_wallet.sol_balance, app_wallet.ore_balance, app_state.config.clone());
-
-    // let (mut account_subscription_client, account_subscription_receiver)
-
-    let task_pool = IoTaskPool::get();
-
-    let (sender, receiver) = unbounded::<AccountUpdatesData>();
-
-    let account_update_channel = AccountUpdatesChannel {
-        channel: receiver.clone(),
-    };
-
-
-    // TODO: use an entity here, we need to unsubscribe and cleanup this task when switching screens.
-    commands.insert_resource(account_update_channel);
-
-    let wallet_pubkey = app_wallet.wallet.pubkey().clone();
-
-    let ws_url = config.ws_url.clone();
-
-    task_pool.spawn(Compat::new(async move {
-        let sender = sender.clone();
-        let ps_client = PubsubClient::new(&ws_url).await;
-        if let Ok(ps_client) = ps_client {
-            let ps_client = Arc::new(ps_client);
-
-            let sender_c = sender.clone();
-            let ps_client_c = ps_client.clone();
-            task_pool.spawn(async move {
-                let ps_client = ps_client_c;
-                let sender = sender_c;
-                let account_pubkey = proof_pubkey(wallet_pubkey);
-                let mut pubsub =
-                    ps_client.account_subscribe(
-                        &account_pubkey,
-                    Some(
-                        RpcAccountInfoConfig {
-                                encoding: Some(UiAccountEncoding::Base64),
-                                data_slice: None,
-                                commitment: Some(CommitmentConfig::confirmed()),
-                                min_context_slot: None,
-                        }
-                    )).await;
-
-                    loop {
-                        if let Ok((account_sub_client, _account_sub_receiver)) = pubsub.as_mut() {
-                            if let Some(response) = account_sub_client.next().await {
-                                let data = response.value.data.decode();
-                                if let Some(data_bytes) = data {
-                                    let proof = Proof::try_from_bytes(&data_bytes);
-                                    if let Ok(proof) = proof {
-                                        let _ = sender.send(AccountUpdatesData::ProofData(*proof));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }).detach();
-
-            let sender_c = sender.clone();
-            let ps_client_c = ps_client.clone();
-            task_pool.spawn(async move {
-                let ps_client = ps_client_c;
-                let sender = sender_c;
-                let account_pubkey = ore::CONFIG_ADDRESS;
-                let mut pubsub =
-                    ps_client.account_subscribe(
-                        &account_pubkey,
-                    Some(
-                        RpcAccountInfoConfig {
-                                encoding: Some(UiAccountEncoding::Base64),
-                                data_slice: None,
-                                commitment: Some(CommitmentConfig::confirmed()),
-                                min_context_slot: None,
-                        }
-                    )).await;
-
-                    loop {
-                        if let Ok((account_sub_client, _account_sub_receiver)) = pubsub.as_mut() {
-                            if let Some(response) = account_sub_client.next().await {
-                                let data = response.value.data.decode();
-                                if let Some(data_bytes) = data {
-                                    let ore_config = ore::state::Config::try_from_bytes(&data_bytes);
-                                    if let Ok(ore_config) = ore_config {
-                                        let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                }).detach();
-
-            let sender_c = sender.clone();
-            let ps_client_c = ps_client.clone();
-            task_pool.spawn(async move {
-                let ps_client = ps_client_c;
-                let sender = sender_c;
-                let account_pubkey = ore::ID;
-                let mut pubsub =
-                    ps_client.program_subscribe(
-                        &account_pubkey,
-                        Some(RpcProgramAccountsConfig {
-                            filters: Some(vec![RpcFilterType::DataSize(32)]),
-                            account_config: RpcAccountInfoConfig {
-                                encoding: Some(UiAccountEncoding::Base64),
-                                data_slice: None,
-                                commitment: Some(CommitmentConfig::confirmed()),
-                                min_context_slot: None,
-                            },
-                            with_context: None,
-                        })
-                    ).await;
-
-                    loop {
-                        if let Ok((account_sub_client, _account_sub_receiver)) = pubsub.as_mut() {
-                            if let Some(response) = account_sub_client.next().await {
-
-                                let data = response.value.account.data.decode();
-                                if let Some(data_bytes) = data {
-                                    let bus = Bus::try_from_bytes(&data_bytes);
-                                    if let Ok(bus) = bus {
-                                        let _ = sender.send(AccountUpdatesData::BusData(*bus));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }).detach();
-        }
-    })).detach();
-
-
-    event_writer.send(EventFetchUiDataFromRpc);
-}
-
-fn setup_locked_screen(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut app_state: ResMut<OreAppState>,
-) {
-    let pass_text_entity = spawn_locked_screen(commands.reborrow(), asset_server);
-    app_state.active_input_node = pass_text_entity;
+    // Setup the base screen
+    spawn_base_screen(commands.reborrow(), asset_server, "Locked".to_string(), 0.0, 0.0, app_state.config.clone());
 }
 
 // Components
