@@ -556,7 +556,6 @@ pub struct ProofAccountResource {
     stake: u64,
     last_hash_at: i64,
     total_hashes: u64,
-    last_claim_at: i64,
 }
 
 impl Default for ProofAccountResource {
@@ -566,7 +565,6 @@ impl Default for ProofAccountResource {
             stake: Default::default(),
             last_hash_at: Default::default(),
             total_hashes: Default::default(),
-            last_claim_at: Default::default(),
         }
     }
 }
@@ -1158,7 +1156,6 @@ pub fn read_accounts_update_channel(
                     challenge: KeccakHash::new_from_array(new_proof_data.challenge).to_string(),
                     stake: new_proof_data.balance,
                     last_hash_at: new_proof_data.last_hash_at,
-                    last_claim_at: new_proof_data.last_claim_at,
                     total_hashes: new_proof_data.total_hashes,
                 };
 

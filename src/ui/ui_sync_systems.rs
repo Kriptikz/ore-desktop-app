@@ -215,18 +215,6 @@ pub fn update_proof_account_ui(
     text_total_hashes.sections[0].value =
         proof_account_res.total_hashes.to_string();
 
-    let mut text_last_claim_at_query = set.p2();
-    let mut text_last_claim_at = text_last_claim_at_query.single_mut();
-    let last_claim_at = proof_account_res.last_claim_at;
-    let last_claim_at_date_time =
-        if let Some(dt) = DateTime::from_timestamp(last_claim_at, 0) {
-            dt.to_string()
-        } else {
-            "Err".to_string()
-        };
-    text_last_claim_at.sections[0].value = format!("{}", last_claim_at_date_time);
-
-
     let mut text_claimable_rewards_query = set.p3();
     let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();
     let amount =
@@ -243,22 +231,6 @@ pub fn update_proof_account_ui(
         };
 
     text_3.sections[0].value = format!("{}", date_time);
-
-    let amount = proof_account_res.stake;
-
-    let clock = get_unix_timestamp() as i64;
-    let t = last_claim_at.saturating_add(ONE_DAY);
-    let burn_amount = if clock.lt(&t) {
-        // Calculate burn amount
-        (amount
-            .saturating_mul(t.saturating_sub(clock) as u64)
-            .saturating_div(ONE_DAY as u64) as f64) / 10f64.powf(get_ore_decimals() as f64)
-    } else {
-        0.0
-    };
-    let mut text_query_4 = set.p5();
-    let mut text_4 = text_query_4.single_mut();
-    text_4.sections[0].value = format!("{}", burn_amount);
 }
 
 pub fn update_treasury_account_ui(
