@@ -11,7 +11,7 @@ use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, trans
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
+    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
 };
 
 // Task Components
@@ -99,9 +99,11 @@ pub fn task_update_app_wallet_sol_balance(
     mut treasury_account_res: ResMut<TreasuryAccountResource>,
     mut busses_res: ResMut<BussesResource>,
     mut query: Query<(Entity, &mut TaskUpdateAppWalletSolBalance)>,
+    mut event_fetch_ui_data: EventWriter<EventFetchUiDataFromRpc>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
         if let Some(result) = block_on(future::poll_once(&mut task.task)) {
+            let mut fetch_failed = false;
             match result {
                 Ok(result) => {
                     app_wallet.sol_balance = result.sol_balance;
@@ -112,12 +114,17 @@ pub fn task_update_app_wallet_sol_balance(
                 },
                 Err(e) => {
                     error!("Tasks UpdateResources error: {}", e);
+                    fetch_failed = true;
                 }
             }
 
             commands
                 .entity(entity)
                 .remove::<TaskUpdateAppWalletSolBalance>();
+
+            if fetch_failed {
+                event_fetch_ui_data.send(EventFetchUiDataFromRpc);
+            }
         }
     }
 }
