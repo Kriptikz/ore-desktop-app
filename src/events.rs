@@ -110,6 +110,7 @@ pub fn handle_event_start_stop_mining_clicked(
     app_wallet: Res<AppWallet>,
     mut miner_status: ResMut<MinerStatusResource>,
     rpc_connection: Res<RpcConnection>,
+    proof_account: Res<ProofAccountResource>,
     asset_server: Res<AssetServer>,
     mut query: Query<(&mut UiImage, &mut ToggleAutoMine)>,
 ) {
@@ -127,17 +128,14 @@ pub fn handle_event_start_stop_mining_clicked(
             },
             "STOPPED" => {
                 // start mining
-                let client = rpc_connection.rpc.clone();
-                let proof_address = proof_pubkey(app_wallet.wallet.pubkey());
-                // TODO: set this up with register properly
-                // if client.get_account(&proof_address).is_ok() {
+                if proof_account.challenge == "Not Found" {
+                    event_writer_register.send(EventRegisterWallet);
+                } else {
                     event_writer.send(EventMineForHash);
                     let (mut btn, mut toggle) = query.single_mut();
                     toggle.0 = true;
                     *btn = UiImage::new(asset_server.load(TOGGLE_ON));
-                // } else {
-                //     event_writer_register.send(EventRegisterWallet);
-                // }
+                }
             },
             _ => {
                 error!("Invalid Miner Status in handle_event_start_stop_mining_clicked");
