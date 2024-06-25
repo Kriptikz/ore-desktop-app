@@ -20,7 +20,6 @@ pub static BUTTON_START_MINING: &str = "design_1/button_start_mining.png";
 pub static BUTTON_STOP_MINING: &str = "design_1/button_stop_mining.png";
 pub static BUTTON_RESET_EPOCH: &str = "design_1/button_reset_epoch.png";
 
-
 // Icons
 pub static CHECKBOX: &str = "design_1/checkbox.png";
 pub static CHECK_ICON: &str = "design_1/check_icon_medium.png";
@@ -48,15 +47,6 @@ pub static CURRENT_TX_STATUS_BACKGROUND: &str = "design_1/current_tx_background.
 
 pub static TX_POP_UP_BACKGROUND: &str = "design_1/tx_pop_up_background.png";
 
-// Fonts
-pub const FONT_SIZE: f32 = 16.0;
-pub const FONT_SIZE_LARGE: f32 = 20.0;
-pub const FONT_SIZE_TITLE: f32 = 22.0;
-pub static FONT_REGULAR: &str = "fonts/Xirod.otf";
-pub static FONT_ROBOTO: &str = "fonts/Roboto-Regular.ttf";
-pub static FONT_ROBOTO_MEDIUM: &str = "fonts/Roboto-Medium.ttf";
-
-
 // HEX COLORS
 
 pub fn hex_black() -> Color {
@@ -70,3 +60,20 @@ pub fn hex_dark_gray() -> Color {
 pub fn hex_light_gray() -> Color {
     Color::hex("#404040").unwrap()
 }
+
+// Design 2
+
+pub static ORE_LOGO_WHITE: &str = "design_2/ore_logo_white.png";
+
+pub fn hex_dark_mode_background() -> Color {
+    Color::hex("#323741").unwrap()
+}
+
+// Fonts
+pub const FONT_SIZE_X_SMALL: f32 = 12.0;
+pub const FONT_SIZE_SMALL: f32 = 14.0;
+pub const FONT_SIZE_MEDIUM: f32 = 16.0;
+pub const FONT_SIZE_LARGE: f32 = 24.0;
+
+pub static FONT_REGULAR: &str = "fonts/OpenSans-Semibold.ttf";
+pub static FONT_BOLD: &str = "fonts/OpenSans-Bold.ttf";
