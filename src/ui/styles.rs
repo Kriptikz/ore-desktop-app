@@ -70,10 +70,31 @@ pub fn hex_dark_mode_background() -> Color {
 }
 
 // Fonts
-pub const FONT_SIZE_X_SMALL: f32 = 12.0;
-pub const FONT_SIZE_SMALL: f32 = 14.0;
-pub const FONT_SIZE_MEDIUM: f32 = 16.0;
-pub const FONT_SIZE_LARGE: f32 = 24.0;
+pub const FONT_SIZE_X_SMALL: f32 = 16.0;
+pub const FONT_SIZE_SMALL: f32 = 18.0;
+pub const FONT_SIZE_MEDIUM: f32 = 20.0;
+pub const FONT_SIZE_LARGE: f32 = 28.0;
 
 pub static FONT_REGULAR: &str = "fonts/OpenSans-Semibold.ttf";
 pub static FONT_BOLD: &str = "fonts/OpenSans-Bold.ttf";
+
+// Icons
+pub static DASHBOARD_ICON_WHITE: &str = "design_2/dashboard_icon_white.png";
+pub static MINING_ICON_GRAY: &str = "design_2/mining_icon_gray.png";
+pub static NAV_ARROW_ICON: &str = "design_2/nav_arrow_icon.png";
+
+pub fn hex_dark_mode_nav_title() -> Color {
+    Color::hex("#2A2D35").unwrap()
+}
+
+pub fn hex_dark_mode_text_white() -> Color {
+    Color::hex("#EFEFEF").unwrap()
+}
+
+pub fn hex_dark_mode_text_white_2() -> Color {
+    Color::hex("#FAFAFA").unwrap()
+}
+
+pub fn hex_dark_mode_text_gray() -> Color {
+    Color::hex("#FAFAFA").unwrap()
+}
