@@ -65,9 +65,6 @@ pub fn hex_light_gray() -> Color {
 
 pub static ORE_LOGO_WHITE: &str = "design_2/ore_logo_white.png";
 
-pub fn hex_dark_mode_background() -> Color {
-    Color::hex("#323741").unwrap()
-}
 
 // Fonts
 pub const FONT_SIZE_X_SMALL: f32 = 16.0;
@@ -80,8 +77,18 @@ pub static FONT_BOLD: &str = "fonts/OpenSans-Bold.ttf";
 
 // Icons
 pub static DASHBOARD_ICON_WHITE: &str = "design_2/dashboard_icon_white.png";
-pub static MINING_ICON_GRAY: &str = "design_2/mining_icon_gray.png";
+pub static MINING_ICON: &str = "design_2/mining_icon.png";
 pub static NAV_ARROW_ICON: &str = "design_2/nav_arrow_icon.png";
+
+// Backgrounds
+pub static MINE_TOGGLE_BACKGROUND: &str = "design_2/mine_toggle_background.png";
+pub static MINE_TOGGLE_BUTTON: &str = "design_2/mine_toggle_button.png";
+
+
+// Hex Colors
+pub fn hex_dark_mode_background() -> Color {
+    Color::hex("#323741").unwrap()
+}
 
 pub fn hex_dark_mode_nav_title() -> Color {
     Color::hex("#2A2D35").unwrap()
@@ -96,5 +103,13 @@ pub fn hex_dark_mode_text_white_2() -> Color {
 }
 
 pub fn hex_dark_mode_text_gray() -> Color {
-    Color::hex("#FAFAFA").unwrap()
+    Color::hex("#8A8A8A").unwrap()
+}
+
+pub fn hex_dark_mode_header_border() -> Color {
+    Color::hex("#30353E").unwrap()
+}
+
+pub fn hex_dark_mode_app_screen_background() -> Color {
+    Color::hex("#383D47").unwrap()
 }

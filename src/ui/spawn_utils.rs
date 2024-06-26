@@ -401,3 +401,357 @@ pub fn spawn_fps_counter(mut commands: Commands) {
         .id();
     commands.entity(root).push_children(&[text_fps]);
 }
+
+pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetServer) {
+    parent.spawn((
+        NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+            ..default()
+        },
+        Name::new("Mining App Screen"),
+    )).with_children(|parent| {
+        // Top Data Section
+        parent.spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(70.0),
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                ..default()
+            },
+            Name::new("Mining App Screen Top Data Section"),
+        )).with_children(|parent| {
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(20.0),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceAround,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("Mining App Screen Top Data Section Top"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_nav_title().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Start,
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect {
+                                top: Val::Px(5.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                        ),
+                    Name::new("Mining App Screen Top Section Top"),
+                )).with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Treasury",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextTreasuryBalance"),
+                    ));
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "420.696969 ORE",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextTreasuryOreBalance"),
+                    ));
+                });
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_nav_title().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Start,
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect {
+                                top: Val::Px(5.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                        ),
+                    Name::new("Mining App Screen Top Section Top"),
+                )).with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Base Reward Rate",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextBaseRewardRate"),
+                    ));
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "0.000032389 ORE",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextBaseRewardRate"),
+                    ));
+                });
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_nav_title().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Start,
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect {
+                                top: Val::Px(5.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                        ),
+                    Name::new("Mining App Screen Top Section Top"),
+                )).with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Last Reset At",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextTreasuryBalance"),
+                    ));
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "2024-00-00 00:00:00 UTC",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextLastResetAt"),
+                    ));
+                });
+            });
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(80.0),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceAround,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("Mining App Screen Top Data Section Bottom"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_nav_title().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Start,
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect {
+                                top: Val::Px(5.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                        ),
+                    Name::new("Mining App Screen Top Section Top"),
+                )).with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Treasury",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextTreasuryBalance"),
+                    ));
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "420.696969 ORE",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextTreasuryOreBalance"),
+                    ));
+                });
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_nav_title().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Start,
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect {
+                                top: Val::Px(5.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(MINE_TOGGLE_BUTTON),
+                        ),
+                    Name::new("Mining App Screen Top Section Top"),
+                )).with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Base Reward Rate",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextBaseRewardRate"),
+                    ));
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "0.000032389 ORE",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextBaseRewardRate"),
+                    ));
+                });
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_nav_title().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Start,
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect {
+                                top: Val::Px(5.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(MINE_TOGGLE_BUTTON),
+                        ),
+                    Name::new("Mining App Screen Top Section Top"),
+                )).with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Last Reset At",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextTreasuryBalance"),
+                    ));
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "2024-00-00 00:00:00 UTC",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextLastResetAt"),
+                    ));
+                });
+            });
+        });
+
+        // Bottom Logs Section
+        parent.spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(30.0),
+                    ..default()
+                },
+                ..default()
+            },
+            Name::new("Mining App Screen Logs Section"),
+        )).with_children(|parent| {
+        });
+    });
+}
