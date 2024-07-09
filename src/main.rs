@@ -437,7 +437,6 @@ impl Default for MinerStatusResource {
 
 #[derive(Resource)]
 pub struct RpcConnection {
-    // Cannot use the nonblocking client and await with the bevy tasks because bevy doesn't actually use tokio for async tasks.
     rpc: Arc<RpcClient>,
     pub fetch_ui_data_timer: Timer,
 }
