@@ -1,4 +1,5 @@
 use async_compat::Compat;
+use async_std::task::sleep;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, IoTaskPool},
@@ -23,7 +24,7 @@ use crate::{
 };
 
 use std::{
-    fs::File, io::{stdout, Write}, path::{Path, PathBuf}, str::FromStr, sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant
+    fs::File, io::{stdout, Write}, path::{Path, PathBuf}, str::FromStr, sync::{atomic::AtomicBool, Arc, Mutex}, time::{Duration, Instant}
 };
 
 use solana_sdk::{
@@ -270,35 +271,40 @@ pub fn handle_event_submit_hash_tx(
                 //     ComputeBudgetInstruction::set_compute_unit_price(self.priority_fee);
                 let ix_mine = get_mine_ix(signer.pubkey(), solution, bus);
                 ixs.push(ix_mine);
-                let latest_blockhash = client
-                    .get_latest_blockhash_with_commitment(client.commitment()).await;
 
-                if let Ok((hash, _slot)) = latest_blockhash {
-                    let mut tx = Transaction::new_with_payer(&ixs, Some(&signer.pubkey()));
+                let mut attempts = 3;
+                while attempts > 0 {
+                    if let Ok((hash, _slot)) = client.get_latest_blockhash_with_commitment(client.commitment()).await {
+                        let mut tx = Transaction::new_with_payer(&ixs, Some(&signer.pubkey()));
 
-                    tx.sign(&[&signer], hash);
-                    
-                    let process_data = TaskProcessTxData {
-                        tx_type: "Mine".to_string(),
-                        signature: None,
-                        signed_tx: Some(tx),
-                        hash_time: Some((hash_time, difficulty)),
-                    };
+                        tx.sign(&[&signer], hash);
+                        
+                        let process_data = TaskProcessTxData {
+                            tx_type: "Mine".to_string(),
+                            signature: None,
+                            signed_tx: Some(tx),
+                            hash_time: Some((hash_time, difficulty)),
+                        };
 
-                    return Ok(process_data);
-                } else {
-                    error!("Failed to get latest blockhash. handle_event_submit_hash_tx");
-                    let process_data = TaskProcessTxData {
-                        tx_type: "Mine".to_string(),
-                        signature: None,
-                        signed_tx: None,
-                        hash_time: Some((hash_time, difficulty)),
-                    };
-                    return Err((
-                        process_data,
-                        "Failed to get latest blockhash".to_string()
-                    ));
+                        return Ok(process_data);
+                    } else {
+                        error!("Failed to get latest blockhash. retrying...");
+                        sleep(Duration::from_millis(1000)).await;
+                        attempts = attempts - 1;
+                    }
                 }
+
+                let process_data = TaskProcessTxData {
+                    tx_type: "Mine".to_string(),
+                    signature: None,
+                    signed_tx: None,
+                    hash_time: Some((hash_time, difficulty)),
+                };
+                return Err((
+                    process_data,
+                    "Failed to get latest blockhash".to_string()
+                ));
+
             }));
 
             miner_status.miner_status = "PROCESSING".to_string();
