@@ -8,8 +8,8 @@ use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::Wor
 use copypasta::{ClipboardContext, ClipboardProvider};
 use crossbeam_channel::{unbounded, Receiver};
 use events::*;
-use ore::{state::{Bus, Proof, Treasury}, utils::AccountDeserialize};
-use ore_utils::proof_pubkey;
+use ore_api::state::{Bus, Proof, Treasury};
+use ore_utils::{proof_pubkey, ORE_TOKEN_DECIMALS, AccountDeserialize};
 use serde::{Deserialize, Serialize};
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{nonblocking::{pubsub_client::PubsubClient, rpc_client::RpcClient}, rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig}, rpc_filter::RpcFilterType, rpc_response::{Response, RpcKeyedAccount}};
@@ -416,7 +416,7 @@ fn setup_mining_screen(
                 task_pool.spawn(async move {
                     let ps_client = ps_client_c;
                     let sender = sender_c;
-                    let account_pubkey = ore::CONFIG_ADDRESS;
+                    let account_pubkey = ore_api::consts::CONFIG_ADDRESS;
                     let pubsub =
                         ps_client.account_subscribe(
                             &account_pubkey,
@@ -434,7 +434,7 @@ fn setup_mining_screen(
                                 if let Some(response) = account_sub_notifications.next().await {
                                     let data = response.value.data.decode();
                                     if let Some(data_bytes) = data {
-                                        let ore_config = ore::state::Config::try_from_bytes(&data_bytes);
+                                        let ore_config = ore_api::state::Config::try_from_bytes(&data_bytes);
                                         if let Ok(ore_config) = ore_config {
                                             let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
                                             continue;
@@ -451,7 +451,7 @@ fn setup_mining_screen(
                 task_pool.spawn(async move {
                     let ps_client = ps_client_c;
                     let sender = sender_c;
-                    let account_pubkey = ore::ID;
+                    let account_pubkey = ore_api::ID;
                     let pubsub =
                         ps_client.program_subscribe(
                             &account_pubkey,
@@ -675,7 +675,7 @@ impl Default for ProofAccountResource {
 
 #[derive(Resource)]
 pub struct BussesResource {
-    busses: Vec<ore::state::Bus>,
+    busses: Vec<ore_api::state::Bus>,
     current_bus_id: usize,
 }
 
@@ -733,7 +733,7 @@ pub struct RpcConnection {
 pub enum AccountUpdatesData {
     ProofData(Proof),
     BusData(Bus),
-    TreasuryConfigData(ore::state::Config)
+    TreasuryConfigData(ore_api::state::Config)
 }
 
 #[derive(Resource)]
@@ -1102,7 +1102,7 @@ pub fn tx_processor_result_checks(
                             if  tx_processor.challenge.as_str() != proof_res.challenge {
                                 // let sol_diff = current_sol_balance - previous_sol_balance;
                                 let staked_diff = current_staked_balance - previous_staked_balance;
-                                let ore_conversion = staked_diff as f64 / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                                let ore_conversion = staked_diff as f64 / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
                                 let status = format!("{} +{} ORE.", status, ore_conversion.to_string());
                                 
                                 event_writer.send(EventTxResult {
@@ -1272,7 +1272,7 @@ pub fn read_accounts_update_channel(
             AccountUpdatesData::TreasuryConfigData(new_treasury_data) => {
                 treasury_account.last_reset_at = new_treasury_data.last_reset_at;
                 let base_reward_rate =
-                    (new_treasury_data.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                    (new_treasury_data.base_reward_rate as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
                 treasury_account.base_reward_rate = base_reward_rate;
 
             },

@@ -5,7 +5,7 @@ use bevy::{
     tasks::{block_on, futures_lite::future, Task}, winit::{UpdateMode, WinitSettings},
 };
 use drillx::Solution;
-use ore::state::Bus;
+use ore_api::state::Bus;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, transaction::Transaction};
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};

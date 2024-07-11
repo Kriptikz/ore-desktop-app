@@ -2,25 +2,28 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bevy::log::{error, info};
 use drillx::{equix, Hash, Solution};
-use ore::{
+use ore_api::{
+    ID as ORE_ID,
     instruction,
     state::{Proof, Treasury},
-    utils::AccountDeserialize,
-    BUS_ADDRESSES, CONFIG_ADDRESS, EPOCH_DURATION, ID as ORE_ID, MINT_ADDRESS, PROOF,
-    TOKEN_DECIMALS, TREASURY_ADDRESS,
+    consts::{BUS_ADDRESSES, CONFIG_ADDRESS, EPOCH_DURATION, MINT_ADDRESS, PROOF,
+    TOKEN_DECIMALS, TREASURY_ADDRESS }
 };
+pub use ore_utils::AccountDeserialize;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     account::ReadableAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, sysvar,
 };
 use spl_associated_token_account::get_associated_token_address;
 
+pub const ORE_TOKEN_DECIMALS: u8 = TOKEN_DECIMALS;
+
 pub fn get_mine_ix(signer: Pubkey, solution: Solution, bus: usize) -> Instruction {
     instruction::mine(signer, BUS_ADDRESSES[bus], solution)
 }
 
 pub fn get_register_ix(signer: Pubkey) -> Instruction {
-    instruction::register(signer)
+    instruction::open(signer, signer)
 }
 
 pub fn get_reset_ix(signer: Pubkey) -> Instruction {
@@ -53,8 +56,8 @@ pub async fn get_proof_and_treasury_with_busses(
 ) -> (
     Result<Proof, ()>,
     Result<Treasury, ()>,
-    Result<ore::state::Config, ()>,
-    Result<Vec<Result<ore::state::Bus, ()>>, ()>,
+    Result<ore_api::state::Config, ()>,
+    Result<Vec<Result<ore_api::state::Bus, ()>>, ()>,
 ) {
     let account_pubkeys = vec![
         TREASURY_ADDRESS,
@@ -84,55 +87,55 @@ pub async fn get_proof_and_treasury_with_busses(
         };
 
         let treasury_config = if let Some(data) = &datas[2] {
-            Ok(*ore::state::Config::try_from_bytes(data.data())
+            Ok(*ore_api::state::Config::try_from_bytes(data.data())
                 .expect("Failed to parse config account"))
         } else {
             Err(())
         };
         let bus_1 = if let Some(data) = &datas[3] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus1 account"))
         } else {
             Err(())
         };
         let bus_2 = if let Some(data) = &datas[4] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus2 account"))
         } else {
             Err(())
         };
         let bus_3 = if let Some(data) = &datas[5] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus3 account"))
         } else {
             Err(())
         };
         let bus_4 = if let Some(data) = &datas[6] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus4 account"))
         } else {
             Err(())
         };
         let bus_5 = if let Some(data) = &datas[7] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus5 account"))
         } else {
             Err(())
         };
         let bus_6 = if let Some(data) = &datas[8] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus6 account"))
         } else {
             Err(())
         };
         let bus_7 = if let Some(data) = &datas[9] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus7 account"))
         } else {
             Err(())
         };
         let bus_8 = if let Some(data) = &datas[10] {
-            Ok(*ore::state::Bus::try_from_bytes(data.data())
+            Ok(*ore_api::state::Bus::try_from_bytes(data.data())
                 .expect("Failed to parse bus1 account"))
         } else {
             Err(())
@@ -236,7 +239,7 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution,
                         // Exit if time has elapsed
                         if nonce % 100 == 0 {
                             if timer.elapsed().as_secs().ge(&cutoff_time) {
-                                if best_difficulty.gt(&ore::MIN_DIFFICULTY) {
+                                if best_difficulty.gt(&ore_api::consts::MIN_DIFFICULTY) {
                                     // Mine until min difficulty has been met
                                     break;
                                 }

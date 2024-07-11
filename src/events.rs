@@ -14,13 +14,13 @@ use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{
-        find_hash_par, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
+        find_hash_par, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey, ORE_TOKEN_DECIMALS
     }, tasks::{
         SigCheckResults, TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskSigChecks, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
         components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, AppScreenState, HashStatus, MinerStatusResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
+    }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashStatus, MinerStatusResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
 
 use std::{
@@ -488,7 +488,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 let treasury_account_res_data;
                 if let Ok(treasury_account) = treasury_config {
                     let base_reward_rate =
-                        (treasury_account.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                        (treasury_account.base_reward_rate as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
 
                     let clock = if let Ok(clock) =  get_clock_account(&connection).await {
                         clock
