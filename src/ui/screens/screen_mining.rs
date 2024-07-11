@@ -12,15 +12,13 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonCooldownSpinner, ButtonRequestAirdrop, ButtonStakeOre, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonCooldownSpinner, ButtonRequestAirdrop, ButtonStakeOre, MiningScreenNode, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, BUTTON_CLAIM, BUTTON_GREEN_MEDIUM, BUTTON_RED_MEDIUM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE_TITLE, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, BUTTON_CLAIM, BUTTON_GREEN_MEDIUM, BUTTON_RED_MEDIUM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, FONT_REGULAR, FONT_SIZE_LARGE, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
-    },
-    utils::shorten_string,
-    AppWallet, AppConfig,
+    }, utils::shorten_string, AppConfig, AppWallet
 };
 
 use crate::ui::{
@@ -30,11 +28,11 @@ use crate::ui::{
         TextMinerStatusStatus, TextMinerStatusTime, TextTotalHashes, TextTreasuryAdmin, TextTreasuryBalance, TextTreasuryLastResetAt,
         TextTreasuryRewardRate, TextWalletOreBalance, TextWalletSolBalance, ToggleAutoMine,
     },
-    styles::FONT_SIZE,
+    styles::FONT_SIZE_SMALL as FONT_SIZE,
 };
 
 pub fn spawn_mining_screen(
-    mut commands: Commands,
+    parent: &mut ChildBuilder,
     asset_server: Res<AssetServer>,
     address: String,
     sol_balance: f64,
@@ -45,7 +43,7 @@ pub fn spawn_mining_screen(
     let wallet_str = shorten_string(full_addr, 10);
     let sol_balance_str = sol_balance.to_string();
     let ore_balance_str = ore_balance.to_string();
-    commands
+    parent
         .spawn((
             NodeBundle {
                 background_color: hex_black().into(),
@@ -57,8 +55,8 @@ pub fn spawn_mining_screen(
                 },
                 ..default()
             },
-            Name::new("Screen Node"),
-            BaseScreenNode,
+            Name::new("Mining Screen Node"),
+            MiningScreenNode,
         ))
         .with_children(|parent| {
             if config.is_devnet {
@@ -89,8 +87,8 @@ pub fn spawn_mining_screen(
                         TextBundle::from_section(
                             "DEVNET",
                             TextStyle {
-                                font: asset_server.load(FONT_ROBOTO),
-                                font_size: FONT_SIZE_TITLE,
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_LARGE,
                                 color: Color::YELLOW.into()
                             },
                         ),
@@ -120,7 +118,7 @@ pub fn spawn_mining_screen(
                             TextBundle::from_section(
                                 "Airdrop",
                                 TextStyle {
-                                    font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                    font: asset_server.load(FONT_REGULAR),
                                     font_size: FONT_SIZE,
                                     color: Color::BLACK.into(),
                                 },
@@ -357,8 +355,8 @@ pub fn spawn_mining_screen(
                                                 TextBundle::from_section(
                                                     "Treasury",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE_TITLE,
+                                                        font: asset_server.load(FONT_REGULAR),
+                                                        font_size: FONT_SIZE_LARGE,
                                                         color: Color::hex("#FFFFFF").unwrap(),
                                                     },
                                                 ),
@@ -437,7 +435,7 @@ pub fn spawn_mining_screen(
                                                             "Balance:",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::hex("#FFFFFF")
                                                                     .unwrap(),
@@ -450,7 +448,7 @@ pub fn spawn_mining_screen(
                                                             "Admin:",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -463,7 +461,7 @@ pub fn spawn_mining_screen(
                                                             "Last Reset At:",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -476,7 +474,7 @@ pub fn spawn_mining_screen(
                                                             "Base Reward Rate:",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -503,7 +501,7 @@ pub fn spawn_mining_screen(
                                                             "loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::hex("#FFFFFF")
                                                                     .unwrap(),
@@ -517,7 +515,7 @@ pub fn spawn_mining_screen(
                                                             "loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -531,7 +529,7 @@ pub fn spawn_mining_screen(
                                                             "loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -545,85 +543,13 @@ pub fn spawn_mining_screen(
                                                             "loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
                                                         Name::new("TextTreasuryRewardRate"),
                                                         TextTreasuryRewardRate,
-                                                    ));
-                                                });
-                                        });
-                                    parent
-                                        .spawn((
-                                            NodeBundle {
-                                                // background_color: Color::WHITE.into(),
-                                                // border_color: Color::ORANGE.into(),
-                                                style: Style {
-                                                    width: Val::Percent(30.0),
-                                                    height: Val::Percent(50.0),
-                                                    flex_direction: FlexDirection::Column,
-                                                    padding: UiRect::right(Val::Px(10.0)),
-                                                    border: UiRect::all(Val::Px(1.0)),
-                                                    ..default()
-                                                },
-                                                ..default()
-                                            },
-                                            // UiImage::new(asset_server.load(TX_RESULTS_BACKGROUND)),
-                                            Name::new("Wallet Info Node"),
-                                        ))
-                                        .with_children(|parent| {
-                                            spawn_copyable_text(
-                                                parent,
-                                                &asset_server,
-                                                address,
-                                                wallet_str,
-                                            );
-                                            parent
-                                                .spawn((
-                                                    NodeBundle {
-                                                        style: Style {
-                                                            flex_direction: FlexDirection::Column,
-                                                            align_items: AlignItems::End,
-                                                            padding: UiRect {
-                                                                left: Val::Px(0.0),
-                                                                right: Val::Px(20.0),
-                                                                top: Val::Px(0.0),
-                                                                bottom: Val::Px(0.0),
-                                                            },
-                                                            ..default()
-                                                        },
-                                                        ..default()
-                                                    },
-                                                    Name::new("WalletBalance Nodes"),
-                                                ))
-                                                .with_children(|parent| {
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            &(sol_balance_str + " SOL"),
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        TextWalletSolBalance,
-                                                        Name::new("TextWalletSolBalance"),
-                                                    ));
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            &(ore_balance_str + " ORE"),
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        TextWalletOreBalance,
-                                                        Name::new("TextWalletOreBalance"),
                                                     ));
                                                 });
                                         });
@@ -666,7 +592,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 1: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -679,7 +605,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 2: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -692,7 +618,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 3: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -705,7 +631,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 4: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -734,7 +660,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 5: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -747,7 +673,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 6: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -760,7 +686,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 7: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -773,7 +699,7 @@ pub fn spawn_mining_screen(
                                                             "Bus 8: loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -832,7 +758,7 @@ pub fn spawn_mining_screen(
                                                     parent.spawn((TextBundle::from_section(
                                                             "Mine",
                                                             TextStyle {
-                                                                font: asset_server.load(FONT_ROBOTO),
+                                                                font: asset_server.load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 ..default()
                                                             },
@@ -942,7 +868,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Type",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -968,7 +894,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Landed At",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -994,7 +920,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Signature",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1020,7 +946,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Send Time",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1046,7 +972,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Hash Time - Difficulty",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1073,7 +999,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Status",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1185,7 +1111,7 @@ pub fn spawn_mining_screen(
                                             parent.spawn((TextBundle::from_section(
                                                 "Auto-Scroll",
                                                 TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO),
+                                                    font: asset_server.load(FONT_REGULAR),
                                                     font_size: FONT_SIZE,
                                                     color: Color::Rgba { red: 1.0, green: 1.0, blue: 1.0, alpha: 0.60 }
                                                 },
@@ -1322,7 +1248,7 @@ pub fn spawn_mining_screen(
                                                     parent.spawn((TextBundle::from_section(
                                                         format!("Miner Status:"),
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1331,7 +1257,7 @@ pub fn spawn_mining_screen(
                                                     parent.spawn((TextBundle::from_section(
                                                         format!("Time:"),
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1340,7 +1266,7 @@ pub fn spawn_mining_screen(
                                                     parent.spawn((TextBundle::from_section(
                                                         format!("Threads:"),
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1349,7 +1275,7 @@ pub fn spawn_mining_screen(
                                                     parent.spawn((TextBundle::from_section(
                                                         format!("Total CPU Usage:"),
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1357,7 +1283,7 @@ pub fn spawn_mining_screen(
                                                     parent.spawn((TextBundle::from_section(
                                                         format!("Total RAM Usage:"),
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             ..default()
                                                         },
@@ -1388,7 +1314,7 @@ pub fn spawn_mining_screen(
                                                             TextStyle {
                                                                 color: Color::RED.into(),
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 ..default()
                                                             },
@@ -1401,7 +1327,7 @@ pub fn spawn_mining_screen(
                                                             format!("Loading..."),
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 ..default()
                                                             },
@@ -1413,7 +1339,7 @@ pub fn spawn_mining_screen(
                                                             format!("Loading..."),
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 ..default()
                                                             },
@@ -1425,7 +1351,7 @@ pub fn spawn_mining_screen(
                                                             format!("2%"),
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 ..default()
                                                             },
@@ -1437,7 +1363,7 @@ pub fn spawn_mining_screen(
                                                             format!("0.2 GB / 6.0 GB"),
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 ..default()
                                                             },
@@ -1507,8 +1433,8 @@ pub fn spawn_mining_screen(
                                                 TextBundle::from_section(
                                                     "Proof Account",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                                                        font_size: FONT_SIZE_TITLE,
+                                                        font: asset_server.load(FONT_REGULAR),
+                                                        font_size: FONT_SIZE_LARGE,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
                                                 ),
@@ -1570,7 +1496,7 @@ pub fn spawn_mining_screen(
                                                                     "Current Challenge:",
                                                                     TextStyle {
                                                                         font: asset_server
-                                                                            .load(FONT_ROBOTO),
+                                                                            .load(FONT_REGULAR),
                                                                         font_size: FONT_SIZE,
                                                                         color: Color::rgb(
                                                                             0.9, 0.9, 0.9,
@@ -1585,7 +1511,7 @@ pub fn spawn_mining_screen(
                                                             "Last Hash At:",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -1597,7 +1523,7 @@ pub fn spawn_mining_screen(
                                                             "Total Hashes:",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -1606,48 +1532,10 @@ pub fn spawn_mining_screen(
                                                     ));
                                                     parent.spawn((
                                                         TextBundle::from_section(
-                                                            " - Rewards:",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::hex("#0ECF86").unwrap(),
-                                                            },
-                                                        ),
-                                                        Name::new("TextRewardsTitle"),
-                                                    ));
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "Last Claim At:",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new("TextLastClaimAt"),
-                                                    ));
-
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "Burn Amount: ",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new("TextBurnAmount"),
-                                                    ));
-
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
                                                             "Staked:",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -1692,7 +1580,7 @@ pub fn spawn_mining_screen(
                                                                                 value: "loading...".to_string(),
                                                                                 style: TextStyle {
                                                                                     font: asset_server
-                                                                                        .load(FONT_ROBOTO),
+                                                                                        .load(FONT_REGULAR),
                                                                                     font_size: FONT_SIZE,
                                                                                     color: Color::rgb(
                                                                                         0.9, 0.9, 0.9,
@@ -1715,7 +1603,7 @@ pub fn spawn_mining_screen(
                                                             "loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -1728,7 +1616,7 @@ pub fn spawn_mining_screen(
                                                             "loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -1738,78 +1626,10 @@ pub fn spawn_mining_screen(
                                                     ));
                                                     parent.spawn((
                                                         TextBundle::from_section(
-                                                            " ",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::hex("#0ECF86").unwrap(),
-                                                            },
-                                                        ).with_style(Style {
-                                                            height: Val::Px(FONT_SIZE),
-                                                            ..Default::default()
-                                                        }),
-                                                        Name::new("TextRewardsTitle"),
-                                                    ));
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
                                                             "loading...",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
-                                                                color: Color::rgb(0.9, 0.9, 0.9),
-                                                            },
-                                                        ),
-                                                        Name::new("TextLastClaimAt"),
-                                                        TextLastClaimAt,
-                                                    ));
-                                                    parent.spawn((
-                                                        NodeBundle {
-                                                            style: Style {
-                                                                width: Val::Px(100.0),
-                                                                height: Val::Px(40.0),
-                                                                ..Default::default()
-                                                            },
-                                                            ..Default::default()
-                                                        },
-                                                        Name::new("BurnAmount Node"),
-                                                    )).with_children(|parent| {
-                                                        parent.spawn((
-                                                            TextBundle::from_section(
-                                                                "loading...",
-                                                                TextStyle {
-                                                                    font: asset_server
-                                                                        .load(FONT_ROBOTO),
-                                                                    font_size: FONT_SIZE,
-                                                                    color: Color::RED.into(),
-                                                                },
-                                                            ),
-                                                            Name::new("TextBurnAmount"),
-                                                            TextBurnAmount,
-                                                        ));
-
-                                                        // parent.spawn((
-                                                        //     NodeBundle {
-                                                        //         background_color: Color::WHITE.into(),
-                                                        //         style: Style {
-                                                        //             width: Val::Px(24.0),
-                                                        //             height: Val::Px(24.0),
-                                                        //             ..Default::default()
-                                                        //         },
-                                                        //         ..Default::default()
-                                                        //     },
-                                                        //     UiImage::new(asset_server.load(FIRE_ICON)),
-                                                        //     Name::new("FireIcon"),
-                                                        // ));
-                                                    });
-
-                                                    parent.spawn((
-                                                        TextBundle::from_section(
-                                                            "loading...",
-                                                            TextStyle {
-                                                                font: asset_server
-                                                                    .load(FONT_ROBOTO),
+                                                                    .load(FONT_REGULAR),
                                                                 font_size: FONT_SIZE,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
@@ -1855,7 +1675,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Burn & Claim",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             color: Color::BLACK.into(),
                                                         },
@@ -1884,7 +1704,7 @@ pub fn spawn_mining_screen(
                                                     TextBundle::from_section(
                                                         "Stake",
                                                         TextStyle {
-                                                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
+                                                            font: asset_server.load(FONT_REGULAR),
                                                             font_size: FONT_SIZE,
                                                             color: Color::BLACK.into(),
                                                         },
@@ -1898,4 +1718,13 @@ pub fn spawn_mining_screen(
                         });
                 });
         });
+}
+
+pub fn despawn_mining_screen(
+    mut commands: Commands,
+    query: Query<Entity, With<MiningScreenNode>>,
+) {
+    if let Ok(screen_node) = query.get_single() {
+        commands.entity(screen_node).despawn_recursive();
+    }
 }

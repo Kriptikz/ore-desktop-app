@@ -4,15 +4,15 @@ use crate::ui::{
     components::{
         BaseScreenNode, ButtonCaptureTextInput, ButtonUnlock, LockedScreenNode, TextCursor, TextInput, TextPasswordInput, TextPasswordLabel
     },
-    styles::{FONT_SIZE, NORMAL_BUTTON},
+    styles::{FONT_SIZE_SMALL, NORMAL_BUTTON},
 };
 
 pub fn spawn_locked_screen(
-    mut commands: Commands,
+    parent: &mut ChildBuilder,
     asset_server: Res<AssetServer>,
 ) -> Option<Entity> {
     let mut password_capture_text_entity = None;
-    commands
+    parent
         .spawn((
             NodeBundle {
                 style: Style {
@@ -26,8 +26,7 @@ pub fn spawn_locked_screen(
                 },
                 ..default()
             },
-            Name::new("Screen Node"),
-            BaseScreenNode,
+            Name::new("App Node"),
             LockedScreenNode,
         ))
         .with_children(|parent| {
@@ -64,7 +63,7 @@ pub fn spawn_locked_screen(
                                     "Password: ",
                                     TextStyle {
                                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                        font_size: FONT_SIZE,
+                                        font_size: FONT_SIZE_SMALL,
                                         color: Color::rgb(0.9, 0.9, 0.9),
                                     },
                                 ),
@@ -98,7 +97,7 @@ pub fn spawn_locked_screen(
                                                 TextStyle {
                                                     font: asset_server
                                                         .load("fonts/FiraSans-Bold.ttf"),
-                                                    font_size: FONT_SIZE,
+                                                    font_size: FONT_SIZE_SMALL,
                                                     color: Color::rgb(0.9, 0.9, 0.9),
                                                 },
                                             ),
@@ -172,7 +171,7 @@ pub fn spawn_locked_screen(
                                 "UNLOCK",
                                 TextStyle {
                                     font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                    font_size: FONT_SIZE,
+                                    font_size: FONT_SIZE_SMALL,
                                     color: Color::rgb(0.9, 0.9, 0.9),
                                 },
                             ));
@@ -182,3 +181,13 @@ pub fn spawn_locked_screen(
 
     password_capture_text_entity
 }
+
+pub fn despawn_locked_screen(
+    mut commands: Commands,
+    query: Query<Entity, With<LockedScreenNode>>,
+) {
+    let screen_node = query.get_single().unwrap();
+    commands.entity(screen_node).despawn_recursive();
+}
+
+

@@ -3,6 +3,8 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use solana_sdk::signature::Keypair;
 
+use crate::NavItemScreen;
+
 // Components
 #[derive(Component, Default)]
 pub struct ScrollingList {
@@ -24,6 +26,9 @@ pub struct FpsText;
 pub struct BaseScreenNode;
 
 #[derive(Component)]
+pub struct NavItem(pub NavItemScreen);
+
+#[derive(Component)]
 pub struct TxPopUpArea;
 
 #[derive(Component)]
@@ -36,7 +41,22 @@ pub struct WalletSetupScreenNode;
 pub struct MiningScreenNode;
 
 #[derive(Component)]
+pub struct AppScreenParent;
+
+#[derive(Component)]
 pub struct LockedScreenNode;
+
+#[derive(Component)]
+pub struct DashboardScreenNode;
+
+#[derive(Component)]
+pub struct SettingsConfigScreenNode;
+
+#[derive(Component)]
+pub struct SettingsGeneralScreenNode;
+
+#[derive(Component)]
+pub struct SettingsWalletScreenNode;
 
 #[derive(Component)]
 pub struct CopyableText {

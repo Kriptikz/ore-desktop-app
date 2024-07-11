@@ -5,6 +5,7 @@ use bevy::
 
 use crate::ui::spawn_utils::spawn_app_screen_mining;
 use crate::ui::styles::{hex_dark_mode_app_screen_background, hex_dark_mode_background, hex_dark_mode_header_border, hex_dark_mode_nav_title, hex_dark_mode_text_gray, hex_dark_mode_text_white, hex_dark_mode_text_white_2, DASHBOARD_ICON_WHITE, FONT_REGULAR, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_SMALL, MINE_TOGGLE_BACKGROUND, MINE_TOGGLE_BUTTON, MINING_ICON, NAV_ARROW_ICON, ORE_LOGO_WHITE};
+use crate::NavItemScreen;
 use crate::{
     ui::
         styles::
@@ -16,10 +17,11 @@ use crate::{
 };
 
 use crate::ui::
-    components::
-        BaseScreenNode
+    components::{AppScreenParent, BaseScreenNode, NavItem, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance}
     
 ;
+
+use super::screen_locked::spawn_locked_screen;
 
 pub fn spawn_base_screen(
     mut commands: Commands,
@@ -308,6 +310,7 @@ pub fn spawn_base_screen(
                                         },
                                     ),
                                     Name::new("TextSolBalance"),
+                                    TextWalletSolBalance
                                 ));
                             });
                             parent.spawn((
@@ -344,6 +347,7 @@ pub fn spawn_base_screen(
                                         },
                                     ),
                                     Name::new("TextWalletPubkey"),
+                                    TextWalletPubkey,
                                 ));
                                 parent.spawn((
                                     TextBundle::from_section(
@@ -355,6 +359,7 @@ pub fn spawn_base_screen(
                                         },
                                     ),
                                     Name::new("TextOreBalance"),
+                                    TextWalletOreBalance
                                 ));
                             });
                         });
@@ -463,14 +468,15 @@ pub fn spawn_base_screen(
                                     NodeBundle {
                                         style: Style {
                                             width: Val::Percent(100.0),
-                                            height: Val::Px(28.0),
+                                            height: Val::Px(35.0),
                                             flex_direction: FlexDirection::Row,
-                                            padding: UiRect { left: Val::Px(0.0), right: Val::Px(0.0), top: Val::Px(5.0), bottom: Val::Px(5.0) },
                                             ..default()
                                         },
                                         ..default()
                                     },
                                     Name::new("Nav Bar Top Half Menu Items Item"),
+                                    Interaction::default(),
+                                    NavItem(NavItemScreen::Dashboard),
                                 )).with_children(|parent| {
                                     // Menu Nav Item
                                     parent.spawn((
@@ -559,6 +565,7 @@ pub fn spawn_base_screen(
                                                     width: Val::Percent(20.0),
                                                     height: Val::Percent(100.0),
                                                     justify_content: JustifyContent::End,
+                                                    align_items: AlignItems::Center,
                                                     ..default()
                                                 },
                                                 ..default()
@@ -588,14 +595,15 @@ pub fn spawn_base_screen(
                                     NodeBundle {
                                         style: Style {
                                             width: Val::Percent(100.0),
-                                            height: Val::Px(28.0),
+                                            height: Val::Px(35.0),
                                             flex_direction: FlexDirection::Row,
-                                            padding: UiRect { left: Val::Px(0.0), right: Val::Px(0.0), top: Val::Px(5.0), bottom: Val::Px(5.0) },
                                             ..default()
                                         },
                                         ..default()
                                     },
                                     Name::new("Nav Bar Top Half Menu Items Item"),
+                                    Interaction::default(),
+                                    NavItem(NavItemScreen::Mining),
                                 )).with_children(|parent| {
                                     // Menu Nav Item
                                     parent.spawn((
@@ -683,6 +691,7 @@ pub fn spawn_base_screen(
                                                     width: Val::Percent(20.0),
                                                     height: Val::Percent(100.0),
                                                     justify_content: JustifyContent::End,
+                                                    align_items: AlignItems::Center,
                                                     ..default()
                                                 },
                                                 ..default()
@@ -796,6 +805,8 @@ pub fn spawn_base_screen(
                                     ..default()
                                 },
                                 Name::new("Nav Bar Bottom Half Settings Items Item"),
+                                Interaction::default(),
+                                NavItem(NavItemScreen::SettingsConfig),
                             )).with_children(|parent| {
                                 // Settings Nav Item
                                 parent.spawn((
@@ -920,7 +931,9 @@ pub fn spawn_base_screen(
                                     },
                                     ..default()
                                 },
-                                Name::new("Nav Bar Top Half Menu Items Item"),
+                                Name::new("Nav Bar Bottom Half Settings Items Item"),
+                                Interaction::default(),
+                                NavItem(NavItemScreen::SettingsWallet),
                             )).with_children(|parent| {
                                 // Menu Nav Item
                                 parent.spawn((
@@ -1044,7 +1057,9 @@ pub fn spawn_base_screen(
                                     },
                                     ..default()
                                 },
-                                Name::new("Nav Bar Top Half Menu Items Item"),
+                                Name::new("Nav Bar Bottom Half Menu Items Item"),
+                                Interaction::default(),
+                                NavItem(NavItemScreen::SettingsGeneral),
                             )).with_children(|parent| {
                                 // Menu Nav Item
                                 parent.spawn((
@@ -1171,11 +1186,11 @@ pub fn spawn_base_screen(
                         },
                         ..default()
                     },
-                    Name::new("App Screen"),
+                    Name::new("App Screen Parent"),
+                    AppScreenParent,
                 )).with_children(|parent| {
-                    spawn_app_screen_mining(parent, &asset_server);
-                    //App Screen Children
-                    // Defaults to Dashboard/Mining
+                    // spawn_locked_screen(parent, asset_server);
+                    //spawn_app_screen_mining(parent, &asset_server);
                 });
             });
         });

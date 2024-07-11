@@ -20,7 +20,7 @@ use crate::{
     }, ui::{
         components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, AppConfig, EntityTaskFetchUiData, EntityTaskHandler, GameState, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
+    }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, AppScreenState, HashStatus, MinerStatusResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
 
 use std::{
@@ -153,12 +153,24 @@ pub fn handle_event_mine_for_hash(
     rpc_connection: ResMut<RpcConnection>,
     mut miner_status: ResMut<MinerStatusResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = AsyncComputeTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let wallet = if let Some(wallet) =  &app_wallet.wallet {
+                wallet.clone()
+            } else {
+                next_state.set(AppScreenState::Unlock);
+                error!("wallet is None, switching to wallet unlock screen");
+                continue;
+            }; 
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
 
             let sys_info = &miner_status.sys_info;
             let cpu_count = sys_info.cpus().len() as u64;
@@ -222,12 +234,24 @@ pub fn handle_event_submit_hash_tx(
     mut miner_status: ResMut<MinerStatusResource>,
     rpc_connection: Res<RpcConnection>,
     mut busses_res: ResMut<BussesResource>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for ev in ev_submit_hash_tx.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot , rpc_connection.rpc is None");
+                continue;
+            };
 
             let bus = find_best_bus(&busses_res.busses);
 
@@ -389,14 +413,26 @@ pub fn handle_event_fetch_ui_data_from_rpc(
     rpc_connection: ResMut<RpcConnection>,
     mut event_reader: EventReader<EventFetchUiDataFromRpc>,
     query_task_handler: Query<Entity, With<EntityTaskFetchUiData>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pubkey = app_wallet.wallet.pubkey();
+            let pubkey = wallet.pubkey();
 
             let pool = IoTaskPool::get();
-
-            let connection = rpc_connection.rpc.clone();
+            let connection = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
             let ore_mint = get_ore_mint();
             let task = pool.spawn(Compat::new(async move {
                 let balance = if let Ok(result) = connection.get_balance(&pubkey).await {
@@ -520,12 +556,25 @@ pub fn handle_event_register_wallet(
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let wallet = wallet;
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
             let task = pool.spawn(Compat::new(async move {
                 let proof = get_proof(&client, wallet.pubkey()).await;
 
@@ -624,12 +673,24 @@ pub fn handle_event_claim_ore_rewards(
     rpc_connection: ResMut<RpcConnection>,
     proof_account: Res<ProofAccountResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
             let claim_amount = proof_account.stake;
             let task = pool.spawn(Compat::new(async move {
                 let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
@@ -725,12 +786,24 @@ pub fn handle_event_stake_ore(
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
             let task = pool.spawn(Compat::new(async move {
                 let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
                     &wallet.pubkey(),
@@ -837,19 +910,20 @@ pub fn handle_event_stake_ore(
 pub fn handle_event_lock(
     mut commands: Commands,
     mut event_reader: EventReader<EventLock>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
         commands.remove_resource::<AppWallet>();
-        next_state.set(GameState::Locked);
+        next_state.set(AppScreenState::Unlock);
     }
 }
 
 pub fn handle_event_unlock(
     mut commands: Commands,
     mut event_reader: EventReader<EventUnlock>,
+    mut app_wallet: ResMut<AppWallet>,
     query: Query<&TextInput, With<TextPasswordInput>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
         let text = query.get_single();
@@ -866,12 +940,8 @@ pub fn handle_event_unlock(
                 let wallet = Keypair::from_bytes(&encoded);
                 if let Ok(wallet) = wallet {
                     let wallet = Arc::new(wallet);
-                    commands.insert_resource(AppWallet {
-                        wallet,
-                        sol_balance: 0.0,
-                        ore_balance: 0.0,
-                    });
-                    next_state.set(GameState::Mining);
+                    app_wallet.wallet = Some(wallet);
+                    next_state.set(AppScreenState::Mining);
                 } else {
                     error!("Failed to parse keypair from bytes. (events.rs: handle_event_unlock)");
                 }
@@ -887,7 +957,7 @@ pub fn handle_event_unlock(
 pub fn handle_event_save_config(
     mut event_reader: EventReader<EventSaveConfig>,
     mut ore_app_state: ResMut<OreAppState>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for ev in event_reader.read() {
         let new_config = ev.0.clone();
@@ -901,9 +971,9 @@ pub fn handle_event_save_config(
         let new_state;
         let wallet_path = Path::new("save.data");
         if wallet_path.exists() {
-            new_state = GameState::Locked;
+            new_state = AppScreenState::Mining;
         } else {
-            new_state = GameState::WalletSetup;
+            new_state = AppScreenState::WalletSetup;
         }
 
         ore_app_state.config = new_config;
@@ -1018,7 +1088,7 @@ pub fn handle_event_save_wallet(
         Query<&TextGeneratedKeypair>,
         Query<&TextInput, With<TextPasswordInput>>,
     )>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
         let generated_keypair = set.p0().single().0.clone();
@@ -1036,7 +1106,7 @@ pub fn handle_event_save_wallet(
 
             if let Ok(_) = container {
                 // go to locked screen
-                next_state.set(GameState::Locked);
+                next_state.set(AppScreenState::Unlock);
             } else {
                 error!("Error: Failed to save wallet file.");
             }
@@ -1051,11 +1121,18 @@ pub fn handle_event_request_airdrop(
     mut event_reader: EventReader<EventRequestAirdrop>,
     app_wallet: Res<AppWallet>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
             let task = pool.spawn(Compat::new(async move {
                 let devnet_url = "https://api.devnet.solana.com".to_string();
                 let client = RpcClient::new(devnet_url);
@@ -1120,7 +1197,12 @@ pub fn handle_event_check_sigs(
 
         if sigs.len() > 0 {
             let task_pool = IoTaskPool::get();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot check sigs, rpc_connection.rpc is None");
+                continue;
+            };
             let task = task_pool.spawn(Compat::new(async move {
                 match client.get_signature_statuses(&sigs).await {
                     Ok(signature_statuses) => {

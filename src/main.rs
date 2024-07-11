@@ -3,7 +3,7 @@ use std::{
 };
 
 use async_compat::{Compat, CompatExt};
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, window::RequestRedraw, winit::{UpdateMode, WinitSettings}};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, utils::hashbrown::Equivalent, window::RequestRedraw, winit::{UpdateMode, WinitSettings}};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use crossbeam_channel::{unbounded, Receiver};
@@ -21,14 +21,11 @@ use tasks::{
     handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskSendTx
 };
 use ui::{
-    components::{ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput},
-    screens::screen_base::spawn_base_screen,
-    ui_button_systems::{
+    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_mining_screen}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}}, ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
-    },
-    ui_sync_systems::{
+    }, ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
-    },
+    }
 };
 
 // screens::{
@@ -71,21 +68,33 @@ impl Default for AppConfig {
 }
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Copy)]
-pub enum GameState {
+pub enum AppScreenState {
     ConfigSetup,
     WalletSetup,
-    Locked,
+    Unlock,
+    Dashboard,
     Mining,
+    SettingsConfig,
+    SettingsWallet,
+    SettingsGeneral,
+}
+
+pub enum NavItemScreen {
+    Dashboard,
+    Mining,
+    SettingsConfig,
+    SettingsWallet,
+    SettingsGeneral,
 }
 
 fn main() {
-    let mut starting_state = GameState::ConfigSetup;
+    let mut starting_state = AppScreenState::ConfigSetup;
     let config_path = Path::new("config.toml");
     let config: Option<AppConfig> = if config_path.exists() {
         let config_string = fs::read_to_string(config_path).unwrap();
         let config = match toml::from_str(&config_string) {
             Ok(d) => {
-                starting_state = GameState::WalletSetup;
+                starting_state = AppScreenState::WalletSetup;
                 Some(d)
             }
             Err(_) => None,
@@ -95,10 +104,10 @@ fn main() {
         None
     };
 
-    if starting_state == GameState::WalletSetup {
+    if starting_state == AppScreenState::WalletSetup {
         let wallet_path = Path::new("save.data");
         if wallet_path.exists() {
-            starting_state = GameState::Locked;
+            starting_state = AppScreenState::Unlock;
         }
     }
 
@@ -128,12 +137,24 @@ fn main() {
             unfocused_mode: bevy::winit::UpdateMode::ReactiveLowPower { wait: REGULAR_DURATION },
         })
         .insert_resource(OreAppState {
-            config,
+            config: config.clone(),
             active_input_node: None,
         })
         .insert_resource(MinerStatusResource {
             miner_threads: threads,
             ..Default::default()
+        })
+        .insert_resource(RpcConnection {
+            rpc: None,
+            fetch_ui_data_timer: Timer::new(
+                Duration::from_millis(config.ui_fetch_interval),
+                TimerMode::Once,
+            ),
+        })
+        .insert_resource(AppWallet {
+            wallet: None,
+            sol_balance: 0.0,
+            ore_balance: 0.0,
         })
         .insert_resource(BussesResource {
             busses: vec![],
@@ -169,27 +190,43 @@ fn main() {
         .add_systems(Update, button_capture_text)
         .add_systems(Update, update_active_text_input_cursor_vis)
         .add_systems(Update, tick_button_cooldowns)
-        // .add_systems(OnEnter(GameState::ConfigSetup), setup_initial_setup_screen)
-        // .add_systems(
-        //     OnExit(GameState::ConfigSetup),
-        //     (
-        //         despawn_initial_setup_screen,
-        //     )
-        // )
-        // .add_systems(OnExit(GameState::ConfigSetup), despawn_locked_screen)
-        // .add_systems(OnEnter(GameState::WalletSetup), setup_wallet_setup_screen)
+        .add_systems(Update, nav_item_interactions)
+        .add_systems(Update, update_app_wallet_ui)
+        .add_systems(OnEnter(AppScreenState::SettingsConfig), setup_settings_config_screen)
+        .add_systems(
+            OnExit(AppScreenState::SettingsConfig),
+            (
+                despawn_settings_config_screen,
+            )
+        )
+        .add_systems(OnEnter(AppScreenState::SettingsGeneral), setup_settings_general_screen)
+        .add_systems(
+            OnExit(AppScreenState::SettingsGeneral),
+            (
+                despawn_settings_general_screen,
+            )
+        )
+        .add_systems(OnEnter(AppScreenState::SettingsWallet), setup_settings_wallet_screen)
+        .add_systems(
+            OnExit(AppScreenState::SettingsWallet),
+            (
+                despawn_settings_wallet_screen,
+            )
+        )
         // .add_systems(OnExit(GameState::WalletSetup), despawn_wallet_setup_screen)
-        // .add_systems(OnEnter(GameState::Locked), setup_locked_screen)
-        // .add_systems(OnExit(GameState::Locked), despawn_locked_screen)
-        // .add_systems(OnEnter(GameState::Mining), setup_mining_screen)
-        // .add_systems(OnExit(GameState::Mining), despawn_mining_screen)
+        .add_systems(OnEnter(AppScreenState::Dashboard), setup_dashboard_screen)
+        .add_systems(OnExit(AppScreenState::Dashboard), despawn_dashboard_screen)
+        .add_systems(OnEnter(AppScreenState::Unlock), setup_locked_screen)
+        .add_systems(OnExit(AppScreenState::Unlock), despawn_locked_screen)
+        .add_systems(OnEnter(AppScreenState::Mining), setup_mining_screen)
+        .add_systems(OnExit(AppScreenState::Mining), despawn_mining_screen)
         .add_systems(
             Update,
             (
                 button_save_config,
                 handle_event_save_config,
             )
-                .run_if(in_state(GameState::ConfigSetup)),
+                .run_if(in_state(AppScreenState::SettingsConfig)),
         )
         .add_systems(
             Update,
@@ -208,12 +245,12 @@ fn main() {
                     file_drop,
                 ),
             )
-                .run_if(in_state(GameState::WalletSetup)),
+                .run_if(in_state(AppScreenState::WalletSetup)),
         )
         .add_systems(
             Update,
             (button_unlock, handle_event_unlock, text_password_input)
-                .run_if(in_state(GameState::Locked)),
+                .run_if(in_state(AppScreenState::Unlock)),
         )
         .add_systems(
             Update,
@@ -252,7 +289,6 @@ fn main() {
                     handle_task_got_sig_checks,
                 ),
                 (
-                    update_app_wallet_ui,
                     update_busses_ui,
                     update_proof_account_ui,
                     update_treasury_account_ui,
@@ -263,12 +299,12 @@ fn main() {
                     tx_processor_result_checks,
                     tx_processors_send,
                     tx_processors_sigs_check,
-                    mining_screen_hotkeys,
+                    // mining_screen_hotkeys,
                     spin_spinner_icons,
                     read_accounts_update_channel,
                 ),
             )
-                .run_if(in_state(GameState::Mining)),
+                .run_if(is_mining_screen_with_some_wallet),
         )
         .run();
 }
@@ -288,6 +324,258 @@ fn setup_base_screen(
 
     // Setup the base screen
     spawn_base_screen(commands.reborrow(), asset_server, "Locked".to_string(), 0.0, 0.0, app_state.config.clone());
+}
+
+fn setup_mining_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    app_state: Res<OreAppState>,
+    app_wallet: Res<AppWallet>,
+    mut rpc_connection: ResMut<RpcConnection>,
+    query: Query<Entity, With<AppScreenParent>>,
+    mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
+) {
+
+    let base_screen_entity_id = query.get_single().unwrap();
+
+    let config = &app_state.config;
+
+    if rpc_connection.rpc.is_none() {
+        let new_rpc_connection = Arc::new(RpcClient::new_with_commitment(
+            config.rpc_url.clone(),
+            CommitmentConfig::confirmed(),
+        ));
+        rpc_connection.rpc = Some(new_rpc_connection);
+    }
+
+    if let Some(wallet) = &app_wallet.wallet {
+        let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+        parent.with_children(|parent| {
+            spawn_mining_screen(parent, asset_server, wallet.pubkey().to_string(), app_wallet.sol_balance, app_wallet.ore_balance, app_state.config.clone());
+        });
+        let task_pool = IoTaskPool::get();
+
+        let (sender, receiver) = unbounded::<AccountUpdatesData>();
+
+        let account_update_channel = AccountUpdatesChannel {
+            channel: receiver.clone(),
+        };
+
+
+        // TODO: use an entity here, we need to unsubscribe and cleanup this task when switching screens.
+        commands.insert_resource(account_update_channel);
+
+        let wallet_pubkey = wallet.pubkey().clone();
+
+        let ws_url = config.ws_url.clone();
+
+        task_pool.spawn(Compat::new(async move {
+            let sender = sender.clone();
+            let ps_client = PubsubClient::new(&ws_url).await;
+            if let Ok(ps_client) = ps_client {
+                let ps_client = Arc::new(ps_client);
+
+                let sender_c = sender.clone();
+                let ps_client_c = ps_client.clone();
+                task_pool.spawn(async move {
+                    let ps_client = ps_client_c;
+                    let sender = sender_c;
+                    let account_pubkey = proof_pubkey(wallet_pubkey);
+                    let pubsub =
+                        ps_client.account_subscribe(
+                            &account_pubkey,
+                        Some(
+                            RpcAccountInfoConfig {
+                                    encoding: Some(UiAccountEncoding::Base64),
+                                    data_slice: None,
+                                    commitment: Some(CommitmentConfig::confirmed()),
+                                    min_context_slot: None,
+                            }
+                        )).await;
+
+
+                        // TODO: store and use account_unsub as needed.
+                        if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
+                            loop {
+                                    if let Some(response) = account_sub_notifications.next().await {
+                                        let data = response.value.data.decode();
+                                        if let Some(data_bytes) = data {
+                                            let proof = Proof::try_from_bytes(&data_bytes);
+                                            if let Ok(proof) = proof {
+                                                let _ = sender.send(AccountUpdatesData::ProofData(*proof));
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                    }).detach();
+
+                let sender_c = sender.clone();
+                let ps_client_c = ps_client.clone();
+                task_pool.spawn(async move {
+                    let ps_client = ps_client_c;
+                    let sender = sender_c;
+                    let account_pubkey = ore::CONFIG_ADDRESS;
+                    let pubsub =
+                        ps_client.account_subscribe(
+                            &account_pubkey,
+                        Some(
+                            RpcAccountInfoConfig {
+                                    encoding: Some(UiAccountEncoding::Base64),
+                                    data_slice: None,
+                                    commitment: Some(CommitmentConfig::confirmed()),
+                                    min_context_slot: None,
+                            }
+                        )).await;
+
+                        if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
+                            loop {
+                                if let Some(response) = account_sub_notifications.next().await {
+                                    let data = response.value.data.decode();
+                                    if let Some(data_bytes) = data {
+                                        let ore_config = ore::state::Config::try_from_bytes(&data_bytes);
+                                        if let Ok(ore_config) = ore_config {
+                                            let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    }).detach();
+
+                let sender_c = sender.clone();
+                let ps_client_c = ps_client.clone();
+                task_pool.spawn(async move {
+                    let ps_client = ps_client_c;
+                    let sender = sender_c;
+                    let account_pubkey = ore::ID;
+                    let pubsub =
+                        ps_client.program_subscribe(
+                            &account_pubkey,
+                            Some(RpcProgramAccountsConfig {
+                                filters: Some(vec![RpcFilterType::DataSize(32)]),
+                                account_config: RpcAccountInfoConfig {
+                                    encoding: Some(UiAccountEncoding::Base64),
+                                    data_slice: None,
+                                    commitment: Some(CommitmentConfig::confirmed()),
+                                    min_context_slot: None,
+                                },
+                                with_context: None,
+                            })
+                        ).await;
+
+                        if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
+                            loop {
+                                if let Some(response) = account_sub_notifications.next().await {
+                                    let data = response.value.account.data.decode();
+                                    if let Some(data_bytes) = data {
+                                        let bus = Bus::try_from_bytes(&data_bytes);
+                                        if let Ok(bus) = bus {
+                                            let _ = sender.send(AccountUpdatesData::BusData(*bus));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }).detach();
+            } else {
+                error!("Failed to connect to pubsub client via wss");
+            }
+        })).detach();
+
+
+        event_writer.send(EventFetchUiDataFromRpc);
+    } else {
+        next_state.set(AppScreenState::Unlock);
+    }
+}
+
+fn setup_dashboard_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<Entity, With<AppScreenParent>>,
+) {
+    let base_screen_entity_id = query.get_single().unwrap();
+
+    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+
+    parent.with_children(|parent| {
+        spawn_dashboard_screen(parent, asset_server);
+    });
+
+}
+
+fn setup_settings_config_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    app_state: Res<OreAppState>,
+    query: Query<Entity, With<AppScreenParent>>,
+) {
+    let base_screen_entity_id = query.get_single().unwrap();
+
+    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+
+    parent.with_children(|parent| {
+        spawn_settings_config_screen(parent, asset_server, app_state.config.clone());
+    });
+
+}
+
+fn setup_settings_general_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<Entity, With<AppScreenParent>>,
+) {
+    let base_screen_entity_id = query.get_single().unwrap();
+
+    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+
+    parent.with_children(|parent| {
+        spawn_settings_general_screen(parent, asset_server);
+    });
+
+}
+
+fn setup_settings_wallet_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<Entity, With<AppScreenParent>>,
+) {
+    let base_screen_entity_id = query.get_single().unwrap();
+
+    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+
+    parent.with_children(|parent| {
+        spawn_settings_wallet_screen(parent, asset_server);
+    });
+
+}
+
+fn setup_locked_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    app_state: Res<OreAppState>,
+    mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
+    query: Query<Entity, With<AppScreenParent>>,
+) {
+
+    let base_screen_entity_id = query.get_single().unwrap();
+
+    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+
+    parent.with_children(|parent| {
+        spawn_locked_screen(parent, asset_server);
+    });
+}
+
+fn is_mining_screen_with_some_wallet(
+    app_wallet: Res<AppWallet>,
+    app_screen_state: Res<State<AppScreenState>>,
+) -> bool {
+    *app_screen_state == AppScreenState::Mining && app_wallet.wallet.is_some()
 }
 
 // Components
@@ -360,7 +648,7 @@ pub struct EntityTaskFetchUiData;
 // Resources
 #[derive(Resource)]
 pub struct AppWallet {
-    wallet: Arc<Keypair>,
+    wallet: Option<Arc<Keypair>>,
     sol_balance: f64,
     ore_balance: f64,
 }
@@ -437,7 +725,7 @@ impl Default for MinerStatusResource {
 
 #[derive(Resource)]
 pub struct RpcConnection {
-    rpc: Arc<RpcClient>,
+    rpc: Option<Arc<RpcClient>>,
     pub fetch_ui_data_timer: Timer,
 }
 
@@ -475,25 +763,25 @@ impl Default for LocalResetCooldown {
     }
 }
 
-pub fn mining_screen_hotkeys(
-    key_input: Res<ButtonInput<KeyCode>>,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
-    if key_input.just_pressed(KeyCode::KeyC) {
-        next_state.set(GameState::ConfigSetup);
-    }
-}
+// pub fn mining_screen_hotkeys(
+//     key_input: Res<ButtonInput<KeyCode>>,
+//     mut next_state: ResMut<NextState<GameState>>,
+// ) {
+//     if key_input.just_pressed(KeyCode::KeyC) {
+//         next_state.set(GameState::ConfigSetup);
+//     }
+// }
 
 pub fn trigger_rpc_calls_for_ui(
     time: Res<Time>,
     mut rpc_connection: ResMut<RpcConnection>,
     mut event_fetch_ui_rpc_data: EventWriter<EventFetchUiDataFromRpc>,
 ) {
-    // rpc_connection.fetch_ui_data_timer.tick(time.delta());
-    // if rpc_connection.fetch_ui_data_timer.just_finished() {
+    rpc_connection.fetch_ui_data_timer.tick(time.delta());
+    if rpc_connection.fetch_ui_data_timer.just_finished() {
         event_fetch_ui_rpc_data.send(EventFetchUiDataFromRpc);
         rpc_connection.fetch_ui_data_timer.reset();
-    // }
+    }
 }
 
 pub struct BackspaceTimer {
@@ -718,6 +1006,12 @@ pub fn tx_processors_send(
     time: Res<Time>
 ) {
     for (entity, mut tx_processor) in query_tx.iter_mut() {
+        let client = if let Some(rpc) = &rpc_connection.rpc {
+            rpc.clone()
+        } else {
+            error!("cannot process tx, rpc_connection.rpc is None");
+            continue;
+        };
         if tx_processor.status.as_str() != "SUCCESS" && tx_processor.status.as_str() != "FAILED" {
             let mut just_finished = false;
             {
@@ -732,7 +1026,6 @@ pub fn tx_processors_send(
             if just_finished {
                 if let Some(signed_tx) = &tx_processor.signed_tx {
                     let task_pool = IoTaskPool::get();
-                    let client = rpc_connection.rpc.clone();
                     let tx = signed_tx.clone();
                     let task = task_pool.spawn(Compat::new(async move {
                         let send_cfg = RpcSendTransactionConfig {

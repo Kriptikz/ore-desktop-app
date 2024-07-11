@@ -5,6 +5,7 @@ use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 use chrono::DateTime;
 use ore::ONE_DAY;
+use solana_sdk::signer::Signer;
 
 use crate::ore_utils::get_ore_decimals;
 use crate::utils::{get_unix_timestamp, human_bytes, shorten_string};
@@ -45,6 +46,7 @@ use super::components::TextTreasuryBalance;
 use super::components::TextTreasuryLastResetAt;
 use super::components::TextTreasuryRewardRate;
 use super::components::TextWalletOreBalance;
+use super::components::TextWalletPubkey;
 use super::components::TextWalletSolBalance;
 
 pub fn mouse_scroll(
@@ -79,15 +81,37 @@ pub fn update_app_wallet_ui(
     mut set: ParamSet<(
         Query<&mut Text, With<TextWalletSolBalance>>,
         Query<&mut Text, With<TextWalletOreBalance>>,
+        Query<&mut Text, With<TextWalletPubkey>>,
     )>,
 ) {
-    let mut text_sol_balance_query = set.p0();
-    let mut text_sol_balance = text_sol_balance_query.single_mut();
-    text_sol_balance.sections[0].value = app_wallet.sol_balance.to_string() + " SOL";
+    if let Some(wallet) = &app_wallet.wallet {
+        let mut text_sol_balance_query = set.p0();
+        let mut text_sol_balance = text_sol_balance_query.single_mut();
+        text_sol_balance.sections[0].value = app_wallet.sol_balance.to_string() + " SOL";
 
-    let mut text_ore_balance_query = set.p1();
-    let mut text_ore_balance = text_ore_balance_query.single_mut();
-    text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORE";
+        let mut text_ore_balance_query = set.p1();
+        let mut text_ore_balance = text_ore_balance_query.single_mut();
+        text_ore_balance.sections[0].value = app_wallet.ore_balance.to_string() + " ORE";
+
+        let mut text_wallet_pubkey_query = set.p2();
+        let mut text_wallet_pubkey = text_wallet_pubkey_query.single_mut();
+
+        let pubkey = shorten_string(wallet.pubkey().to_string(), 10);
+        text_wallet_pubkey.sections[0].value = pubkey;
+    } else {
+        let mut text_sol_balance_query = set.p0();
+        let mut text_sol_balance = text_sol_balance_query.single_mut();
+        text_sol_balance.sections[0].value = "0.0 SOL".to_string();
+
+        let mut text_ore_balance_query = set.p1();
+        let mut text_ore_balance = text_ore_balance_query.single_mut();
+        text_ore_balance.sections[0].value = "0.0 ORE".to_string();
+
+        let mut text_wallet_pubkey_query = set.p2();
+        let mut text_wallet_pubkey = text_wallet_pubkey_query.single_mut();
+
+        text_wallet_pubkey.sections[0].value = "Locked".to_string();
+    }
 }
 
 pub fn update_busses_ui(

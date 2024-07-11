@@ -246,7 +246,6 @@ pub fn spawn_copyable_text(
                         color: Color::rgb(0.9, 0.9, 0.9),
                     },
                 ),
-                TextWalletPubkey,
                 Name::new("WalletPubkeyText"),
             ));
             parent
@@ -309,7 +308,6 @@ pub fn spawn_web_link_icon(
                         color: Color::rgb(0.9, 0.9, 0.9),
                     },
                 ),
-                TextWalletPubkey,
                 Name::new("WalletPubkeyText"),
             ));
             parent
@@ -461,7 +459,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                         ..default()
                     },
                     UiImage::new(
-                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                            asset_server.load(CONTENT_BACKGROUND_SMALL),
                         ),
                     Name::new("Mining App Screen Top Section Top"),
                 )).with_children(|parent| {
@@ -508,7 +506,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                         ..default()
                     },
                     UiImage::new(
-                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                            asset_server.load(CONTENT_BACKGROUND_SMALL),
                         ),
                     Name::new("Mining App Screen Top Section Top"),
                 )).with_children(|parent| {
@@ -555,7 +553,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                         ..default()
                     },
                     UiImage::new(
-                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                            asset_server.load(CONTENT_BACKGROUND_SMALL),
                         ),
                     Name::new("Mining App Screen Top Section Top"),
                 )).with_children(|parent| {
@@ -568,7 +566,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                 color: hex_dark_mode_text_gray().into()
                             },
                         ),
-                        Name::new("TextTreasuryBalance"),
+                        Name::new("TextLastResetAt"),
                     ));
                     parent.spawn((
                         TextBundle::from_section(
@@ -598,15 +596,15 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
             )).with_children(|parent| {
                 parent.spawn((
                     NodeBundle {
-                        background_color: hex_dark_mode_nav_title().into(),
+                        background_color: hex_dark_mode_background().into(),
                         style: Style {
                             width: Val::Percent(25.0),
                             height: Val::Percent(90.0),
-                            justify_content: JustifyContent::SpaceBetween,
-                            align_items: AlignItems::Start,
+                            align_items: AlignItems::Center,
                             flex_direction: FlexDirection::Column,
+                            justify_content: JustifyContent::SpaceAround,
                             padding: UiRect {
-                                top: Val::Px(5.0),
+                                top: Val::Px(12.0),
                                 bottom: Val::Px(5.0),
                                 left: Val::Px(8.0),
                                 right: Val::Px(0.0),
@@ -616,13 +614,558 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                         ..default()
                     },
                     UiImage::new(
-                            asset_server.load(MINE_TOGGLE_BACKGROUND),
+                            asset_server.load(CONTENT_BACKGROUND_MEDIUM),
                         ),
-                    Name::new("Mining App Screen Top Section Top"),
+                    Name::new("Mining App Screen Top Section Bottom"),
                 )).with_children(|parent| {
+                    // Title with tooltip icon
                     parent.spawn((
                         TextBundle::from_section(
-                            "Treasury",
+                            "Busses",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextBussesTitle"),
+                    ));
+
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 1"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "1: 0.59323254732",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus1"),
+                        ));
+                    });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_background().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 2"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "2: 0.64323254732",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus2"),
+                        ));
+                    });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 3"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "3: 0.438873254732",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus3"),
+                        ));
+                    });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_background().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 4"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "4: 0.59323254732",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus4"),
+                        ));
+                    });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 5"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "5: 0.59323254732",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus5"),
+                        ));
+                    });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_background().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 6"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "6: 0.59323254732",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus6"),
+                        ));
+                    });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 7"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "7: 0.59323254732",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus7"),
+                        ));
+                    });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_background().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(10.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Row,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Busses Node Bus 8"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "8: 0.650000000",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextBus8"),
+                        ));
+                    });
+
+                });
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_background().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            align_items: AlignItems::Center,
+                            flex_direction: FlexDirection::Column,
+                            justify_content: JustifyContent::SpaceAround,
+                            padding: UiRect {
+                                top: Val::Px(12.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(CONTENT_BACKGROUND_MEDIUM),
+                        ),
+                    Name::new("Mining App Screen Top Section Bottom"),
+                )).with_children(|parent| {
+                    // Title with tooltip icon
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Status",
+                            TextStyle {
+                                font: asset_server.load(FONT_REGULAR),
+                                font_size: FONT_SIZE_MEDIUM,
+                                color: hex_dark_mode_text_gray().into()
+                            },
+                        ),
+                        Name::new("TextTitleStatus"),
+                    ));
+
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Status Current Time Node"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Current Time UTC",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleCurrentTime"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "2024-00-00 00:00:00 UTC",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextCurrentTime"),
+                        ));
+                    });
+
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Status Threads Node"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Threads",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleThreads"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "1",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextThreads"),
+                        ));
+                    });
+
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Status CPU Usage Node"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "CPU Usage",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleCpuUsage"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "144.34 % / 400 %",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTotalCpuUsage"),
+                        ));
+                    });
+
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Status RAM Usage Node"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "RAM Usage",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleRamUsage"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "43 % / 100 %",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextRamUsage"),
+                        ));
+                    });
+                });
+                parent.spawn((
+                    NodeBundle {
+                        background_color: hex_dark_mode_background().into(),
+                        style: Style {
+                            width: Val::Percent(25.0),
+                            height: Val::Percent(90.0),
+                            align_items: AlignItems::Center,
+                            flex_direction: FlexDirection::Column,
+                            justify_content: JustifyContent::SpaceAround,
+                            padding: UiRect {
+                                top: Val::Px(12.0),
+                                bottom: Val::Px(5.0),
+                                left: Val::Px(8.0),
+                                right: Val::Px(0.0),
+                            },
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    UiImage::new(
+                            asset_server.load(CONTENT_BACKGROUND_MEDIUM),
+                        ),
+                    Name::new("Mining App Screen Top Section Bottom"),
+                )).with_children(|parent| {
+                    // Title with tooltip icon
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "Proof Account",
                             TextStyle {
                                 font: asset_server.load(FONT_REGULAR),
                                 font_size: FONT_SIZE_MEDIUM,
@@ -631,111 +1174,198 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                         ),
                         Name::new("TextTreasuryBalance"),
                     ));
+
+                    // Current Challenge
                     parent.spawn((
-                        TextBundle::from_section(
-                            "420.696969 ORE",
-                            TextStyle {
-                                font: asset_server.load(FONT_REGULAR),
-                                font_size: FONT_SIZE_MEDIUM,
-                                color: hex_dark_mode_text_gray().into()
-                            },
-                        ),
-                        Name::new("TextTreasuryOreBalance"),
-                    ));
-                });
-                parent.spawn((
-                    NodeBundle {
-                        background_color: hex_dark_mode_nav_title().into(),
-                        style: Style {
-                            width: Val::Percent(25.0),
-                            height: Val::Percent(90.0),
-                            justify_content: JustifyContent::SpaceBetween,
-                            align_items: AlignItems::Start,
-                            flex_direction: FlexDirection::Column,
-                            padding: UiRect {
-                                top: Val::Px(5.0),
-                                bottom: Val::Px(5.0),
-                                left: Val::Px(8.0),
-                                right: Val::Px(0.0),
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
                             },
                             ..default()
                         },
-                        ..default()
-                    },
-                    UiImage::new(
-                            asset_server.load(MINE_TOGGLE_BUTTON),
-                        ),
-                    Name::new("Mining App Screen Top Section Top"),
-                )).with_children(|parent| {
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Proof Account Current Challenge Node"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Current Challenge",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleCurrentChallenge"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Adsakjlfdkslajdcliusdkcjlsccc",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextCurrentChallenge"),
+                        ));
+                    });
+
+                    // Last Hash At
                     parent.spawn((
-                        TextBundle::from_section(
-                            "Base Reward Rate",
-                            TextStyle {
-                                font: asset_server.load(FONT_REGULAR),
-                                font_size: FONT_SIZE_MEDIUM,
-                                color: hex_dark_mode_text_gray().into()
-                            },
-                        ),
-                        Name::new("TextBaseRewardRate"),
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "0.000032389 ORE",
-                            TextStyle {
-                                font: asset_server.load(FONT_REGULAR),
-                                font_size: FONT_SIZE_MEDIUM,
-                                color: hex_dark_mode_text_gray().into()
-                            },
-                        ),
-                        Name::new("TextBaseRewardRate"),
-                    ));
-                });
-                parent.spawn((
-                    NodeBundle {
-                        background_color: hex_dark_mode_nav_title().into(),
-                        style: Style {
-                            width: Val::Percent(25.0),
-                            height: Val::Percent(90.0),
-                            justify_content: JustifyContent::SpaceBetween,
-                            align_items: AlignItems::Start,
-                            flex_direction: FlexDirection::Column,
-                            padding: UiRect {
-                                top: Val::Px(5.0),
-                                bottom: Val::Px(5.0),
-                                left: Val::Px(8.0),
-                                right: Val::Px(0.0),
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
                             },
                             ..default()
                         },
-                        ..default()
-                    },
-                    UiImage::new(
-                            asset_server.load(MINE_TOGGLE_BUTTON),
-                        ),
-                    Name::new("Mining App Screen Top Section Top"),
-                )).with_children(|parent| {
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Proof Account Last Hash At"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Last Hash At",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleLastHashAt"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "2024-00-00 00:00:00 UTC",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextLastHashAt"),
+                        ));
+                    });
+
+                    // Total Hashes
                     parent.spawn((
-                        TextBundle::from_section(
-                            "Last Reset At",
-                            TextStyle {
-                                font: asset_server.load(FONT_REGULAR),
-                                font_size: FONT_SIZE_MEDIUM,
-                                color: hex_dark_mode_text_gray().into()
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
                             },
-                        ),
-                        Name::new("TextTreasuryBalance"),
-                    ));
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Proof Account Total Hashes"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Total Hashes",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleTotalHashes"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "69",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTotalHashes"),
+                        ));
+                    });
+
+                    // Staked
                     parent.spawn((
-                        TextBundle::from_section(
-                            "2024-00-00 00:00:00 UTC",
-                            TextStyle {
-                                font: asset_server.load(FONT_REGULAR),
-                                font_size: FONT_SIZE_MEDIUM,
-                                color: hex_dark_mode_text_gray().into()
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(15.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
                             },
-                        ),
-                        Name::new("TextLastResetAt"),
-                    ));
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Proof Account Staked"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Staked",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleStaked"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "9001.60420",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextStaked"),
+                        ));
+                    });
                 });
             });
         });

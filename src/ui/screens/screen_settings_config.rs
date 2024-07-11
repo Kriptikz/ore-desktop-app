@@ -2,17 +2,19 @@ use bevy::prelude::*;
 
 use crate::{ui::{
     components::{
-        BaseScreenNode, ButtonCaptureTextInput, ButtonSaveConfig, InitialSetupScreenNode,
-        TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval,
-        TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput,
+        BaseScreenNode, ButtonCaptureTextInput, ButtonSaveConfig, InitialSetupScreenNode, SettingsConfigScreenNode, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextCursor, TextInput
     },
     styles::{
-        BUTTON, BUTTON_SAVE_CONFIG, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_ROBOTO_MEDIUM, FONT_SIZE, FONT_SIZE_LARGE, FONT_SIZE_TITLE, MENU_BACKGROUND, SCREEN_BACKGROUND_1, SETTINGS_ICON, TITLE_BACKGROUND, TREASURY_BACKGROUND
+        BUTTON, BUTTON_SAVE_CONFIG, CURRENT_TX_STATUS_BACKGROUND, FONT_REGULAR, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, MENU_BACKGROUND, SCREEN_BACKGROUND_1, SETTINGS_ICON, TITLE_BACKGROUND, TREASURY_BACKGROUND
     },
 }, AppConfig};
 
-pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>, config: AppConfig) {
-    commands
+pub fn spawn_settings_config_screen(
+    parent: &mut ChildBuilder,
+    asset_server: Res<AssetServer>,
+    config: AppConfig
+) {
+    parent
         .spawn((
             NodeBundle {
                 style: Style {
@@ -24,9 +26,8 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                 background_color: Color::BLACK.into(),
                 ..default()
             },
-            Name::new("Screen Node"),
-            BaseScreenNode,
-            InitialSetupScreenNode,
+            Name::new("App Screen Node"),
+            SettingsConfigScreenNode,
         ))
         .with_children(|parent| {
             // Top Left Ore Logo
@@ -150,8 +151,8 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                             parent.spawn(TextBundle::from_section(
                                 "Config Setup",
                                 TextStyle {
-                                    font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                                    font_size: FONT_SIZE_TITLE,
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
                                     color: Color::rgb(0.9, 0.9, 0.9),
                                 },
                             ));
@@ -212,32 +213,32 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                             parent.spawn(TextBundle::from_section(
                                                 "RPC URL: ",
                                                 TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                                                    font_size: FONT_SIZE_TITLE,
+                                                    font: asset_server.load(FONT_REGULAR),
+                                                    font_size: FONT_SIZE_MEDIUM,
                                                     color: Color::rgb(0.9, 0.9, 0.9),
                                                 },
                                             ));
                                             parent.spawn(TextBundle::from_section(
                                                 "Threads: ",
                                                 TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                                                    font_size: FONT_SIZE_TITLE,
+                                                    font: asset_server.load(FONT_REGULAR),
+                                                    font_size: FONT_SIZE_MEDIUM,
                                                     color: Color::rgb(0.9, 0.9, 0.9),
                                                 },
                                             ));
                                             parent.spawn(TextBundle::from_section(
                                                 "UI Fetch Interval (ms): ",
                                                 TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                                                    font_size: FONT_SIZE_TITLE,
+                                                    font: asset_server.load(FONT_REGULAR),
+                                                    font_size: FONT_SIZE_MEDIUM,
                                                     color: Color::rgb(0.9, 0.9, 0.9),
                                                 },
                                             ));
                                             parent.spawn(TextBundle::from_section(
                                                 "Tx Send Interval (ms): ",
                                                 TextStyle {
-                                                    font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                                                    font_size: FONT_SIZE_TITLE,
+                                                    font: asset_server.load(FONT_REGULAR),
+                                                    font_size: FONT_SIZE_MEDIUM,
                                                     color: Color::rgb(0.9, 0.9, 0.9),
                                                 },
                                             ));
@@ -287,7 +288,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextBundle::from_section(
                                                     "",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO),
+                                                        font: asset_server.load(FONT_REGULAR),
                                                         font_size: FONT_SIZE_LARGE,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
@@ -338,7 +339,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextBundle::from_section(
                                                     "",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO),
+                                                        font: asset_server.load(FONT_REGULAR),
                                                         font_size: FONT_SIZE_LARGE,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
@@ -388,7 +389,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextBundle::from_section(
                                                     "",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO),
+                                                        font: asset_server.load(FONT_REGULAR),
                                                         font_size: FONT_SIZE_LARGE,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
@@ -438,7 +439,7 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                                                 TextBundle::from_section(
                                                     "",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO),
+                                                        font: asset_server.load(FONT_REGULAR),
                                                         font_size: FONT_SIZE_LARGE,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
@@ -508,4 +509,13 @@ pub fn spawn_initial_setup_screen(mut commands: Commands, asset_server: Res<Asse
                         });
                 });
         });
+}
+
+
+pub fn despawn_settings_config_screen(
+    mut commands: Commands,
+    query: Query<Entity, With<SettingsConfigScreenNode>>,
+) {
+    let screen_node = query.get_single().unwrap();
+    commands.entity(screen_node).despawn_recursive();
 }

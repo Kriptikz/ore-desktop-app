@@ -83,6 +83,8 @@ pub static NAV_ARROW_ICON: &str = "design_2/nav_arrow_icon.png";
 // Backgrounds
 pub static MINE_TOGGLE_BACKGROUND: &str = "design_2/mine_toggle_background.png";
 pub static MINE_TOGGLE_BUTTON: &str = "design_2/mine_toggle_button.png";
+pub static CONTENT_BACKGROUND_SMALL: &str = "design_2/content_background_small.png";
+pub static CONTENT_BACKGROUND_MEDIUM: &str = "design_2/content_background_medium.png";
 
 
 // Hex Colors
