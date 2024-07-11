@@ -17,7 +17,7 @@ use crate::{
 };
 
 use crate::ui::
-    components::{AppScreenParent, BaseScreenNode, NavItem, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance}
+    components::{AppScreenParent, BaseScreenNode, NavItem, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance, TxPopUpArea}
     
 ;
 
@@ -52,6 +52,43 @@ pub fn spawn_base_screen(
             Name::new("Base Screen Node"),
             BaseScreenNode,
         )).with_children(|parent| {
+            // pop-up area
+            parent.spawn((
+                NodeBundle {
+                    z_index: ZIndex::Global(15),
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        padding: UiRect {
+                            top: Val::Px(10.0),
+                            right: Val::Px(25.0),
+                            left: Val::Px(0.0),
+                            bottom: Val::Px(10.0),
+                        },
+                        position_type: PositionType::Absolute,
+                        align_content: AlignContent::End,
+                        justify_content: JustifyContent::End,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("TxPopUpScreen Node"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    NodeBundle {
+                        style: Style {
+                            width: Val::Px(250.0),
+                            height: Val::Percent(100.0),
+                            flex_direction: FlexDirection::ColumnReverse,
+                            row_gap: Val::Px(10.0),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    TxPopUpArea,
+                    Name::new("TxPopUpArea"),
+                ));
+            });
             parent.spawn((
                 NodeBundle {
                     border_color: Color::PURPLE.into(),

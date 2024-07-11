@@ -146,43 +146,6 @@ pub fn spawn_mining_screen(
                     });
                 });
             }
-            // pop-up area
-            parent.spawn((
-                NodeBundle {
-                    z_index: ZIndex::Global(15),
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        padding: UiRect {
-                            top: Val::Px(10.0),
-                            right: Val::Px(25.0),
-                            left: Val::Px(0.0),
-                            bottom: Val::Px(10.0),
-                        },
-                        position_type: PositionType::Absolute,
-                        align_content: AlignContent::End,
-                        justify_content: JustifyContent::End,
-                        ..default()
-                    },
-                    ..default()
-                },
-                Name::new("TxPopUpScreen Node"),
-            )).with_children(|parent| {
-                parent.spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(250.0),
-                            height: Val::Percent(100.0),
-                            flex_direction: FlexDirection::ColumnReverse,
-                            row_gap: Val::Px(10.0),
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    TxPopUpArea,
-                    Name::new("TxPopUpArea"),
-                ));
-            });
             // Top Left Ore Logo
             parent
                 .spawn(NodeBundle {
