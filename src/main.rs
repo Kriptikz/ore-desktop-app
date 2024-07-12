@@ -3,25 +3,27 @@ use std::{
 };
 
 use async_compat::{Compat, CompatExt};
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, utils::hashbrown::Equivalent, window::RequestRedraw, winit::{UpdateMode, WinitSettings}};
+use async_std::task::sleep;
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, utils::{hashbrown::Equivalent, HashMap}, window::RequestRedraw, winit::{UpdateMode, WinitSettings}};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use crossbeam_channel::{unbounded, Receiver};
 use events::*;
-use ore_api::state::{Bus, Proof, Treasury};
+use ore_api::{consts::TOKEN_DECIMALS, state::{Bus, Proof, Treasury}};
 use ore_utils::{proof_pubkey, ORE_TOKEN_DECIMALS, AccountDeserialize};
 use serde::{Deserialize, Serialize};
-use solana_account_decoder::UiAccountEncoding;
+use solana_account_decoder::{parse_token::UiTokenAccount, UiAccountEncoding};
 use solana_client::{nonblocking::{pubsub_client::PubsubClient, rpc_client::RpcClient}, rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig}, rpc_filter::RpcFilterType, rpc_response::{Response, RpcKeyedAccount}};
 use solana_sdk::{
-    commitment_config::{CommitmentConfig, CommitmentLevel}, signature::{Keypair, Signature}, signer::Signer, transaction::Transaction, keccak::Hash as KeccakHash
+    commitment_config::{CommitmentConfig, CommitmentLevel}, keccak::Hash as KeccakHash, program_pack::Pack, pubkey::Pubkey, signature::{Keypair, Signature}, signer::Signer, transaction::Transaction
 };
 use solana_transaction_status::UiTransactionEncoding;
+use spl_token::state::GenericTokenAccount;
 use tasks::{
     handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskSendTx
 };
 use ui::{
-    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_mining_screen}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}}, ui_button_systems::{
+    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}}, ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     }, ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -160,6 +162,9 @@ fn main() {
             busses: vec![],
             current_bus_id: 0,
         })
+        .insert_resource(MiningProofsResource {
+            proofs: HashMap::new(),
+        })
         .init_resource::<ProofAccountResource>()
         .register_type::<ProofAccountResource>()
         .init_resource::<TreasuryAccountResource>()
@@ -192,6 +197,38 @@ fn main() {
         .add_systems(Update, tick_button_cooldowns)
         .add_systems(Update, nav_item_interactions)
         .add_systems(Update, update_app_wallet_ui)
+        .add_systems(Update, 
+            (
+                (
+                    button_start_stop_mining,
+                    spin_spinner_icons,
+                ),
+                (
+                    handle_event_start_stop_mining_clicked,
+                    handle_event_submit_hash_tx,
+                    handle_event_tx_result,
+                    handle_event_fetch_ui_data_from_rpc,
+                    handle_event_register_wallet,
+                    handle_event_mine_for_hash,
+                    handle_event_check_sigs,
+                ),
+                (
+                    task_update_app_wallet_sol_balance,
+                    task_generate_hash,
+                    task_register_wallet,
+                    handle_task_process_tx_result,
+                    handle_task_send_tx_result,
+                    handle_task_tx_sig_check_results,
+                    handle_task_got_sig_checks,
+                ),
+                (
+                    tx_processor_result_checks,
+                    tx_processors_send,
+                    tx_processors_sigs_check,
+                    read_accounts_update_channel,
+                )
+            ).run_if(run_if_has_some_wallet)
+        )
         .add_systems(OnEnter(AppScreenState::SettingsConfig), setup_settings_config_screen)
         .add_systems(
             OnExit(AppScreenState::SettingsConfig),
@@ -259,7 +296,6 @@ fn main() {
                 (
                     button_lock,
                     button_copy_text,
-                    button_start_stop_mining,
                     button_claim_ore_rewards,
                     button_stake_ore,
                     button_auto_scroll,
@@ -267,26 +303,10 @@ fn main() {
                     button_request_airdrop
                 ),
                 (
-                    handle_event_start_stop_mining_clicked,
-                    handle_event_submit_hash_tx,
-                    handle_event_tx_result,
-                    handle_event_fetch_ui_data_from_rpc,
-                    handle_event_register_wallet,
-                    handle_event_mine_for_hash,
                     handle_event_claim_ore_rewards,
                     handle_event_stake_ore,
                     handle_event_lock,
                     handle_event_request_airdrop,
-                    handle_event_check_sigs,
-                ),
-                (
-                    task_update_app_wallet_sol_balance,
-                    task_generate_hash,
-                    task_register_wallet,
-                    handle_task_process_tx_result,
-                    handle_task_send_tx_result,
-                    handle_task_tx_sig_check_results,
-                    handle_task_got_sig_checks,
                 ),
                 (
                     update_busses_ui,
@@ -296,12 +316,7 @@ fn main() {
                 ),
                 (
                     mouse_scroll,
-                    tx_processor_result_checks,
-                    tx_processors_send,
-                    tx_processors_sigs_check,
                     // mining_screen_hotkeys,
-                    spin_spinner_icons,
-                    read_accounts_update_channel,
                 ),
             )
                 .run_if(is_mining_screen_with_some_wallet),
@@ -341,153 +356,130 @@ fn setup_mining_screen(
 
     let config = &app_state.config;
 
-    if rpc_connection.rpc.is_none() {
-        let new_rpc_connection = Arc::new(RpcClient::new_with_commitment(
-            config.rpc_url.clone(),
-            CommitmentConfig::confirmed(),
-        ));
-        rpc_connection.rpc = Some(new_rpc_connection);
-    }
-
     if let Some(wallet) = &app_wallet.wallet {
-        let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
-        parent.with_children(|parent| {
-            spawn_mining_screen(parent, asset_server, wallet.pubkey().to_string(), app_wallet.sol_balance, app_wallet.ore_balance, app_state.config.clone());
-        });
-        let task_pool = IoTaskPool::get();
+        if rpc_connection.rpc.is_none() {
+            let new_rpc_connection = Arc::new(RpcClient::new_with_commitment(
+                config.rpc_url.clone(),
+                CommitmentConfig::confirmed(),
+            ));
+            rpc_connection.rpc = Some(new_rpc_connection);
+            let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+            parent.with_children(|parent| {
+                spawn_app_screen_mining(parent, &asset_server);
+            });
+            let task_pool = IoTaskPool::get();
 
-        let (sender, receiver) = unbounded::<AccountUpdatesData>();
+            let (sender, receiver) = unbounded::<AccountUpdatesData>();
 
-        let account_update_channel = AccountUpdatesChannel {
-            channel: receiver.clone(),
-        };
-
-
-        // TODO: use an entity here, we need to unsubscribe and cleanup this task when switching screens.
-        commands.insert_resource(account_update_channel);
-
-        let wallet_pubkey = wallet.pubkey().clone();
-
-        let ws_url = config.ws_url.clone();
-
-        task_pool.spawn(Compat::new(async move {
-            let sender = sender.clone();
-            let ps_client = PubsubClient::new(&ws_url).await;
-            if let Ok(ps_client) = ps_client {
-                let ps_client = Arc::new(ps_client);
-
-                let sender_c = sender.clone();
-                let ps_client_c = ps_client.clone();
-                task_pool.spawn(async move {
-                    let ps_client = ps_client_c;
-                    let sender = sender_c;
-                    let account_pubkey = proof_pubkey(wallet_pubkey);
-                    let pubsub =
-                        ps_client.account_subscribe(
-                            &account_pubkey,
-                        Some(
-                            RpcAccountInfoConfig {
-                                    encoding: Some(UiAccountEncoding::Base64),
-                                    data_slice: None,
-                                    commitment: Some(CommitmentConfig::confirmed()),
-                                    min_context_slot: None,
-                            }
-                        )).await;
+            let account_update_channel = AccountUpdatesChannel {
+                channel: receiver.clone(),
+            };
 
 
-                        // TODO: store and use account_unsub as needed.
-                        if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
-                            loop {
+            // TODO: use an entity here, we need to unsubscribe and cleanup this task when switching screens.
+            commands.insert_resource(account_update_channel);
+
+            let wallet_pubkey = wallet.pubkey().clone();
+
+            let ws_url = config.ws_url.clone();
+
+            task_pool.spawn(Compat::new(async move {
+                let sender = sender.clone();
+
+                let mut ps_client = PubsubClient::new(&ws_url).await;
+                let mut attempts = 0;
+                
+                while ps_client.is_err() && attempts < 3 {
+                    error!("Failed to connect to websocket, retrying...");
+                    ps_client = PubsubClient::new(&ws_url).await;
+                    sleep(Duration::from_millis(1000)).await;
+                    attempts += 1;
+                }
+
+                if let Ok(ps_client) = ps_client {
+                    let ps_client = Arc::new(ps_client);
+                    let sender_c = sender.clone();
+                    let ps_client_c = ps_client.clone();
+                    task_pool.spawn(async move {
+                        let ps_client = ps_client_c;
+                        let sender = sender_c;
+                        let account_pubkey = ore_api::ID;
+                        let pubsub =
+                            ps_client.program_subscribe(
+                                &account_pubkey,
+                                Some(RpcProgramAccountsConfig {
+                                    //filters: Some(vec![RpcFilterType::DataSize(32)]),
+                                    filters: None,
+                                    account_config: RpcAccountInfoConfig {
+                                        encoding: Some(UiAccountEncoding::Base64),
+                                        data_slice: None,
+                                        commitment: Some(CommitmentConfig::confirmed()),
+                                        min_context_slot: None,
+                                    },
+                                    with_context: None,
+                                })
+                            ).await;
+
+                            if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
+                                loop {
                                     if let Some(response) = account_sub_notifications.next().await {
-                                        let data = response.value.data.decode();
+
+                                        let data = response.value.account.data.decode();
                                         if let Some(data_bytes) = data {
-                                            let proof = Proof::try_from_bytes(&data_bytes);
-                                            if let Ok(proof) = proof {
+                                            if let Ok(bus) = Bus::try_from_bytes(&data_bytes) {
+                                                let _ = sender.send(AccountUpdatesData::BusData(*bus));
+                                            }
+                                            if let Ok(ore_config) = ore_api::state::Config::try_from_bytes(&data_bytes) {
+                                                let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
+                                            }
+                                            if let Ok(proof) = Proof::try_from_bytes(&data_bytes) {
                                                 let _ = sender.send(AccountUpdatesData::ProofData(*proof));
                                             }
                                         }
                                     }
+                                }
                             }
-                        }
-                    }).detach();
+                        }).detach();
 
-                let sender_c = sender.clone();
-                let ps_client_c = ps_client.clone();
-                task_pool.spawn(async move {
-                    let ps_client = ps_client_c;
-                    let sender = sender_c;
-                    let account_pubkey = ore_api::consts::CONFIG_ADDRESS;
-                    let pubsub =
-                        ps_client.account_subscribe(
+                    let sender_c = sender.clone();
+                    let ps_client_c = ps_client.clone();
+                    task_pool.spawn(async move {
+                        let ps_client = ps_client_c;
+                        let sender = sender_c;
+                        let account_pubkey = ore_api::consts::TREASURY_TOKENS_ADDRESS;
+                        let pubsub = ps_client.account_subscribe(
                             &account_pubkey,
                         Some(
-                            RpcAccountInfoConfig {
-                                    encoding: Some(UiAccountEncoding::Base64),
-                                    data_slice: None,
-                                    commitment: Some(CommitmentConfig::confirmed()),
-                                    min_context_slot: None,
-                            }
-                        )).await;
+                                RpcAccountInfoConfig {
+                                        encoding: Some(UiAccountEncoding::Base64),
+                                        data_slice: None,
+                                        commitment: Some(CommitmentConfig::confirmed()),
+                                        min_context_slot: None,
+                                }
+                            )).await;
 
-                        if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
-                            loop {
-                                if let Some(response) = account_sub_notifications.next().await {
-                                    let data = response.value.data.decode();
-                                    if let Some(data_bytes) = data {
-                                        let ore_config = ore_api::state::Config::try_from_bytes(&data_bytes);
-                                        if let Ok(ore_config) = ore_config {
-                                            let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
-                                            continue;
+                            if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
+                                loop {
+                                    if let Some(response) = account_sub_notifications.next().await {
+
+                                        let data = response.value.data.decode();
+                                        if let Some(data_bytes) = data {
+                                            if let Ok(token_account) = spl_token::state::Account::unpack(&data_bytes) {
+                                                let _ = sender.send(AccountUpdatesData::TreasuryBalanceData(token_account.amount));
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-
-                    }).detach();
-
-                let sender_c = sender.clone();
-                let ps_client_c = ps_client.clone();
-                task_pool.spawn(async move {
-                    let ps_client = ps_client_c;
-                    let sender = sender_c;
-                    let account_pubkey = ore_api::ID;
-                    let pubsub =
-                        ps_client.program_subscribe(
-                            &account_pubkey,
-                            Some(RpcProgramAccountsConfig {
-                                filters: Some(vec![RpcFilterType::DataSize(32)]),
-                                account_config: RpcAccountInfoConfig {
-                                    encoding: Some(UiAccountEncoding::Base64),
-                                    data_slice: None,
-                                    commitment: Some(CommitmentConfig::confirmed()),
-                                    min_context_slot: None,
-                                },
-                                with_context: None,
-                            })
-                        ).await;
-
-                        if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
-                            loop {
-                                if let Some(response) = account_sub_notifications.next().await {
-                                    let data = response.value.account.data.decode();
-                                    if let Some(data_bytes) = data {
-                                        let bus = Bus::try_from_bytes(&data_bytes);
-                                        if let Ok(bus) = bus {
-                                            let _ = sender.send(AccountUpdatesData::BusData(*bus));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }).detach();
-            } else {
-                error!("Failed to connect to pubsub client via wss");
-            }
-        })).detach();
+                        }).detach();
+                } else {
+                    error!("Failed to connect to pubsub client via wss");
+                }
+            })).detach();
 
 
-        event_writer.send(EventFetchUiDataFromRpc);
+            event_writer.send(EventFetchUiDataFromRpc);
+        }
     } else {
         next_state.set(AppScreenState::Unlock);
     }
@@ -576,6 +568,12 @@ fn is_mining_screen_with_some_wallet(
     app_screen_state: Res<State<AppScreenState>>,
 ) -> bool {
     *app_screen_state == AppScreenState::Mining && app_wallet.wallet.is_some()
+}
+
+fn run_if_has_some_wallet(
+    app_wallet: Res<AppWallet>,
+) -> bool {
+    app_wallet.wallet.is_some()
 }
 
 // Components
@@ -729,11 +727,17 @@ pub struct RpcConnection {
     pub fetch_ui_data_timer: Timer,
 }
 
+#[derive(Resource)]
+pub struct MiningProofsResource {
+    proofs: HashMap<Pubkey, Proof>
+}
+
 #[derive(Debug)]
 pub enum AccountUpdatesData {
     ProofData(Proof),
     BusData(Bus),
-    TreasuryConfigData(ore_api::state::Config)
+    TreasuryConfigData(ore_api::state::Config),
+    TreasuryBalanceData(u64)
 }
 
 #[derive(Resource)]
@@ -1247,6 +1251,8 @@ pub fn read_accounts_update_channel(
     mut proof_account: ResMut<ProofAccountResource>,
     mut treasury_account: ResMut<TreasuryAccountResource>,
     mut busses_res: ResMut<BussesResource>,
+    app_wallet: Res<AppWallet>,
+    mut mining_proofs: ResMut<MiningProofsResource>,
 ) {
     let receiver = account_update_channel.channel.clone();
 
@@ -1259,23 +1265,55 @@ pub fn read_accounts_update_channel(
                     }
                 }
             },
-            AccountUpdatesData::ProofData(new_proof_data) => {
-                let new_proof = ProofAccountResource {
-                    challenge: KeccakHash::new_from_array(new_proof_data.challenge).to_string(),
-                    stake: new_proof_data.balance,
-                    last_hash_at: new_proof_data.last_hash_at,
-                    total_hashes: new_proof_data.total_hashes,
-                };
+            AccountUpdatesData::ProofData(proof) => {
+                if let Some(wallet) = &app_wallet.wallet {
+                    if proof.authority == wallet.pubkey() {
+                        let new_proof = ProofAccountResource {
+                            challenge: KeccakHash::new_from_array(proof.challenge).to_string(),
+                            stake: proof.balance,
+                            last_hash_at: proof.last_hash_at,
+                            total_hashes: proof.total_hashes,
+                        };
 
-                *proof_account = new_proof;
+                        *proof_account = new_proof;
+                    }
+                }
+
+                let pubkey = proof.authority;
+                let mut rewards: i64 = 0;
+                if let Some(old_proof) = mining_proofs.proofs.get_mut(&pubkey) {
+                    let old_balance = old_proof.balance;
+                    rewards = proof.balance as i64 - old_balance as i64;
+                    *old_proof = proof;
+                } else {
+                    mining_proofs.proofs.insert(pubkey, proof);
+                }
+                let authority = proof.authority.to_string();
+                let default_proof_difficulty = [0; 32];
+
+                let difficulty = if default_proof_difficulty == proof.last_hash {
+                    0
+                } else {
+                    drillx::difficulty(proof.last_hash)
+                };
+                let balance = (proof.balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                let rewards = if rewards > 0 {
+                    (rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64)
+                } else {
+                    0.0
+                };
+                info!("Authority: {}, Difficulty: {}, Rewards: {}, Balance: {}", authority, difficulty, rewards, balance);
             },
             AccountUpdatesData::TreasuryConfigData(new_treasury_data) => {
                 treasury_account.last_reset_at = new_treasury_data.last_reset_at;
                 let base_reward_rate =
                     (new_treasury_data.base_reward_rate as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
                 treasury_account.base_reward_rate = base_reward_rate;
-
             },
+            AccountUpdatesData::TreasuryBalanceData(new_balance) => {
+                let new_balance = (new_balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                treasury_account.balance = new_balance.to_string();
+            }
         }
     }
 }
