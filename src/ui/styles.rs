@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 // Buttons
 pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+pub const HOVERED_BUTTON: Color = Color::rgba(1.0, 1.0, 1.0, 0.6);
 pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 pub static TOGGLE_ON: &str = "design_1/toggle_on.png";
@@ -85,6 +85,8 @@ pub static MINE_TOGGLE_BACKGROUND: &str = "design_2/mine_toggle_background.png";
 pub static MINE_TOGGLE_BUTTON: &str = "design_2/mine_toggle_button.png";
 pub static CONTENT_BACKGROUND_SMALL: &str = "design_2/content_background_small.png";
 pub static CONTENT_BACKGROUND_MEDIUM: &str = "design_2/content_background_medium.png";
+pub static MINE_TOGGLE_ON: &str = "design_2/mine_toggle_on.png";
+pub static MINE_TOGGLE_OFF: &str = "design_2/mine_toggle_off.png";
 
 
 // Hex Colors

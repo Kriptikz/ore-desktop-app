@@ -3,8 +3,7 @@ use bevy::
     prelude::*
 ;
 
-use crate::ui::spawn_utils::spawn_app_screen_mining;
-use crate::ui::styles::{hex_dark_mode_app_screen_background, hex_dark_mode_background, hex_dark_mode_header_border, hex_dark_mode_nav_title, hex_dark_mode_text_gray, hex_dark_mode_text_white, hex_dark_mode_text_white_2, DASHBOARD_ICON_WHITE, FONT_REGULAR, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_SMALL, MINE_TOGGLE_BACKGROUND, MINE_TOGGLE_BUTTON, MINING_ICON, NAV_ARROW_ICON, ORE_LOGO_WHITE};
+use crate::ui::styles::{hex_dark_mode_app_screen_background, hex_dark_mode_background, hex_dark_mode_header_border, hex_dark_mode_nav_title, hex_dark_mode_text_gray, hex_dark_mode_text_white, hex_dark_mode_text_white_2, DASHBOARD_ICON_WHITE, FONT_REGULAR, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_SMALL, MINE_TOGGLE_BACKGROUND, MINE_TOGGLE_BUTTON, MINE_TOGGLE_OFF, MINING_ICON, NAV_ARROW_ICON, ORE_LOGO_WHITE};
 use crate::NavItemScreen;
 use crate::{
     ui::
@@ -17,7 +16,7 @@ use crate::{
 };
 
 use crate::ui::
-    components::{AppScreenParent, BaseScreenNode, NavItem, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance, TxPopUpArea}
+    components::{AppScreenParent, BaseScreenNode, NavItem, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance, ToggleAutoMine, TxPopUpArea}
     
 ;
 
@@ -199,79 +198,20 @@ pub fn spawn_base_screen(
                         Name::new("Top Section Header Mine Toggle Section"),
                     )).with_children(|parent| {
                         parent.spawn((
-                            NodeBundle {
-                                background_color: hex_dark_mode_nav_title().into(),
+                            ButtonBundle {
                                 style: Style {
-                                    width: Val::Percent(90.0),
-                                    height: Val::Percent(90.0),
-                                    flex_direction: FlexDirection::Row,
-                                    align_items: AlignItems::Center,
+                                    width: Val::Px(292.0),
+                                    height: Val::Px(80.0),
                                     ..default()
                                 },
+                                image: UiImage::new(
+                                    asset_server.load(MINE_TOGGLE_OFF),
+                                ),
                                 ..default()
                             },
-                            UiImage::new(
-                                    asset_server.load(MINE_TOGGLE_BACKGROUND),
-                                ),
                             Name::new("Top Section Header Mine Toggle"),
-                        )).with_children(|parent| {
-                            parent.spawn((
-                                NodeBundle {
-                                    style: Style {
-                                        width: Val::Percent(45.0),
-                                        height: Val::Percent(100.0),
-                                        justify_content: JustifyContent::Center,
-                                        align_items: AlignItems::Center,
-                                        ..default()
-                                    },
-                                    ..default()
-                                },
-                                Name::new("Top Section Header Mine Toggle Left"),
-                            )).with_children(|parent| {
-                                parent.spawn((
-                                    TextBundle::from_section(
-                                        "Mine",
-                                        TextStyle {
-                                            font: asset_server.load(FONT_REGULAR),
-                                            font_size: FONT_SIZE_MEDIUM,
-                                            color: hex_dark_mode_text_gray().into()
-                                        },
-                                    ),
-                                    Name::new("TextToggleMine"),
-                                ));
-                            });
-                            parent.spawn((
-                                NodeBundle {
-                                    background_color: hex_dark_mode_background().into(),
-                                    style: Style {
-                                        width: Val::Percent(53.0),
-                                        height: Val::Percent(90.0),
-                                        justify_content: JustifyContent::Center,
-                                        align_items: AlignItems::Center,
-                                        ..default()
-                                    },
-                                    ..default()
-                                },
-                                UiImage::new(
-                                        asset_server.load(MINE_TOGGLE_BUTTON),
-                                    ),
-                                Name::new("Top Section Header Mine Toggle Right"),
-                            )).with_children(|parent| {
-                                parent.spawn((
-                                    TextBundle::from_section(
-                                        "On",
-                                        TextStyle {
-                                            font: asset_server.load(FONT_REGULAR),
-                                            font_size: FONT_SIZE_MEDIUM,
-                                            color: hex_dark_mode_text_gray().into()
-                                        },
-                                    ),
-                                    Name::new("TextToggleMine"),
-                                ));
-                            });
-                            
-
-                        });
+                            ToggleAutoMine(false),
+                        ));
                     });
 
                     // Wallet Info
