@@ -48,6 +48,7 @@ use super::components::TextTreasuryRewardRate;
 use super::components::TextWalletOreBalance;
 use super::components::TextWalletPubkey;
 use super::components::TextWalletSolBalance;
+use super::styles::hex_dark_mode_text_gray;
 
 pub fn mouse_scroll(
     mut mouse_wheel_events: EventReader<MouseWheel>,
@@ -130,90 +131,140 @@ pub fn update_busses_ui(
 ) {
     if busses_res.busses.len() > 7 {
         let mut text_bus_query = set.p0();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[0].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 1: {}    ", rewards);
-        let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
-            Color::GREEN
-        } else {
-            Color::ORANGE
-        };
-        
-        if busses_res.current_bus_id == 0 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[0].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 0 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
 
         let mut text_bus_query = set.p1();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[1].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 2: {}    ", rewards);
-        if busses_res.current_bus_id == 1 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[1].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 1 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
+
 
         let mut text_bus_query = set.p2();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[2].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 3: {}    ", rewards);
-        if busses_res.current_bus_id == 2 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[2].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 2 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
 
-
         let mut text_bus_query = set.p3();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[3].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 4: {}    ", rewards);
-        if busses_res.current_bus_id == 3 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[3].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 3 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
 
         let mut text_bus_query = set.p4();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[4].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 5: {}    ", rewards);
-        if busses_res.current_bus_id == 4 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[4].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 4 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
 
         let mut text_bus_query = set.p5();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[5].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 6: {}    ", rewards);
-        if busses_res.current_bus_id == 5 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[5].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 5 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
 
         let mut text_bus_query = set.p6();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[6].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 7: {}    ", rewards);
-        if busses_res.current_bus_id == 6 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[6].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 6 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
 
         let mut text_bus_query = set.p7();
-        let mut text_bus_text = text_bus_query.single_mut();
-        let rewards = (busses_res.busses[7].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        text_bus_text.sections[0].value = format!("Bus 8: {}    ", rewards);
-        if busses_res.current_bus_id == 7 {
-            text_bus_text.sections[0].style.color = selected_color.into();
-        } else {
-            text_bus_text.sections[0].style.color = Color::rgb(0.9, 0.9, 0.9);
+        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+            let rewards = (busses_res.busses[7].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+            text_component.sections[0].value = format!("{}", rewards);
+            let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            };
+            
+            if busses_res.current_bus_id == 7 {
+                text_component.sections[0].style.color = selected_color.into();
+            } else {
+                text_component.sections[0].style.color = hex_dark_mode_text_gray();
+            }
         }
     }
 }
@@ -230,76 +281,75 @@ pub fn update_proof_account_ui(
     )>,
 ) {
     let mut text_current_hash_query = set.p0();
-    let mut text_current_hash = text_current_hash_query.single_mut();
-    text_current_hash.sections[0].value =
-        proof_account_res.challenge.clone();
+    if let Ok(mut text_component) = text_current_hash_query.get_single_mut() {
+        text_component.sections[0].value =
+            proof_account_res.challenge.clone();
+    }
 
     let mut text_total_hashes_query = set.p1();
-    let mut text_total_hashes = text_total_hashes_query.single_mut();
-    text_total_hashes.sections[0].value =
-        proof_account_res.total_hashes.to_string();
+    if let Ok(mut text_component) = text_total_hashes_query.get_single_mut() {
+        text_component.sections[0].value =
+            proof_account_res.total_hashes.to_string();
+    }
 
     let mut text_claimable_rewards_query = set.p3();
-    let mut text_claimable_rewards = text_claimable_rewards_query.single_mut();
-    let amount =
-        (proof_account_res.stake as f64) / 10f64.powf(get_ore_decimals() as f64);
-    text_claimable_rewards.sections[0].value = format!("{}", amount);
+    if let Ok(mut text_component) = text_claimable_rewards_query.get_single_mut() {
+        let amount =
+            (proof_account_res.stake as f64) / 10f64.powf(get_ore_decimals() as f64);
+        text_component.sections[0].value = format!("{}", amount);
+    }
 
     let mut text_query_3 = set.p4();
-    let mut text_3 = text_query_3.single_mut();
-    let date_time =
-        if let Some(dt) = DateTime::from_timestamp(proof_account_res.last_hash_at, 0) {
-            dt.to_string()
-        } else {
-            "Err".to_string()
-        };
+    if let Ok(mut text_component) = text_query_3.get_single_mut() {
+        let date_time =
+            if let Some(dt) = DateTime::from_timestamp(proof_account_res.last_hash_at, 0) {
+                dt.to_string()
+            } else {
+                "Err".to_string()
+            };
 
-    text_3.sections[0].value = format!("{}", date_time);
+        text_component.sections[0].value = format!("{}", date_time);
+    }
 }
 
 pub fn update_treasury_account_ui(
     treasury_account_res: Res<TreasuryAccountResource>,
     mut set: ParamSet<(
         Query<&mut Text, With<TextTreasuryBalance>>,
-        Query<&mut Text, With<TextTreasuryAdmin>>,
         Query<&mut Text, With<TextTreasuryLastResetAt>>,
         Query<&mut Text, With<TextTreasuryRewardRate>>,
     )>,
 ) {
     let mut text_query_0 = set.p0();
-    let mut text_0 = text_query_0.single_mut();
-    text_0.sections[0].value = treasury_account_res.balance.clone();
-
-    let mut text_query_1 = set.p1();
-    let mut text_1 = text_query_1.single_mut();
-    text_1.sections[0].value = treasury_account_res.admin.clone();
-
-
-    if treasury_account_res.last_reset_at != 0 {
-        let mut text_query_3 = set.p2();
-        let mut text_3 = text_query_3.single_mut();
-
-        let date_time =
-            if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
-                dt.to_string()
-            } else {
-                "Err".to_string()
-            };
-        text_3.sections[0].value = format!("{}", date_time);
-
+    let mut text_0 = text_query_0.get_single_mut();
+    if let Ok(mut text_0) = text_query_0.get_single_mut() {
+        text_0.sections[0].value = treasury_account_res.balance.clone();
     }
 
-    let mut text_query_4 = set.p3();
-    let mut text_4 = text_query_4.single_mut();
-    text_4.sections[0].value =
-        treasury_account_res.base_reward_rate.to_string();
+    if treasury_account_res.last_reset_at != 0 {
+        let mut text_query_3 = set.p1();
 
+        if let Ok(mut text_3) = text_query_3.get_single_mut() {
+            let date_time =
+                if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
+                    dt.to_string()
+                } else {
+                    "Err".to_string()
+                };
+            text_3.sections[0].value = format!("{}", date_time);
+        }
+    }
+
+    let mut text_query_4 = set.p2();
+    if let Ok(mut text_4) = text_query_4.get_single_mut() {
+        text_4.sections[0].value =
+            treasury_account_res.base_reward_rate.to_string();
+    }
 }
 
 pub fn update_miner_status_ui(
     mut res: ResMut<MinerStatusResource>,
     mut set: ParamSet<(
-        Query<&mut Text, With<TextMinerStatusStatus>>,
         Query<&mut Text, With<TextMinerStatusCpuUsage>>,
         Query<&mut Text, With<TextMinerStatusRamUsage>>,
         Query<&mut Text, With<TextMinerStatusTime>>,
@@ -314,71 +364,53 @@ pub fn update_miner_status_ui(
         res.sys_refresh_timer.reset();
     }
 
-    let mut text_query_0 = set.p0();
-    let mut text_0 = text_query_0.single_mut();
-    match res.miner_status.as_str() {
-        "PROCESSING" => {
-            if text_0.sections[0].style.color != Color::ORANGE {
-                text_0.sections[0].style.color = Color::ORANGE;
-            }
-        },
-        "MINING" => {
-            if text_0.sections[0].style.color != Color::GREEN {
-                text_0.sections[0].style.color = Color::GREEN;
-            }
-        },
-        _ => {
-            if text_0.sections[0].style.color != Color::RED {
-                text_0.sections[0].style.color = Color::RED;
-            }
-        },
+    let mut text_query_1 = set.p0();
+    if let Ok(mut text_1) = text_query_1.get_single_mut() {
+        let mut cpu_usage = 0.0;
+        for (_index, cpu) in res.sys_info.cpus().iter().enumerate() {
+            cpu_usage += cpu.cpu_usage();
+        }
+
+        let cpu_usage = format!(
+            "{:.2}  % / {} %",
+            cpu_usage,
+            res.sys_info.cpus().len() * 100
+        );
+        text_1.sections[0].value = cpu_usage;
     }
 
-    text_0.sections[0].value = res.miner_status.clone();
+    let mut text_query_2 = set.p1();
+    if let Ok(mut text_2) = text_query_2.get_single_mut() {
+        let total_memory = res.sys_info.total_memory();
+        let used_memory = res.sys_info.used_memory();
+        let ram_usage = format!(
+            "{} / {}",
+            human_bytes(used_memory as f64),
+            human_bytes(total_memory as f64)
+        );
 
-    let mut text_query_1 = set.p1();
-    let mut text_1 = text_query_1.single_mut();
-
-    let mut cpu_usage = 0.0;
-    for (_index, cpu) in res.sys_info.cpus().iter().enumerate() {
-        cpu_usage += cpu.cpu_usage();
+        text_2.sections[0].value = ram_usage;
     }
 
-    let cpu_usage = format!(
-        "{:.2}  % / {} %",
-        cpu_usage,
-        res.sys_info.cpus().len() * 100
-    );
-    text_1.sections[0].value = cpu_usage;
 
-    let mut text_query_2 = set.p2();
-    let mut text_2 = text_query_2.single_mut();
-    let total_memory = res.sys_info.total_memory();
-    let used_memory = res.sys_info.used_memory();
-    let ram_usage = format!(
-        "{} / {}",
-        human_bytes(used_memory as f64),
-        human_bytes(total_memory as f64)
-    );
+    let mut text_query_3 = set.p2();
+    if let Ok(mut text_3) = text_query_3.get_single_mut() {
+        let ts = get_unix_timestamp();
+        let date_time = if let Some(dt) = DateTime::from_timestamp(ts as i64, 0) {
+            dt.to_string()
+        } else {
+            "Err".to_string()
+        };
 
-    text_2.sections[0].value = ram_usage;
+        text_3.sections[0].value = format!("{}", date_time);
+    }
 
-    let ts = get_unix_timestamp();
-    let date_time = if let Some(dt) = DateTime::from_timestamp(ts as i64, 0) {
-        dt.to_string()
-    } else {
-        "Err".to_string()
-    };
 
-    let mut text_query_3 = set.p3();
-    let mut text_3 = text_query_3.single_mut();
+    let mut text_query_4 = set.p3();
+    if let Ok(mut text_4) = text_query_4.get_single_mut() {
+        text_4.sections[0].value = format!("{}", res.miner_threads);
+    }
 
-    text_3.sections[0].value = format!("{}", date_time);
-
-    let mut text_query_4 = set.p4();
-    let mut text_4 = text_query_4.single_mut();
-
-    text_4.sections[0].value = format!("{}", res.miner_threads);
 }
 
 pub fn update_text_input_ui(mut active_text_query: Query<(&mut Text, &TextInput)>) {
