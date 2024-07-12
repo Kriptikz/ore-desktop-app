@@ -19,7 +19,7 @@ use crate::{
         SigCheckResults, TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskSigChecks, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
         components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
-        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
+        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{MINE_TOGGLE_OFF, MINE_TOGGLE_ON, TOGGLE_OFF, TOGGLE_ON},
     }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashStatus, MinerStatusResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
 
@@ -124,7 +124,7 @@ pub fn handle_event_start_stop_mining_clicked(
                 miner_status.miner_status = "STOPPED".to_string();
                 let (mut btn, mut toggle) = query.single_mut();
                 toggle.0 = false;
-                *btn = UiImage::new(asset_server.load(TOGGLE_OFF));
+                *btn = UiImage::new(asset_server.load(MINE_TOGGLE_OFF));
             
             },
             "STOPPED" => {
@@ -135,7 +135,7 @@ pub fn handle_event_start_stop_mining_clicked(
                     event_writer.send(EventMineForHash);
                     let (mut btn, mut toggle) = query.single_mut();
                     toggle.0 = true;
-                    *btn = UiImage::new(asset_server.load(TOGGLE_ON));
+                    *btn = UiImage::new(asset_server.load(MINE_TOGGLE_ON));
                 }
             },
             _ => {
@@ -357,43 +357,44 @@ pub fn handle_event_tx_result(
         } else {
             ("N/A".to_string(), "".to_string())
         };
-        let (scroll_panel_entity, mut scrolling_list, mut style, parent, list_node) = query.get_single_mut().expect("There should only be 1 scroll panel entity.");
-        let status = format!(
-            "{}  {}",
-            ev.tx_status.status.clone(),
-            ev.tx_status.error.clone()
-        );
+        if let Ok((scroll_panel_entity, mut scrolling_list, mut style, parent, list_node)) = query.get_single_mut() {
+            let status = format!(
+                "{}  {}",
+                ev.tx_status.status.clone(),
+                ev.tx_status.error.clone()
+            );
 
-        let ts = get_unix_timestamp();
-        let date_time = if let Some(dt) = DateTime::from_timestamp(ts as i64, 0) {
-            dt.to_string()
-        } else {
-            "Err".to_string()
-        };
+            let ts = get_unix_timestamp();
+            let date_time = if let Some(dt) = DateTime::from_timestamp(ts as i64, 0) {
+                dt.to_string()
+            } else {
+                "Err".to_string()
+            };
 
-        let hash_time = format!("{} - {}", hash_time, difficulty);
-        let item_data = UiListItem {
-            id: ev.tx_type.clone(),
-            landed_at: date_time.clone(),
-            sig: ev.sig.clone(),
-            tx_time: ev.tx_time.to_string(),
-            hash_time,
-            status,
-        };
-        spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
+            let hash_time = format!("{} - {}", hash_time, difficulty);
+            let item_data = UiListItem {
+                id: ev.tx_type.clone(),
+                landed_at: date_time.clone(),
+                sig: ev.sig.clone(),
+                tx_time: ev.tx_time.to_string(),
+                hash_time,
+                status,
+            };
+            spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
 
-        let auto_scroll = query_auto_scroll.single();
+            let auto_scroll = query_auto_scroll.single();
 
-        if auto_scroll.0 {
-            let items_height = list_node.size().y + 20.0;
-            if let Ok(query_node_parent) = query_node.get(parent.get()) {
-                let container_height = query_node_parent.size().y;
+            if auto_scroll.0 {
+                let items_height = list_node.size().y + 20.0;
+                if let Ok(query_node_parent) = query_node.get(parent.get()) {
+                    let container_height = query_node_parent.size().y;
 
-                if items_height > container_height {
-                    let max_scroll = items_height - container_height;
+                    if items_height > container_height {
+                        let max_scroll = items_height - container_height;
 
-                    scrolling_list.position = -max_scroll;
-                    style.top = Val::Px(scrolling_list.position);
+                        scrolling_list.position = -max_scroll;
+                        style.top = Val::Px(scrolling_list.position);
+                    }
                 }
             }
         }
@@ -430,7 +431,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
             let connection = if let Some(rpc) = &rpc_connection.rpc {
                 rpc.clone()
             } else {
-                error!("cannot mine for hash, rpc_connection.rpc is None");
+                error!("cannot fetch ui data, rpc_connection.rpc is None");
                 continue;
             };
             let ore_mint = get_ore_mint();
@@ -957,6 +958,7 @@ pub fn handle_event_unlock(
 pub fn handle_event_save_config(
     mut event_reader: EventReader<EventSaveConfig>,
     mut ore_app_state: ResMut<OreAppState>,
+    mut miner_status: ResMut<MinerStatusResource>,
     mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for ev in event_reader.read() {
@@ -976,6 +978,7 @@ pub fn handle_event_save_config(
             new_state = AppScreenState::WalletSetup;
         }
 
+        miner_status.miner_threads = new_config.threads;
         ore_app_state.config = new_config;
         next_state.set(new_state);
     }
