@@ -7,7 +7,7 @@ use async_std::task::sleep;
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, utils::{hashbrown::Equivalent, HashMap}, window::RequestRedraw, winit::{UpdateMode, WinitSettings}};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
-use crossbeam_channel::{unbounded, Receiver};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use events::*;
 use ore_api::{consts::TOKEN_DECIMALS, state::{Bus, Proof, Treasury}};
 use ore_utils::{proof_pubkey, ORE_TOKEN_DECIMALS, AccountDeserialize};
@@ -162,15 +162,22 @@ fn main() {
             busses: vec![],
             current_bus_id: 0,
         })
+        .insert_resource(HashRateResource {
+            hash_rate: 0.0,
+        })
         .insert_resource(MiningProofsResource {
             proofs: HashMap::new(),
+            largest_difficulty_seen: 0,
+        })
+        .insert_resource(MiningDataChannelResource {
+            receiver: None,
+            sender: None,
         })
         .init_resource::<ProofAccountResource>()
         .register_type::<ProofAccountResource>()
         .init_resource::<TreasuryAccountResource>()
         .register_type::<TreasuryAccountResource>()
         .add_event::<EventStartStopMining>()
-        .add_event::<EventStopMining>()
         .add_event::<EventSubmitHashTx>()
         .add_event::<EventTxResult>()
         .add_event::<EventFetchUiDataFromRpc>()
@@ -187,6 +194,8 @@ fn main() {
         .add_event::<EventLoadKeypairFile>()
         .add_event::<EventRequestAirdrop>()
         .add_event::<EventCheckSigs>()
+        .add_event::<EventProofAccountUpdated>()
+        .add_event::<EventCancelMining>()
         .add_systems(Startup, setup_base_screen)
         .add_systems(Update, fps_text_update_system)
         .add_systems(Update, fps_counter_showhide)
@@ -197,6 +206,7 @@ fn main() {
         .add_systems(Update, tick_button_cooldowns)
         .add_systems(Update, nav_item_interactions)
         .add_systems(Update, update_app_wallet_ui)
+        .add_systems(Update, mouse_scroll)
         .add_systems(Update, 
             (
                 (
@@ -211,6 +221,8 @@ fn main() {
                     handle_event_register_wallet,
                     handle_event_mine_for_hash,
                     handle_event_check_sigs,
+                    handle_event_proof_account_updated,
+                    handle_event_cancel_mining,
                 ),
                 (
                     task_update_app_wallet_sol_balance,
@@ -314,10 +326,6 @@ fn main() {
                     update_treasury_account_ui,
                     update_miner_status_ui,
                 ),
-                (
-                    mouse_scroll,
-                    // mining_screen_hotkeys,
-                ),
             )
                 .run_if(is_mining_screen_with_some_wallet),
         )
@@ -356,6 +364,11 @@ fn setup_mining_screen(
 
     let config = &app_state.config;
 
+    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+    parent.with_children(|parent| {
+        spawn_app_screen_mining(parent, &asset_server);
+    });
+
     if let Some(wallet) = &app_wallet.wallet {
         if rpc_connection.rpc.is_none() {
             let new_rpc_connection = Arc::new(RpcClient::new_with_commitment(
@@ -363,10 +376,6 @@ fn setup_mining_screen(
                 CommitmentConfig::confirmed(),
             ));
             rpc_connection.rpc = Some(new_rpc_connection);
-            let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
-            parent.with_children(|parent| {
-                spawn_app_screen_mining(parent, &asset_server);
-            });
             let task_pool = IoTaskPool::get();
 
             let (sender, receiver) = unbounded::<AccountUpdatesData>();
@@ -672,6 +681,11 @@ impl Default for ProofAccountResource {
 }
 
 #[derive(Resource)]
+pub struct HashRateResource {
+    hash_rate: f64,
+}
+
+#[derive(Resource)]
 pub struct BussesResource {
     busses: Vec<ore_api::state::Bus>,
     current_bus_id: usize,
@@ -729,7 +743,20 @@ pub struct RpcConnection {
 
 #[derive(Resource)]
 pub struct MiningProofsResource {
-    proofs: HashMap<Pubkey, Proof>
+    proofs: HashMap<Pubkey, Proof>,
+    largest_difficulty_seen: u32,
+}
+
+
+#[derive(Debug)]
+pub enum MiningDataChannelMessage {
+    Stop,
+}
+
+#[derive(Resource)]
+pub struct MiningDataChannelResource {
+    pub receiver: Option<Receiver<MiningDataChannelMessage>>,
+    pub sender: Option<Sender<MiningDataChannelMessage>>
 }
 
 #[derive(Debug)]
@@ -1252,7 +1279,7 @@ pub fn read_accounts_update_channel(
     mut treasury_account: ResMut<TreasuryAccountResource>,
     mut busses_res: ResMut<BussesResource>,
     app_wallet: Res<AppWallet>,
-    mut mining_proofs: ResMut<MiningProofsResource>,
+    mut event_proof_account_updated: EventWriter<EventProofAccountUpdated>
 ) {
     let receiver = account_update_channel.channel.clone();
 
@@ -1279,30 +1306,8 @@ pub fn read_accounts_update_channel(
                     }
                 }
 
-                let pubkey = proof.authority;
-                let mut rewards: i64 = 0;
-                if let Some(old_proof) = mining_proofs.proofs.get_mut(&pubkey) {
-                    let old_balance = old_proof.balance;
-                    rewards = proof.balance as i64 - old_balance as i64;
-                    *old_proof = proof;
-                } else {
-                    mining_proofs.proofs.insert(pubkey, proof);
-                }
-                let authority = proof.authority.to_string();
-                let default_proof_difficulty = [0; 32];
+                event_proof_account_updated.send(EventProofAccountUpdated(proof));
 
-                let difficulty = if default_proof_difficulty == proof.last_hash {
-                    0
-                } else {
-                    drillx::difficulty(proof.last_hash)
-                };
-                let balance = (proof.balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-                let rewards = if rewards > 0 {
-                    (rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64)
-                } else {
-                    0.0
-                };
-                info!("Authority: {}, Difficulty: {}, Rewards: {}, Balance: {}", authority, difficulty, rewards, balance);
             },
             AccountUpdatesData::TreasuryConfigData(new_treasury_data) => {
                 treasury_account.last_reset_at = new_treasury_data.last_reset_at;

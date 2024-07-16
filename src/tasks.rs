@@ -30,7 +30,7 @@ pub struct TaskUpdateAppWalletSolBalance {
 
 #[derive(Component)]
 pub struct TaskGenerateHash {
-    pub task: Task<Result<(Solution, u32, u64), String>>,
+    pub task: Task<Result<(Solution, u32, u64, u64), String>>,
 }
 
 #[derive(Component)]

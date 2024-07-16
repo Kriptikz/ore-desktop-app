@@ -12,7 +12,7 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonCooldownSpinner, ButtonRequestAirdrop, ButtonStakeOre, MiningScreenNode, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonCooldownSpinner, ButtonRequestAirdrop, ButtonStakeOre, MiningScreenNode, MiningScreenTxResultList, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
@@ -1414,6 +1414,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                         },
                                         ScrollingList::default(),
                                         AccessibilityNode(NodeBuilder::new(Role::List)),
+                                        MiningScreenTxResultList,
                                         MovingScrollPanel,
                                         Name::new("MovingScrollPanel"),
                                     ));

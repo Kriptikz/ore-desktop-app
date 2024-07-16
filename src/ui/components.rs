@@ -95,6 +95,15 @@ pub struct TextPasswordLabel;
 pub struct TextWalletPubkey;
 
 #[derive(Component)]
+pub struct DashboardProofUpdatesLogsList;
+
+#[derive(Component)]
+pub struct DashboardProofUpdatesLogsListItem;
+
+#[derive(Component)]
+pub struct MiningScreenTxResultList;
+
+#[derive(Component)]
 pub struct ButtonOpenWebTxExplorer;
 
 #[derive(Component)]

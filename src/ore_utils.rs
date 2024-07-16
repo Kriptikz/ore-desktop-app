@@ -1,6 +1,7 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bevy::log::{error, info};
+use crossbeam_channel::{Receiver, Sender};
 use drillx::{equix, Hash, Solution};
 use ore_api::{
     ID as ORE_ID,
@@ -15,6 +16,8 @@ use solana_sdk::{
     account::ReadableAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, sysvar,
 };
 use spl_associated_token_account::get_associated_token_address;
+
+use crate::MiningDataChannelMessage;
 
 pub const ORE_TOKEN_DECIMALS: u8 = TOKEN_DECIMALS;
 
@@ -204,11 +207,13 @@ pub fn get_cutoff(proof: Proof, buffer_time: u64) -> i64 {
         .saturating_sub(now)
 }
 
-pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution, u32, Hash) {
+pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, mining_messages_reciever: Receiver<MiningDataChannelMessage>, mining_messages_sender: Sender<MiningDataChannelMessage>) -> (Solution, u32, Hash, u64) {
     let handles: Vec<_> = (0..threads)
         .map(|i| {
             std::thread::spawn({
                 let proof = proof.clone();
+                let message_receiver = mining_messages_reciever.clone();
+                let message_sender = mining_messages_sender.clone();
                 let mut memory = equix::SolverMemory::new();
                 move || {
                     let timer = Instant::now();
@@ -236,6 +241,18 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution,
                             }
                         }
 
+
+                        if let Ok(message) = message_receiver.try_recv() {
+                            match message {
+                                MiningDataChannelMessage::Stop => {
+                                    // messages are only received by one receiver. 
+                                    // try to send another message for any remaining receivers.
+                                    let _ = message_sender.try_send(MiningDataChannelMessage::Stop);
+                                    break;
+                                }
+                            }
+                        }
+
                         // Exit if time has elapsed
                         if nonce % 100 == 0 {
                             if timer.elapsed().as_secs().ge(&cutoff_time) {
@@ -249,9 +266,11 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution,
                         // Increment nonce
                         nonce += 1;
                     }
+                    
+                    let nonces_checked = nonce - first_nonce;
 
                     // Return the best nonce
-                    (best_nonce, best_difficulty, best_hash)
+                    (best_nonce, best_difficulty, best_hash, nonces_checked)
                 }
             })
         })
@@ -261,15 +280,18 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64) -> (Solution,
     let mut best_nonce = 0;
     let mut best_difficulty = 0;
     let mut best_hash = Hash::default();
+    let mut total_nonces_checked = 0;
     for h in handles {
-        if let Ok((nonce, difficulty, hash)) = h.join() {
+        if let Ok((nonce, difficulty, hash, nonces_checked)) = h.join() {
+            total_nonces_checked += nonces_checked;
             if difficulty > best_difficulty {
                 best_difficulty = difficulty;
                 best_nonce = nonce;
                 best_hash = hash;
             }
+        } else {
+            error!("Failed to join a thread handle!");
         }
     }
-
-    (Solution::new(best_hash.d, best_nonce.to_le_bytes()), best_difficulty, best_hash)
+    (Solution::new(best_hash.d, best_nonce.to_le_bytes()), best_difficulty, best_hash, total_nonces_checked)
 }

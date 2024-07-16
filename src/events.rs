@@ -7,7 +7,9 @@ use bevy::{
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use chrono::DateTime;
 use cocoon::Cocoon;
+use crossbeam_channel::{bounded, unbounded};
 use drillx::{Solution};
+use ore_api::state::Proof;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
@@ -18,9 +20,9 @@ use crate::{
     }, tasks::{
         SigCheckResults, TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskSigChecks, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
-        components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
-        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{MINE_TOGGLE_OFF, MINE_TOGGLE_ON, TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashStatus, MinerStatusResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
+        components::{ButtonAutoScroll, DashboardProofUpdatesLogsList, DashboardProofUpdatesLogsListItem, MiningScreenTxResultList, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
+        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{FONT_REGULAR, FONT_SIZE_MEDIUM, MINE_TOGGLE_OFF, MINE_TOGGLE_ON, TOGGLE_OFF, TOGGLE_ON},
+    }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashRateResource, HashStatus, MinerStatusResource, MiningDataChannelMessage, MiningDataChannelResource, MiningProofsResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
 
 use std::{
@@ -48,13 +50,10 @@ pub struct EventSaveWallet;
 pub struct EventMineForHash;
 
 #[derive(Event)]
-pub struct EventStopMining;
-
-#[derive(Event)]
 pub struct EventRequestAirdrop;
 
 #[derive(Event)]
-pub struct EventSubmitHashTx(pub (Solution, u32, u64));
+pub struct EventSubmitHashTx(pub (Solution, u32, u64, u64));
 
 pub struct TxResult {
     pub sig: String,
@@ -107,6 +106,7 @@ pub struct EventSaveConfig(pub AppConfig);
 pub fn handle_event_start_stop_mining_clicked(
     mut ev_start_stop_mining: EventReader<EventStartStopMining>,
     mut event_writer: EventWriter<EventMineForHash>,
+    mut event_writer_cancel_mining: EventWriter<EventCancelMining>,
     mut event_writer_register: EventWriter<EventRegisterWallet>,
     app_wallet: Res<AppWallet>,
     mut miner_status: ResMut<MinerStatusResource>,
@@ -120,11 +120,11 @@ pub fn handle_event_start_stop_mining_clicked(
             "MINING" |
             "PROCESSING" => {
                 // stop mining
-                // event_writer_stop.send(EventStopMining);
                 miner_status.miner_status = "STOPPED".to_string();
                 let (mut btn, mut toggle) = query.single_mut();
                 toggle.0 = false;
                 *btn = UiImage::new(asset_server.load(MINE_TOGGLE_OFF));
+                event_writer_cancel_mining.send(EventCancelMining);
             
             },
             "STOPPED" => {
@@ -154,6 +154,7 @@ pub fn handle_event_mine_for_hash(
     mut miner_status: ResMut<MinerStatusResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     mut next_state: ResMut<NextState<AppScreenState>>,
+    mut mining_channels_res: ResMut<MiningDataChannelResource>,
 ) {
     for _ev in event_reader.read() {
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
@@ -172,9 +173,26 @@ pub fn handle_event_mine_for_hash(
                 continue;
             };
 
+            if mining_channels_res.sender.is_none() {
+                let (sender, receiver) = bounded::<MiningDataChannelMessage>(1);
+                mining_channels_res.sender = Some(sender.clone());
+                mining_channels_res.receiver = Some(receiver.clone());
+            }
+
             let sys_info = &miner_status.sys_info;
             let cpu_count = sys_info.cpus().len() as u64;
             let threads = miner_status.miner_threads.clamp(1, cpu_count);
+
+            let channel_rec = mining_channels_res.receiver.as_ref().unwrap();
+            let channel_sender = mining_channels_res.sender.as_ref().unwrap();
+
+            let receiver = channel_rec.clone();
+            let sender = channel_sender.clone();
+
+            while let Ok(_) = receiver.try_recv() {
+                // clear out any current messages
+            }
+
 
             let task = pool.spawn(Compat::new(async move {
                 // TODO: use proof resource cached proof. May need LatestHash Resource to ensure a new proof if loaded before mining.
@@ -198,13 +216,15 @@ pub fn handle_event_mine_for_hash(
                                     .max(0) as u64;
 
                 let hash_time = Instant::now();
-                let (solution, best_difficulty, best_hash) = find_hash_par(
+                let (solution, best_difficulty, best_hash, total_nonces_checked) = find_hash_par(
                     proof,
                     cutoff,
                     threads,
+                    receiver,
+                    sender,
                 );
 
-                Ok((solution, best_difficulty, hash_time.elapsed().as_secs()))
+                Ok((solution, best_difficulty, hash_time.elapsed().as_secs(), total_nonces_checked))
             }));
             miner_status.miner_status = "MINING".to_string();
 
@@ -235,6 +255,7 @@ pub fn handle_event_submit_hash_tx(
     rpc_connection: Res<RpcConnection>,
     mut busses_res: ResMut<BussesResource>,
     mut next_state: ResMut<NextState<AppScreenState>>,
+    mut hashrate_res: ResMut<HashRateResource>,
 ) {
     for ev in ev_submit_hash_tx.read() {
         let wallet = if let Some(wallet) =  &app_wallet.wallet {
@@ -260,16 +281,22 @@ pub fn handle_event_submit_hash_tx(
             let solution;
             let difficulty;
             let hash_time;
+            let new_hashes_checked;
 
             {
-                let (s, d, ht) = &ev.0;
+                let (s, d, ht, hashes_checked) = &ev.0;
                 solution = Solution::new(s.d, s.n);
 
                 difficulty = *d;
                 hash_time = *ht;
+                new_hashes_checked = *hashes_checked;
             }
 
             let last_reset_at = treasury.last_reset_at;
+
+            hashrate_res.hash_rate = new_hashes_checked as f64 / hash_time as f64;
+
+            info!("Hashrate: {}/second", hashrate_res.hash_rate);
 
             let current_ts = get_unix_timestamp() as i64;
 
@@ -346,7 +373,7 @@ pub fn handle_event_tx_result(
     mut ev_tx_result: EventReader<EventTxResult>,
     mut event_writer: EventWriter<EventMineForHash>,
     asset_server: Res<AssetServer>,
-    mut query: Query<(Entity, &mut ScrollingList, &mut Style, &Parent, &Node), With<MovingScrollPanel>>,
+    mut query: Query<(Entity, &mut ScrollingList, &mut Style, &Parent, &Node), With<MiningScreenTxResultList>>,
     query_node: Query<&Node>,
     query_auto_scroll: Query<&ButtonAutoScroll>,
     query_toggle: Query<&ToggleAutoMine>,
@@ -1227,6 +1254,97 @@ pub fn handle_event_check_sigs(
                 .entity(task_handler_entity)
                 .insert(TaskSigChecks { task });
 
+        }
+    }
+}
+
+
+#[derive(Event)]
+pub struct EventProofAccountUpdated(pub Proof);
+
+pub fn handle_event_proof_account_updated(
+    mut commands: Commands,
+    mut event_reader: EventReader<EventProofAccountUpdated>,
+    mut mining_proofs: ResMut<MiningProofsResource>,
+    asset_server: Res<AssetServer>,
+    parent_list: Query<Entity, With<DashboardProofUpdatesLogsList>>,
+) {
+    for ev in event_reader.read() {
+        let proof = ev.0;
+        let pubkey = proof.authority;
+        let mut rewards: i64 = 0;
+        if let Some(old_proof) = mining_proofs.proofs.get_mut(&pubkey) {
+            let old_balance = old_proof.balance;
+            rewards = proof.balance as i64 - old_balance as i64;
+            *old_proof = proof;
+        } else {
+            mining_proofs.proofs.insert(pubkey, proof);
+        }
+        let authority = proof.authority.to_string();
+        let default_proof_difficulty = [0; 32];
+
+        let difficulty = if default_proof_difficulty == proof.last_hash {
+            0
+        } else {
+            drillx::difficulty(proof.last_hash)
+        };
+        let balance = (proof.balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+        let rewards: f64 = (rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+
+        let _average_reward_per_hash = (proof.total_rewards as f64 / proof.total_hashes as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+        let total_rewards = proof.total_rewards as f64 / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+
+        let text_log_item = format!("{}, Diff: {}, Rewards: {}, Bal: {}, Hashes: {}", authority, difficulty, rewards, balance, proof.total_hashes);
+
+        if let Ok(parent_entity) = parent_list.get_single() {
+            let new_list_item_id = commands.spawn((
+                NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Row,
+                        height: Val::Px(20.0),
+                        width: Val::Percent(100.0),
+                        // padding: UiRect::left(Val::Px(20.0)),
+                        // column_gap: Val::Px(30.0),
+                        // justify_content: JustifyContent::SpaceAround,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("Proof Account Update List Item"),
+            )).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        text_log_item,
+                        TextStyle {
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
+                            ..default()
+                        },
+                    ),
+                    DashboardProofUpdatesLogsListItem
+                ));
+            }).id();
+
+            commands.entity(parent_entity).add_child(new_list_item_id);
+        }
+    }
+}
+
+#[derive(Event)]
+pub struct EventCancelMining;
+
+pub fn handle_event_cancel_mining(
+    mut event_reader: EventReader<EventCancelMining>,
+    mining_channels_res: Res<MiningDataChannelResource>,
+) {
+    if let Some(channel_rec) = mining_channels_res.sender.as_ref() {
+        for _ev in event_reader.read() {
+            let sender = channel_rec.clone();
+            let _ = sender.try_send(MiningDataChannelMessage::Stop);
+        }
+    } else {
+        for _ev in event_reader.read() {
+            // read and do nothing
         }
     }
 }
