@@ -11,6 +11,10 @@ pub struct ScrollingList {
     pub position: f32,
 }
 
+
+#[derive(Component)]
+pub struct ScrollingListNode(pub bool);
+
 #[derive(Component)]
 pub struct MovingScrollPanel;
 

@@ -2,7 +2,7 @@ use bevy::{ecs::storage::Column, prelude::*};
 
 use crate::ui::{
     components::{
-        BaseScreenNode, ButtonCaptureTextInput, ButtonUnlock, DashboardProofUpdatesLogsList, DashboardScreenNode, LockedScreenNode, MovingScrollPanel, ScrollingList, TextCursor, TextInput, TextPasswordInput, TextPasswordLabel
+        BaseScreenNode, ButtonCaptureTextInput, ButtonUnlock, DashboardProofUpdatesLogsList, DashboardScreenNode, LockedScreenNode, MovingScrollPanel, ScrollingList, ScrollingListNode, TextCursor, TextInput, TextPasswordInput, TextPasswordLabel
     },
     styles::{hex_dark_mode_text_white_2, FONT_REGULAR, FONT_SIZE_LARGE, FONT_SIZE_SMALL, NORMAL_BUTTON},
 };
@@ -54,6 +54,7 @@ pub fn spawn_dashboard_screen(
                         ..default()
                     },
                     Name::new("Scrolling List Node"),
+                    ScrollingListNode(true),
                 )).with_children(|parent| {
                     parent.spawn((
                         NodeBundle {
