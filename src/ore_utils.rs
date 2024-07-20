@@ -22,11 +22,11 @@ use crate::MiningDataChannelMessage;
 pub const ORE_TOKEN_DECIMALS: u8 = TOKEN_DECIMALS;
 
 pub fn get_mine_ix(signer: Pubkey, solution: Solution, bus: usize) -> Instruction {
-    instruction::mine(signer, BUS_ADDRESSES[bus], solution)
+    instruction::mine(signer, signer, BUS_ADDRESSES[bus], solution)
 }
 
 pub fn get_register_ix(signer: Pubkey) -> Instruction {
-    instruction::open(signer, signer)
+    instruction::open(signer, signer, signer)
 }
 
 pub fn get_reset_ix(signer: Pubkey) -> Instruction {
