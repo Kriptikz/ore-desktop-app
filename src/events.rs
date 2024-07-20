@@ -20,7 +20,7 @@ use crate::{
     }, tasks::{
         SigCheckResults, TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskSigChecks, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
-        components::{ButtonAutoScroll, DashboardProofUpdatesLogsList, DashboardProofUpdatesLogsListItem, MiningScreenTxResultList, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
+        components::{ButtonAutoScroll, DashboardProofUpdatesLogsList, DashboardProofUpdatesLogsListItem, MiningScreenTxResultList, MovingScrollPanel, ScrollingList, ScrollingListNode, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{FONT_REGULAR, FONT_SIZE_MEDIUM, MINE_TOGGLE_OFF, MINE_TOGGLE_ON, TOGGLE_OFF, TOGGLE_ON},
     }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashRateResource, HashStatus, MinerStatusResource, MiningDataChannelMessage, MiningDataChannelResource, MiningProofsResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
@@ -1267,7 +1267,8 @@ pub fn handle_event_proof_account_updated(
     mut event_reader: EventReader<EventProofAccountUpdated>,
     mut mining_proofs: ResMut<MiningProofsResource>,
     asset_server: Res<AssetServer>,
-    parent_list: Query<Entity, With<DashboardProofUpdatesLogsList>>,
+    scrolling_list_node_query: Query<&Node, (With<ScrollingListNode>, Without<ScrollingList>)>,
+    mut moving_scroll_panel_query: Query<(Entity, &Node, &Parent, &mut Style, &mut ScrollingList), With<DashboardProofUpdatesLogsList>>,
 ) {
     for ev in event_reader.read() {
         let proof = ev.0;
@@ -1295,8 +1296,9 @@ pub fn handle_event_proof_account_updated(
         let total_rewards = proof.total_rewards as f64 / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
 
         let text_log_item = format!("{}, Diff: {}, Rewards: {}, Bal: {}, Hashes: {}", authority, difficulty, rewards, balance, proof.total_hashes);
+        info!("{}", text_log_item.clone());
 
-        if let Ok(parent_entity) = parent_list.get_single() {
+        if let Ok((moving_scroll_panel_entity, moving_scroll_panel_node, parent_scroll_list, mut moving_scroll_panel_style, mut moving_scroll_panel_scrolling_list)) = moving_scroll_panel_query.get_single_mut() {
             let new_list_item_id = commands.spawn((
                 NodeBundle {
                     style: Style {
@@ -1325,7 +1327,19 @@ pub fn handle_event_proof_account_updated(
                 ));
             }).id();
 
-            commands.entity(parent_entity).add_child(new_list_item_id);
+            commands.entity(moving_scroll_panel_entity).add_child(new_list_item_id);
+
+            let items_height = moving_scroll_panel_node.size().y + 20.0;
+            if let Ok(scrolling_list_node) = scrolling_list_node_query.get(parent_scroll_list.get()) {
+                let container_height = scrolling_list_node.size().y;
+
+                if items_height > container_height {
+                    let max_scroll = items_height - container_height;
+
+                    moving_scroll_panel_scrolling_list.position = -max_scroll;
+                    moving_scroll_panel_style.top = Val::Px(moving_scroll_panel_scrolling_list.position);
+                }
+            }
         }
     }
 }
