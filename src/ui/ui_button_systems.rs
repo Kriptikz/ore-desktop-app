@@ -11,7 +11,7 @@ use super::{
     components::{
         AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCooldownSpinner, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonRequestAirdrop, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextInput, ToggleAutoMine
     },
-    styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
+    styles::{hex_dark_mode_app_screen_background, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
 
 pub fn button_copy_text(
@@ -444,7 +444,7 @@ pub fn button_auto_scroll(
                 // }
             }
             Interaction::None => {
-                *color = HOVERED_BUTTON.into();
+                *color = hex_dark_mode_app_screen_background().into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
                 // }

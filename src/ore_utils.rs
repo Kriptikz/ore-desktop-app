@@ -258,6 +258,8 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, mining_messag
                             if timer.elapsed().as_secs().ge(&cutoff_time) {
                                 if best_difficulty.gt(&ore_api::consts::MIN_DIFFICULTY) {
                                     // Mine until min difficulty has been met
+                                    // Stop all other threads since time has elapsed and the minimum difficulty has been found
+                                    let _ = message_sender.try_send(MiningDataChannelMessage::Stop);
                                     break;
                                 }
                             } 

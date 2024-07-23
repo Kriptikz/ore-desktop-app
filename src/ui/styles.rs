@@ -85,6 +85,7 @@ pub static MINE_TOGGLE_BACKGROUND: &str = "design_2/mine_toggle_background.png";
 pub static MINE_TOGGLE_BUTTON: &str = "design_2/mine_toggle_button.png";
 pub static CONTENT_BACKGROUND_SMALL: &str = "design_2/content_background_small.png";
 pub static CONTENT_BACKGROUND_MEDIUM: &str = "design_2/content_background_medium.png";
+pub static LOG_ITEMS_BACKGROUND: &str = "design_2/log_items_background.png";
 pub static MINE_TOGGLE_ON: &str = "design_2/mine_toggle_on.png";
 pub static MINE_TOGGLE_OFF: &str = "design_2/mine_toggle_off.png";
 

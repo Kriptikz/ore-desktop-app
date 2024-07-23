@@ -18,6 +18,12 @@ pub struct ScrollingListNode(pub bool);
 #[derive(Component)]
 pub struct MovingScrollPanel;
 
+#[derive(Component)]
+pub struct TextActiveMinersThisEpoch;
+
+#[derive(Component)]
+pub struct TextActiveMinersLastEpoch;
+
 /// Marker to find the container entity so we can show/hide the FPS counter
 #[derive(Component)]
 pub struct FpsRoot;
@@ -25,6 +31,15 @@ pub struct FpsRoot;
 /// Marker to find the text entity so we can update it
 #[derive(Component)]
 pub struct FpsText;
+
+#[derive(Component)]
+pub struct TextHighestDifficultySeen;
+
+#[derive(Component)]
+pub struct TextCrownStakeAmount;
+
+#[derive(Component)]
+pub struct TextCrownStakeBy;
 
 #[derive(Component)]
 pub struct BaseScreenNode;
@@ -192,6 +207,9 @@ pub struct TextMinerStatusCpuUsage;
 
 #[derive(Component)]
 pub struct TextMinerStatusRamUsage;
+
+#[derive(Component)]
+pub struct TextHashrate;
 
 #[derive(Component)]
 pub struct TextCurrentTxSig;

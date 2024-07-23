@@ -12,11 +12,11 @@ use solana_sdk::signer::Signer;
 use crate::{
     ui::{
         components::{
-            AutoScrollCheckIcon, ButtonAutoScroll, ButtonCooldownSpinner, ButtonRequestAirdrop, ButtonStakeOre, MiningScreenNode, MiningScreenTxResultList, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
+            AutoScrollCheckIcon, ButtonAutoScroll, ButtonCooldownSpinner, ButtonRequestAirdrop, ButtonStakeOre, MiningScreenNode, MiningScreenTxResultList, SpinnerIcon, TextBurnAmount, TextBus1, TextBus2, TextBus3, TextBus4, TextBus5, TextBus6, TextBus7, TextBus8, TextHashrate, TextLastClaimAt, TextLastHashAt, TextMinerStatusThreads, TxPopUpArea
         },
         spawn_utils::spawn_copyable_text,
         styles::{
-            hex_black, hex_dark_mode_background, hex_dark_mode_nav_title, hex_dark_mode_text_gray, BUTTON_CLAIM, BUTTON_GREEN_MEDIUM, BUTTON_RED_MEDIUM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, CONTENT_BACKGROUND_MEDIUM, CONTENT_BACKGROUND_SMALL, FONT_REGULAR, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
+            hex_black, hex_dark_mode_app_screen_background, hex_dark_mode_background, hex_dark_mode_nav_title, hex_dark_mode_text_gray, BUTTON_CLAIM, BUTTON_GREEN_MEDIUM, BUTTON_RED_MEDIUM, BUTTON_STAKE, CHECKBOX, CHECK_ICON, CONTENT_BACKGROUND_MEDIUM, CONTENT_BACKGROUND_SMALL, FONT_REGULAR, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, LOG_ITEMS_BACKGROUND, MINE_TOGGLE_BUTTON, PROOF_ACCOUNT_BACKGROUND, SPINNER_ICON, SYSTEM_OVERVIEW_BACKGROUND, TOGGLE_OFF, TREASURY_BACKGROUND, TX_RESULTS_BACKGROUND
         },
     }, utils::shorten_string, AppConfig, AppWallet
 };
@@ -50,7 +50,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
             NodeBundle {
                 style: Style {
                     width: Val::Percent(100.0),
-                    height: Val::Percent(70.0),
+                    height: Val::Percent(55.0),
                     flex_direction: FlexDirection::Column,
                     ..default()
                 },
@@ -71,54 +71,6 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                 },
                 Name::new("Mining App Screen Top Data Section Top"),
             )).with_children(|parent| {
-                parent.spawn((
-                    NodeBundle {
-                        background_color: hex_dark_mode_nav_title().into(),
-                        style: Style {
-                            width: Val::Percent(25.0),
-                            height: Val::Percent(90.0),
-                            justify_content: JustifyContent::SpaceBetween,
-                            align_items: AlignItems::Start,
-                            flex_direction: FlexDirection::Column,
-                            padding: UiRect {
-                                top: Val::Px(5.0),
-                                bottom: Val::Px(5.0),
-                                left: Val::Px(8.0),
-                                right: Val::Px(0.0),
-                            },
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    UiImage::new(
-                            asset_server.load(CONTENT_BACKGROUND_SMALL),
-                        ),
-                    Name::new("Mining App Screen Top Section Top"),
-                )).with_children(|parent| {
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "Treasury",
-                            TextStyle {
-                                font: asset_server.load(FONT_REGULAR),
-                                font_size: FONT_SIZE_MEDIUM,
-                                color: hex_dark_mode_text_gray().into()
-                            },
-                        ),
-                        Name::new("TextTreasuryBalance"),
-                    ));
-                    parent.spawn((
-                        TextBundle::from_section(
-                            "loading...",
-                            TextStyle {
-                                font: asset_server.load(FONT_REGULAR),
-                                font_size: FONT_SIZE_MEDIUM,
-                                color: hex_dark_mode_text_gray().into()
-                            },
-                        ),
-                        Name::new("TextTreasuryOreBalance"),
-                        TextTreasuryBalance,
-                    ));
-                });
                 parent.spawn((
                     NodeBundle {
                         background_color: hex_dark_mode_nav_title().into(),
@@ -872,6 +824,53 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                             TextMinerStatusRamUsage
                         ));
                     });
+                    parent.spawn((
+                        NodeBundle {
+                            background_color: hex_dark_mode_nav_title().into(),
+                            style: Style {
+                                width: Val::Percent(90.0),
+                                height: Val::Percent(20.0),
+                                align_items: AlignItems::Start,
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect {
+                                    top: Val::Px(5.0),
+                                    bottom: Val::Px(5.0),
+                                    left: Val::Px(8.0),
+                                    right: Val::Px(0.0),
+                                },
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiImage::new(
+                                asset_server.load(CONTENT_BACKGROUND_SMALL),
+                            ),
+                        Name::new("Status Hashrate"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "Hashrate",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextTitleHashrate"),
+                        ));
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "calculating...",
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    color: hex_dark_mode_text_gray().into()
+                                },
+                            ),
+                            Name::new("TextHashrate"),
+                            TextHashrate
+                        ));
+                    });
                 });
                 parent.spawn((
                     NodeBundle {
@@ -1114,7 +1113,9 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
             NodeBundle {
                 style: Style {
                     width: Val::Percent(100.0),
-                    height: Val::Percent(30.0),
+                    height: Val::Percent(45.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
                     ..default()
                 },
                 ..default()
@@ -1124,33 +1125,36 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
             parent
                 .spawn((
                     NodeBundle {
-                        background_color: Color::WHITE.into(),
+                        background_color: hex_dark_mode_nav_title().into(),
                         // border_color: Color::ORANGE.into(),
                         style: Style {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
-                            flex_direction: FlexDirection::Column,
+                            width: Val::Percent(95.0),
+                            height: Val::Percent(98.0),
                             border: UiRect::all(Val::Px(1.0)),
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::Center,
                             ..default()
                         },
                         ..default()
                     },
-                    UiImage::new(asset_server.load(TX_RESULTS_BACKGROUND)),
+                    UiImage::new(asset_server.load(LOG_ITEMS_BACKGROUND)),
                     Name::new("Left Bottom Node"),
                 ))
                 .with_children(|parent| {
                     parent
                         .spawn((
                             NodeBundle {
+                                background_color: hex_dark_mode_background().into(),
                                 style: Style {
                                     flex_direction: FlexDirection::Column,
                                     align_items: AlignItems::Center,
-                                    padding: UiRect::all(Val::Percent(2.0)),
-                                    min_height: Val::Percent(100.0),
+                                    height: Val::Percent(90.0),
+                                    width: Val::Percent(95.0),
                                     ..default()
                                 },
                                 ..default()
                             },
+                            UiImage::new(asset_server.load(LOG_ITEMS_BACKGROUND)),
                             Name::new("TxResultList Node"),
                         ))
                         .with_children(|parent| {
@@ -1169,8 +1173,6 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                             // column_gap: Val::Px(30.0),
                                             ..default()
                                         },
-                                        background_color: Color::rgb(0.15, 0.15, 0.15)
-                                            .into(),
                                         ..default()
                                     },
                                     Name::new("Tx Status Title"),
@@ -1195,6 +1197,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                                 TextStyle {
                                                     font: asset_server.load(FONT_REGULAR),
                                                     font_size: FONT_SIZE,
+                                                    color: hex_dark_mode_text_gray().into(),
                                                     ..default()
                                                 },
                                             ),
@@ -1221,6 +1224,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                                 TextStyle {
                                                     font: asset_server.load(FONT_REGULAR),
                                                     font_size: FONT_SIZE,
+                                                    color: hex_dark_mode_text_gray().into(),
                                                     ..default()
                                                 },
                                             ),
@@ -1247,6 +1251,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                                 TextStyle {
                                                     font: asset_server.load(FONT_REGULAR),
                                                     font_size: FONT_SIZE,
+                                                    color: hex_dark_mode_text_gray().into(),
                                                     ..default()
                                                 },
                                             ),
@@ -1273,6 +1278,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                                 TextStyle {
                                                     font: asset_server.load(FONT_REGULAR),
                                                     font_size: FONT_SIZE,
+                                                    color: hex_dark_mode_text_gray().into(),
                                                     ..default()
                                                 },
                                             ),
@@ -1299,6 +1305,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                                 TextStyle {
                                                     font: asset_server.load(FONT_REGULAR),
                                                     font_size: FONT_SIZE,
+                                                    color: hex_dark_mode_text_gray().into(),
                                                     ..default()
                                                 },
                                             ),
@@ -1326,6 +1333,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                                 TextStyle {
                                                     font: asset_server.load(FONT_REGULAR),
                                                     font_size: FONT_SIZE,
+                                                    color: hex_dark_mode_text_gray().into(),
                                                     ..default()
                                                 },
                                             ),
@@ -1395,8 +1403,6 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                             overflow: Overflow::clip_y(),
                                             ..default()
                                         },
-                                        background_color: Color::rgb(0.10, 0.10, 0.10)
-                                            .into(),
                                         ..default()
                                     },
                                     Name::new("ScrollingList Node"),
@@ -1426,6 +1432,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                             width: Val::Px(100.0),
                                             height: Val::Px(21.0),
                                             align_self: AlignSelf::End,
+                                            padding: UiRect::all(Val::Px(2.0)),
                                             justify_content: JustifyContent::SpaceBetween,
                                             ..default()
                                         },
@@ -1444,16 +1451,16 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                     ),));
                                     parent.spawn((
                                         ButtonBundle {
-                                            background_color: Color::WHITE.into(),
+                                            background_color: hex_dark_mode_app_screen_background().into(),
                                             style: Style {
-                                                width: Val::Px(21.0),
-                                                height: Val::Px(21.0),
+                                                width: Val::Px(18.0),
+                                                height: Val::Px(18.0),
                                                 justify_content: JustifyContent::Center,
                                                 align_items: AlignItems::Center,
                                                 ..default()
                                             },
                                             image: UiImage::new(
-                                                asset_server.load(CHECKBOX),
+                                                asset_server.load(MINE_TOGGLE_BUTTON),
                                             ),
                                             ..default()
                                         },

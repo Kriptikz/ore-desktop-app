@@ -22,7 +22,7 @@ use crate::{
     }, ui::{
         components::{ButtonAutoScroll, DashboardProofUpdatesLogsList, DashboardProofUpdatesLogsListItem, MiningScreenTxResultList, MovingScrollPanel, ScrollingList, ScrollingListNode, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{FONT_REGULAR, FONT_SIZE_MEDIUM, MINE_TOGGLE_OFF, MINE_TOGGLE_ON, TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashRateResource, HashStatus, MinerStatusResource, MiningDataChannelMessage, MiningDataChannelResource, MiningProofsResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
+    }, utils::{find_best_bus, get_unix_timestamp, shorten_string}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashStatus, HashrateResource, MinerStatusResource, MiningDataChannelMessage, MiningDataChannelResource, MiningProofsResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
 
 use std::{
@@ -255,7 +255,7 @@ pub fn handle_event_submit_hash_tx(
     rpc_connection: Res<RpcConnection>,
     mut busses_res: ResMut<BussesResource>,
     mut next_state: ResMut<NextState<AppScreenState>>,
-    mut hashrate_res: ResMut<HashRateResource>,
+    mut hashrate_res: ResMut<HashrateResource>,
 ) {
     for ev in ev_submit_hash_tx.read() {
         let wallet = if let Some(wallet) =  &app_wallet.wallet {
@@ -294,9 +294,12 @@ pub fn handle_event_submit_hash_tx(
 
             let last_reset_at = treasury.last_reset_at;
 
-            hashrate_res.hash_rate = new_hashes_checked as f64 / hash_time as f64;
-
-            info!("Hashrate: {}/second", hashrate_res.hash_rate);
+            if hash_time > 0 {
+                hashrate_res.hashrate = new_hashes_checked as f64 / hash_time as f64;
+            } else {
+                hashrate_res.hashrate = new_hashes_checked as f64;
+            }
+            info!("Hashrate: {}/second", hashrate_res.hashrate);
 
             let current_ts = get_unix_timestamp() as i64;
 
@@ -377,6 +380,7 @@ pub fn handle_event_tx_result(
     query_node: Query<&Node>,
     query_auto_scroll: Query<&ButtonAutoScroll>,
     query_toggle: Query<&ToggleAutoMine>,
+    mut local: Local<bool>,
 ) {
     for ev in ev_tx_result.read() {
         let (hash_time, difficulty) = if let Some(ht) = &ev.hash_status {
@@ -407,7 +411,10 @@ pub fn handle_event_tx_result(
                 hash_time,
                 status,
             };
-            spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
+            let use_light_background = local.clone();
+            spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data, use_light_background);
+
+            *local = !*local;
 
             let auto_scroll = query_auto_scroll.single();
 
@@ -1273,74 +1280,103 @@ pub fn handle_event_proof_account_updated(
     for ev in event_reader.read() {
         let proof = ev.0;
         let pubkey = proof.authority;
-        let mut rewards: i64 = 0;
+        let mut active_miner = false;
         if let Some(old_proof) = mining_proofs.proofs.get_mut(&pubkey) {
-            let old_balance = old_proof.balance;
-            rewards = proof.balance as i64 - old_balance as i64;
+            if proof.miner != old_proof.miner {
+                // miner pubkey was updated
+                info!("Proof miner was updated!");
+            } else {
+                let item_log_data: String;
+                // miner pubkey is still the same, do checks for other tx types
+                let old_balance = old_proof.balance;
+                let rewards = proof.balance as i64 - old_balance as i64;
+                let proof_auth = shorten_string(proof.authority.to_string(), 8);
+
+                if proof.challenge != old_proof.challenge {
+                    // Challenge was updated, it was a mine tx
+                    let default_proof_difficulty = [0; 32];
+                    let difficulty = if default_proof_difficulty == proof.last_hash {
+                        0
+                    } else {
+                        drillx::difficulty(proof.last_hash)
+                    };
+
+                    let balance = (proof.balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                    let rewards: f64 = (rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+
+                    let _average_reward_per_hash = (proof.total_rewards as f64 / proof.total_hashes as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                    let total_rewards = proof.total_rewards as f64 / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                    active_miner = true;
+
+                    item_log_data = format!("{} mined {} with difficulty {}", proof_auth, rewards, difficulty);
+                } else {
+                    // Challenge was not updated, it was a Stake or Claim
+                    if rewards > 0 {
+                        // Rewards increased, it was a stake
+                        item_log_data = format!("{} staked {} Ore", proof_auth, rewards);
+                    } else {
+                        // Rewards decreased, it was a claim
+                        item_log_data = format!("{} claimed {} Ore", proof_auth, rewards);
+                    }
+                }
+
+                info!("{}", item_log_data.clone());
+                if let Ok((moving_scroll_panel_entity, moving_scroll_panel_node, parent_scroll_list, mut moving_scroll_panel_style, mut moving_scroll_panel_scrolling_list)) = moving_scroll_panel_query.get_single_mut() {
+                    let new_list_item_id = commands.spawn((
+                        NodeBundle {
+                            style: Style {
+                                flex_direction: FlexDirection::Row,
+                                height: Val::Px(20.0),
+                                width: Val::Percent(100.0),
+                                // padding: UiRect::left(Val::Px(20.0)),
+                                // column_gap: Val::Px(30.0),
+                                // justify_content: JustifyContent::SpaceAround,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Name::new("Proof Account Update List Item"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                item_log_data,
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    ..default()
+                                },
+                            ),
+                            DashboardProofUpdatesLogsListItem
+                        ));
+                    }).id();
+
+                    commands.entity(moving_scroll_panel_entity).add_child(new_list_item_id);
+
+                    let items_height = moving_scroll_panel_node.size().y + 20.0;
+                    if let Ok(scrolling_list_node) = scrolling_list_node_query.get(parent_scroll_list.get()) {
+                        let container_height = scrolling_list_node.size().y;
+
+                        if items_height > container_height {
+                            let max_scroll = items_height - container_height;
+
+                            moving_scroll_panel_scrolling_list.position = -max_scroll;
+                            moving_scroll_panel_style.top = Val::Px(moving_scroll_panel_scrolling_list.position);
+                        }
+                    }
+                }
+
+            }
+
+            // update old proof 
             *old_proof = proof;
         } else {
             mining_proofs.proofs.insert(pubkey, proof);
         }
-        let authority = proof.authority.to_string();
-        let default_proof_difficulty = [0; 32];
 
-        let difficulty = if default_proof_difficulty == proof.last_hash {
-            0
-        } else {
-            drillx::difficulty(proof.last_hash)
-        };
-        let balance = (proof.balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        let rewards: f64 = (rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-
-        let _average_reward_per_hash = (proof.total_rewards as f64 / proof.total_hashes as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-        let total_rewards = proof.total_rewards as f64 / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
-
-        let text_log_item = format!("{}, Diff: {}, Rewards: {}, Bal: {}, Hashes: {}", authority, difficulty, rewards, balance, proof.total_hashes);
-        info!("{}", text_log_item.clone());
-
-        if let Ok((moving_scroll_panel_entity, moving_scroll_panel_node, parent_scroll_list, mut moving_scroll_panel_style, mut moving_scroll_panel_scrolling_list)) = moving_scroll_panel_query.get_single_mut() {
-            let new_list_item_id = commands.spawn((
-                NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Row,
-                        height: Val::Px(20.0),
-                        width: Val::Percent(100.0),
-                        // padding: UiRect::left(Val::Px(20.0)),
-                        // column_gap: Val::Px(30.0),
-                        // justify_content: JustifyContent::SpaceAround,
-                        ..default()
-                    },
-                    ..default()
-                },
-                Name::new("Proof Account Update List Item"),
-            )).with_children(|parent| {
-                parent.spawn((
-                    TextBundle::from_section(
-                        text_log_item,
-                        TextStyle {
-                            font: asset_server.load(FONT_REGULAR),
-                            font_size: FONT_SIZE_MEDIUM,
-                            ..default()
-                        },
-                    ),
-                    DashboardProofUpdatesLogsListItem
-                ));
-            }).id();
-
-            commands.entity(moving_scroll_panel_entity).add_child(new_list_item_id);
-
-            let items_height = moving_scroll_panel_node.size().y + 20.0;
-            if let Ok(scrolling_list_node) = scrolling_list_node_query.get(parent_scroll_list.get()) {
-                let container_height = scrolling_list_node.size().y;
-
-                if items_height > container_height {
-                    let max_scroll = items_height - container_height;
-
-                    moving_scroll_panel_scrolling_list.position = -max_scroll;
-                    moving_scroll_panel_style.top = Val::Px(moving_scroll_panel_scrolling_list.position);
-                }
-            }
+        if active_miner {
+            mining_proofs.miners_this_epoch += 1;
         }
+
     }
 }
 

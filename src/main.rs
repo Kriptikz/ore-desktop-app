@@ -26,7 +26,7 @@ use ui::{
     components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}}, ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     }, ui_sync_systems::{
-        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
+        fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_miners_ui, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_hash_rate_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
     }
 };
 
@@ -162,12 +162,14 @@ fn main() {
             busses: vec![],
             current_bus_id: 0,
         })
-        .insert_resource(HashRateResource {
-            hash_rate: 0.0,
+        .insert_resource(HashrateResource {
+            hashrate: 0.0,
         })
         .insert_resource(MiningProofsResource {
             proofs: HashMap::new(),
             largest_difficulty_seen: 0,
+            miners_last_epoch: 0,
+            miners_this_epoch: 0,
         })
         .insert_resource(MiningDataChannelResource {
             receiver: None,
@@ -212,6 +214,8 @@ fn main() {
                 (
                     button_start_stop_mining,
                     spin_spinner_icons,
+                    update_busses_ui,
+                    update_treasury_account_ui,
                 ),
                 (
                     handle_event_start_stop_mining_clicked,
@@ -303,6 +307,11 @@ fn main() {
         )
         .add_systems(
             Update,
+            (update_active_miners_ui)
+                .run_if(in_state(AppScreenState::Dashboard)),
+        )
+        .add_systems(
+            Update,
             (
                 // individual tuple max size is 12
                 (
@@ -321,10 +330,9 @@ fn main() {
                     handle_event_request_airdrop,
                 ),
                 (
-                    update_busses_ui,
                     update_proof_account_ui,
-                    update_treasury_account_ui,
                     update_miner_status_ui,
+                    update_hash_rate_ui,
                 ),
             )
                 .run_if(is_mining_screen_with_some_wallet),
@@ -681,8 +689,8 @@ impl Default for ProofAccountResource {
 }
 
 #[derive(Resource)]
-pub struct HashRateResource {
-    hash_rate: f64,
+pub struct HashrateResource {
+    hashrate: f64,
 }
 
 #[derive(Resource)]
@@ -745,6 +753,8 @@ pub struct RpcConnection {
 pub struct MiningProofsResource {
     proofs: HashMap<Pubkey, Proof>,
     largest_difficulty_seen: u32,
+    miners_this_epoch: u32,
+    miners_last_epoch: u32,
 }
 
 
@@ -1278,6 +1288,7 @@ pub fn read_accounts_update_channel(
     mut proof_account: ResMut<ProofAccountResource>,
     mut treasury_account: ResMut<TreasuryAccountResource>,
     mut busses_res: ResMut<BussesResource>,
+    mut mining_proofs_res: ResMut<MiningProofsResource>,
     app_wallet: Res<AppWallet>,
     mut event_proof_account_updated: EventWriter<EventProofAccountUpdated>
 ) {
@@ -1310,10 +1321,18 @@ pub fn read_accounts_update_channel(
 
             },
             AccountUpdatesData::TreasuryConfigData(new_treasury_data) => {
+                if treasury_account.last_reset_at != new_treasury_data.last_reset_at {
+                    // last_reset_at updated
+                    mining_proofs_res.miners_last_epoch = mining_proofs_res.miners_this_epoch;
+                    mining_proofs_res.miners_this_epoch = 0;
+
+                    info!("miners last epoch: {}", mining_proofs_res.miners_last_epoch);
+                }
                 treasury_account.last_reset_at = new_treasury_data.last_reset_at;
                 let base_reward_rate =
                     (new_treasury_data.base_reward_rate as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
                 treasury_account.base_reward_rate = base_reward_rate;
+
             },
             AccountUpdatesData::TreasuryBalanceData(new_balance) => {
                 let new_balance = (new_balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);

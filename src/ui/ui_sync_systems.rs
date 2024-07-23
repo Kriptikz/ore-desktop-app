@@ -11,7 +11,9 @@ use crate::ore_utils::ORE_TOKEN_DECIMALS;
 use crate::utils::{get_unix_timestamp, human_bytes, shorten_string};
 use crate::AppWallet;
 use crate::BussesResource;
+use crate::HashrateResource;
 use crate::MinerStatusResource;
+use crate::MiningProofsResource;
 use crate::OreAppState;
 use crate::ProofAccountResource;
 use crate::TreasuryAccountResource;
@@ -20,6 +22,8 @@ use super::components::ButtonCaptureTextInput;
 use super::components::FpsRoot;
 use super::components::FpsText;
 use super::components::ScrollingList;
+use super::components::TextActiveMinersLastEpoch;
+use super::components::TextActiveMinersThisEpoch;
 use super::components::TextBurnAmount;
 use super::components::TextBus1;
 use super::components::TextBus2;
@@ -32,6 +36,7 @@ use super::components::TextBus8;
 use super::components::TextCurrentStake;
 use super::components::TextCurrentChallenge;
 use super::components::TextCursor;
+use super::components::TextHashrate;
 use super::components::TextInput;
 use super::components::TextLastClaimAt;
 use super::components::TextLastHashAt;
@@ -267,6 +272,40 @@ pub fn update_busses_ui(
             }
         }
     }
+}
+
+pub fn update_active_miners_ui(
+    mining_proofs_res: Res<MiningProofsResource>,
+    mut set: ParamSet<(
+        Query<&mut Text, With<TextActiveMinersThisEpoch>>,
+        Query<&mut Text, With<TextActiveMinersLastEpoch>>,
+    )>,
+) {
+    let mut text_active_miners_this_epoch = set.p0();
+    if let Ok(mut text_component) = text_active_miners_this_epoch.get_single_mut() {
+        text_component.sections[0].value =
+            mining_proofs_res.miners_this_epoch.to_string();
+    }
+
+    let mut text_active_miners_last_epoch = set.p1();
+    if let Ok(mut text_component) = text_active_miners_last_epoch.get_single_mut() {
+        text_component.sections[0].value =
+            mining_proofs_res.miners_last_epoch.to_string();
+    }
+}
+
+pub fn update_hash_rate_ui(
+    hashrate_res: Res<HashrateResource>,
+    mut set: ParamSet<(
+        Query<&mut Text, With<TextHashrate>>,
+    )>,
+) {
+    let mut text_hash_rate = set.p0();
+    if let Ok(mut text_component) = text_hash_rate.get_single_mut() {
+        let new_value = format!("{:.0} H/s", hashrate_res.hashrate);
+        text_component.sections[0].value = new_value;
+    }
+
 }
 
 pub fn update_proof_account_ui(
