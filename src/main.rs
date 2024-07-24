@@ -398,6 +398,8 @@ fn setup_mining_screen(
 
             let wallet_pubkey = wallet.pubkey().clone();
 
+            info!("Wallet Pubkey: {}", wallet_pubkey);
+
             let ws_url = config.ws_url.clone();
 
             task_pool.spawn(Compat::new(async move {
@@ -703,20 +705,20 @@ pub struct BussesResource {
 #[reflect(Resource, InspectorOptions)]
 pub struct TreasuryAccountResource {
     balance: String,
-    admin: String,
     last_reset_at: i64,
     need_epoch_reset: bool,
     base_reward_rate: f64,
+    min_difficulty: u64,
 }
 
 impl Default for TreasuryAccountResource {
     fn default() -> Self {
         Self {
             balance: "loading...".to_string(),
-            admin: "loading...".to_string(),
             last_reset_at: 0,
             need_epoch_reset: false,
             base_reward_rate: 0.0,
+            min_difficulty: 0,
         }
     }
 }

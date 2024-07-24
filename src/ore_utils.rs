@@ -207,7 +207,7 @@ pub fn get_cutoff(proof: Proof, buffer_time: u64) -> i64 {
         .saturating_sub(now)
 }
 
-pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, mining_messages_reciever: Receiver<MiningDataChannelMessage>, mining_messages_sender: Sender<MiningDataChannelMessage>) -> (Solution, u32, Hash, u64) {
+pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, min_difficulty: u32, mining_messages_reciever: Receiver<MiningDataChannelMessage>, mining_messages_sender: Sender<MiningDataChannelMessage>) -> (Solution, u32, Hash, u64) {
     let handles: Vec<_> = (0..threads)
         .map(|i| {
             std::thread::spawn({
@@ -256,7 +256,7 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, mining_messag
                         // Exit if time has elapsed
                         if nonce % 100 == 0 {
                             if timer.elapsed().as_secs().ge(&cutoff_time) {
-                                if best_difficulty.gt(&ore_api::consts::MIN_DIFFICULTY) {
+                                if best_difficulty.gt(&min_difficulty) {
                                     // Mine until min difficulty has been met
                                     // Stop all other threads since time has elapsed and the minimum difficulty has been found
                                     let _ = message_sender.try_send(MiningDataChannelMessage::Stop);

@@ -151,6 +151,7 @@ pub fn handle_event_mine_for_hash(
     mut event_reader: EventReader<EventMineForHash>,
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
+    ore_config_res: Res<TreasuryAccountResource>,
     mut miner_status: ResMut<MinerStatusResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
     mut next_state: ResMut<NextState<AppScreenState>>,
@@ -193,6 +194,7 @@ pub fn handle_event_mine_for_hash(
                 // clear out any current messages
             }
 
+            let min_difficulty = ore_config_res.min_difficulty;
 
             let task = pool.spawn(Compat::new(async move {
                 // TODO: use proof resource cached proof. May need LatestHash Resource to ensure a new proof if loaded before mining.
@@ -220,6 +222,7 @@ pub fn handle_event_mine_for_hash(
                     proof,
                     cutoff,
                     threads,
+                    min_difficulty as u32,
                     receiver,
                     sender,
                 );
@@ -542,18 +545,18 @@ pub fn handle_event_fetch_ui_data_from_rpc(
 
                     treasury_account_res_data = TreasuryAccountResource {
                         balance: treasury_ore_balance.to_string(),
-                        admin: treasury_account.admin.to_string(),
                         last_reset_at: treasury_account.last_reset_at,
+                        min_difficulty: treasury_account.min_difficulty,
                         need_epoch_reset,
                         base_reward_rate,
                     };
                 } else {
                     treasury_account_res_data = TreasuryAccountResource {
                         balance: "Not Found".to_string(),
-                        admin: "".to_string(),
                         last_reset_at: 0,
                         need_epoch_reset: false,
                         base_reward_rate: 0.0,
+                        min_difficulty: 0,
                     };
                 }
                 let mut busses_res_data = vec![];

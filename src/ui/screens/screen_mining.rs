@@ -1148,7 +1148,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                 style: Style {
                                     flex_direction: FlexDirection::Column,
                                     align_items: AlignItems::Center,
-                                    height: Val::Percent(90.0),
+                                    height: Val::Percent(88.0),
                                     width: Val::Percent(95.0),
                                     ..default()
                                 },
@@ -1434,6 +1434,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                             align_self: AlignSelf::End,
                                             padding: UiRect::all(Val::Px(2.0)),
                                             justify_content: JustifyContent::SpaceBetween,
+                                            align_items: AlignItems::Center,
                                             ..default()
                                         },
                                         ..default()
@@ -1453,8 +1454,8 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                                         ButtonBundle {
                                             background_color: hex_dark_mode_app_screen_background().into(),
                                             style: Style {
-                                                width: Val::Px(18.0),
-                                                height: Val::Px(18.0),
+                                                width: Val::Px(14.0),
+                                                height: Val::Px(12.0),
                                                 justify_content: JustifyContent::Center,
                                                 align_items: AlignItems::Center,
                                                 ..default()
