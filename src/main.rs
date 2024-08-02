@@ -385,12 +385,12 @@ fn setup_mining_screen(
     if let Ok((_mining_screen_ent, mut visibility)) = query_mining_screen.get_single_mut() {
         *visibility = Visibility::Visible;
     } else {
-        let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
-        parent.with_children(|parent| {
-            spawn_app_screen_mining(parent, &asset_server);
-        });
 
         if let Some(wallet) = &app_wallet.wallet {
+            let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+            parent.with_children(|parent| {
+                spawn_app_screen_mining(parent, &asset_server);
+            });
             if rpc_connection.rpc.is_none() {
                 let new_rpc_connection = Arc::new(RpcClient::new_with_commitment(
                     config.rpc_url.clone(),

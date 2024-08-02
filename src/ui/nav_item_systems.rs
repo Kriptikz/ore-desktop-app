@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{AppScreenState, NavItemScreen};
+use crate::{AppScreenState, AppWallet, NavItemScreen};
 
 use super::{components::NavItem, styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON}};
 
@@ -9,6 +9,7 @@ pub fn nav_item_interactions(
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor, &NavItem),
         Changed<Interaction>,
     >,
+    app_wallet: Res<AppWallet>,
     mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for (_entity, interaction, mut color, mut border_color, nav_item) in &mut interaction_query {
@@ -18,22 +19,24 @@ pub fn nav_item_interactions(
                 border_color.0 = Color::RED;
 
                 // event_writer.send(EventNavItemClicked);
-                match nav_item.0 {
-                    NavItemScreen::Dashboard => {
-                        next_state.set(AppScreenState::Dashboard);
-                    },
-                    NavItemScreen::Mining => {
-                        next_state.set(AppScreenState::Mining);
-                    },
-                    NavItemScreen::SettingsWallet => {
-                        next_state.set(AppScreenState::SettingsWallet);
-                    },
-                    NavItemScreen::SettingsConfig => {
-                        next_state.set(AppScreenState::SettingsConfig);
-                    },
-                    NavItemScreen::SettingsGeneral => {
-                        next_state.set(AppScreenState::SettingsGeneral);
-                    },
+                if let Some(_) = &app_wallet.wallet {
+                    match nav_item.0 {
+                        NavItemScreen::Dashboard => {
+                            next_state.set(AppScreenState::Dashboard);
+                        },
+                        NavItemScreen::Mining => {
+                            next_state.set(AppScreenState::Mining);
+                        },
+                        NavItemScreen::SettingsWallet => {
+                            next_state.set(AppScreenState::SettingsWallet);
+                        },
+                        NavItemScreen::SettingsConfig => {
+                            next_state.set(AppScreenState::SettingsConfig);
+                        },
+                        NavItemScreen::SettingsGeneral => {
+                            next_state.set(AppScreenState::SettingsGeneral);
+                        },
+                    }
                 }
             }
             Interaction::Hovered => {
