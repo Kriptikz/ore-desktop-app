@@ -20,6 +20,7 @@ pub fn spawn_dashboard_screen(
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     flex_direction: FlexDirection::Column,
+                    position_type: PositionType::Absolute,
                     ..default()
                 },
                 ..default()

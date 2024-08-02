@@ -38,6 +38,7 @@ pub fn spawn_app_screen_mining(parent: &mut ChildBuilder, asset_server: &AssetSe
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
+                position_type: PositionType::Absolute,
                 ..default()
             },
             ..default()
