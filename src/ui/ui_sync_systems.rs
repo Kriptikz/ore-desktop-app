@@ -136,7 +136,7 @@ pub fn update_busses_ui(
 ) {
     if busses_res.busses.len() > 7 {
         let mut text_bus_query = set.p0();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[0].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -153,7 +153,7 @@ pub fn update_busses_ui(
         }
 
         let mut text_bus_query = set.p1();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[1].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -171,7 +171,7 @@ pub fn update_busses_ui(
 
 
         let mut text_bus_query = set.p2();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[2].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -188,7 +188,7 @@ pub fn update_busses_ui(
         }
 
         let mut text_bus_query = set.p3();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[3].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -205,7 +205,7 @@ pub fn update_busses_ui(
         }
 
         let mut text_bus_query = set.p4();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[4].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -222,7 +222,7 @@ pub fn update_busses_ui(
         }
 
         let mut text_bus_query = set.p5();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[5].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -239,7 +239,7 @@ pub fn update_busses_ui(
         }
 
         let mut text_bus_query = set.p6();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[6].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -256,7 +256,7 @@ pub fn update_busses_ui(
         }
 
         let mut text_bus_query = set.p7();
-        if let Ok(mut text_component) = text_bus_query.get_single_mut() {
+        for mut text_component in text_bus_query.iter_mut() {
             let rewards = (busses_res.busses[7].rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
             text_component.sections[0].value = format!("{}", rewards);
             let selected_color = if miner_status.miner_status.as_str() == "PROCESSING" {
@@ -360,15 +360,13 @@ pub fn update_treasury_account_ui(
     )>,
 ) {
     let mut text_query_0 = set.p0();
-    let mut text_0 = text_query_0.get_single_mut();
-    if let Ok(mut text_0) = text_query_0.get_single_mut() {
+    for mut text_0 in text_query_0.iter_mut() {
         text_0.sections[0].value = treasury_account_res.balance.clone();
     }
 
     if treasury_account_res.last_reset_at != 0 {
         let mut text_query_3 = set.p1();
-
-        if let Ok(mut text_3) = text_query_3.get_single_mut() {
+        for mut text_3 in text_query_3.iter_mut() {
             let date_time =
                 if let Some(dt) = DateTime::from_timestamp(treasury_account_res.last_reset_at, 0) {
                     dt.to_string()
@@ -380,7 +378,7 @@ pub fn update_treasury_account_ui(
     }
 
     let mut text_query_4 = set.p2();
-    if let Ok(mut text_4) = text_query_4.get_single_mut() {
+    for mut text_4 in text_query_4.iter_mut() {
         text_4.sections[0].value =
             treasury_account_res.base_reward_rate.to_string();
     }
