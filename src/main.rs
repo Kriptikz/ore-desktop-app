@@ -22,7 +22,7 @@ use tasks::{
     handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskSendTx
 };
 use ui::{
-    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}, screen_setup_wallet::{despawn_wallet_create_screen, spawn_wallet_setup_screen}}, ui_button_systems::{
+    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, DashboardScreenNode, MiningScreenNode, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}, screen_setup_wallet::{despawn_wallet_create_screen, spawn_wallet_setup_screen}}, ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     }, ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_miners_ui, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_hash_rate_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -271,11 +271,11 @@ fn main() {
         )
         // .add_systems(OnExit(GameState::WalletSetup), despawn_wallet_setup_screen)
         .add_systems(OnEnter(AppScreenState::Dashboard), setup_dashboard_screen)
-        .add_systems(OnExit(AppScreenState::Dashboard), despawn_dashboard_screen)
+        .add_systems(OnExit(AppScreenState::Dashboard), hide_dashboard_screen)
         .add_systems(OnEnter(AppScreenState::Unlock), setup_locked_screen)
         .add_systems(OnExit(AppScreenState::Unlock), despawn_locked_screen)
         .add_systems(OnEnter(AppScreenState::Mining), setup_mining_screen)
-        .add_systems(OnExit(AppScreenState::Mining), despawn_mining_screen)
+        .add_systems(OnExit(AppScreenState::Mining), hide_mining_screen)
         .add_systems(
             Update,
             (
@@ -367,6 +367,7 @@ fn setup_mining_screen(
     app_wallet: Res<AppWallet>,
     mut rpc_connection: ResMut<RpcConnection>,
     query: Query<Entity, With<AppScreenParent>>,
+    mut query_mining_screen: Query<(Entity, &mut Visibility), (With<MiningScreenNode>, Without<AppScreenParent>)>,
     mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
     mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
@@ -375,141 +376,154 @@ fn setup_mining_screen(
 
     let config = &app_state.config;
 
-    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
-    parent.with_children(|parent| {
-        spawn_app_screen_mining(parent, &asset_server);
-    });
-
-    if let Some(wallet) = &app_wallet.wallet {
-        if rpc_connection.rpc.is_none() {
-            let new_rpc_connection = Arc::new(RpcClient::new_with_commitment(
-                config.rpc_url.clone(),
-                CommitmentConfig::confirmed(),
-            ));
-            rpc_connection.rpc = Some(new_rpc_connection);
-            let task_pool = IoTaskPool::get();
-
-            let (sender, receiver) = unbounded::<AccountUpdatesData>();
-
-            let account_update_channel = AccountUpdatesChannel {
-                channel: receiver.clone(),
-            };
-
-
-            // TODO: use an entity here, we need to unsubscribe and cleanup this task when switching screens.
-            commands.insert_resource(account_update_channel);
-
-            let wallet_pubkey = wallet.pubkey().clone();
-
-            info!("Wallet Pubkey: {}", wallet_pubkey);
-
-            let ws_url = config.ws_url.clone();
-
-            task_pool.spawn(Compat::new(async move {
-                let sender = sender.clone();
-
-                let mut ps_client = PubsubClient::new(&ws_url).await;
-                let mut attempts = 0;
-                
-                while ps_client.is_err() && attempts < 3 {
-                    error!("Failed to connect to websocket, retrying...");
-                    ps_client = PubsubClient::new(&ws_url).await;
-                    sleep(Duration::from_millis(1000)).await;
-                    attempts += 1;
-                }
-
-                if let Ok(ps_client) = ps_client {
-                    let ps_client = Arc::new(ps_client);
-                    let sender_c = sender.clone();
-                    let ps_client_c = ps_client.clone();
-                    task_pool.spawn(async move {
-                        let ps_client = ps_client_c;
-                        let sender = sender_c;
-                        let account_pubkey = ore_api::ID;
-                        let pubsub =
-                            ps_client.program_subscribe(
-                                &account_pubkey,
-                                Some(RpcProgramAccountsConfig {
-                                    //filters: Some(vec![RpcFilterType::DataSize(32)]),
-                                    filters: None,
-                                    account_config: RpcAccountInfoConfig {
-                                        encoding: Some(UiAccountEncoding::Base64),
-                                        data_slice: None,
-                                        commitment: Some(CommitmentConfig::confirmed()),
-                                        min_context_slot: None,
-                                    },
-                                    with_context: None,
-                                })
-                            ).await;
-
-                            if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
-                                loop {
-                                    if let Some(response) = account_sub_notifications.next().await {
-
-                                        let data = response.value.account.data.decode();
-                                        if let Some(data_bytes) = data {
-                                            if let Ok(bus) = Bus::try_from_bytes(&data_bytes) {
-                                                let _ = sender.send(AccountUpdatesData::BusData(*bus));
-                                            }
-                                            if let Ok(ore_config) = ore_api::state::Config::try_from_bytes(&data_bytes) {
-                                                let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
-                                            }
-                                            if let Ok(proof) = Proof::try_from_bytes(&data_bytes) {
-                                                let _ = sender.send(AccountUpdatesData::ProofData(*proof));
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }).detach();
-
-                    let sender_c = sender.clone();
-                    let ps_client_c = ps_client.clone();
-                    task_pool.spawn(async move {
-                        let ps_client = ps_client_c;
-                        let sender = sender_c;
-                        let account_pubkey = ore_api::consts::TREASURY_TOKENS_ADDRESS;
-                        let pubsub = ps_client.account_subscribe(
-                            &account_pubkey,
-                        Some(
-                                RpcAccountInfoConfig {
-                                        encoding: Some(UiAccountEncoding::Base64),
-                                        data_slice: None,
-                                        commitment: Some(CommitmentConfig::confirmed()),
-                                        min_context_slot: None,
-                                }
-                            )).await;
-
-                            if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
-                                loop {
-                                    if let Some(response) = account_sub_notifications.next().await {
-
-                                        let data = response.value.data.decode();
-                                        if let Some(data_bytes) = data {
-                                            if let Ok(token_account) = spl_token::state::Account::unpack(&data_bytes) {
-                                                let _ = sender.send(AccountUpdatesData::TreasuryBalanceData(token_account.amount));
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }).detach();
-                } else {
-                    error!("Failed to connect to pubsub client via wss");
-                }
-            })).detach();
-
-
-            event_writer.send(EventFetchUiDataFromRpc);
-        }
+    if let Ok((_mining_screen_ent, mut visibility)) = query_mining_screen.get_single_mut() {
+        *visibility = Visibility::Visible;
     } else {
+        let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+        parent.with_children(|parent| {
+            spawn_app_screen_mining(parent, &asset_server);
+        });
 
-        let wallet_path = Path::new("save.data");
-        if wallet_path.exists() {
-            next_state.set(AppScreenState::Unlock);
+        if let Some(wallet) = &app_wallet.wallet {
+            if rpc_connection.rpc.is_none() {
+                let new_rpc_connection = Arc::new(RpcClient::new_with_commitment(
+                    config.rpc_url.clone(),
+                    CommitmentConfig::confirmed(),
+                ));
+                rpc_connection.rpc = Some(new_rpc_connection);
+                let task_pool = IoTaskPool::get();
+
+                let (sender, receiver) = unbounded::<AccountUpdatesData>();
+
+                let account_update_channel = AccountUpdatesChannel {
+                    channel: receiver.clone(),
+                };
+
+
+                // TODO: use an entity here, we need to unsubscribe and cleanup this task when switching screens.
+                commands.insert_resource(account_update_channel);
+
+                let wallet_pubkey = wallet.pubkey().clone();
+
+                info!("Wallet Pubkey: {}", wallet_pubkey);
+
+                let ws_url = config.ws_url.clone();
+
+                task_pool.spawn(Compat::new(async move {
+                    let sender = sender.clone();
+
+                    let mut ps_client = PubsubClient::new(&ws_url).await;
+                    let mut attempts = 0;
+                    
+                    while ps_client.is_err() && attempts < 3 {
+                        error!("Failed to connect to websocket, retrying...");
+                        ps_client = PubsubClient::new(&ws_url).await;
+                        sleep(Duration::from_millis(1000)).await;
+                        attempts += 1;
+                    }
+
+                    if let Ok(ps_client) = ps_client {
+                        let ps_client = Arc::new(ps_client);
+                        let sender_c = sender.clone();
+                        let ps_client_c = ps_client.clone();
+                        task_pool.spawn(async move {
+                            let ps_client = ps_client_c;
+                            let sender = sender_c;
+                            let account_pubkey = ore_api::ID;
+                            let pubsub =
+                                ps_client.program_subscribe(
+                                    &account_pubkey,
+                                    Some(RpcProgramAccountsConfig {
+                                        //filters: Some(vec![RpcFilterType::DataSize(32)]),
+                                        filters: None,
+                                        account_config: RpcAccountInfoConfig {
+                                            encoding: Some(UiAccountEncoding::Base64),
+                                            data_slice: None,
+                                            commitment: Some(CommitmentConfig::confirmed()),
+                                            min_context_slot: None,
+                                        },
+                                        with_context: None,
+                                    })
+                                ).await;
+
+                                if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
+                                    loop {
+                                        if let Some(response) = account_sub_notifications.next().await {
+
+                                            let data = response.value.account.data.decode();
+                                            if let Some(data_bytes) = data {
+                                                if let Ok(bus) = Bus::try_from_bytes(&data_bytes) {
+                                                    let _ = sender.send(AccountUpdatesData::BusData(*bus));
+                                                }
+                                                if let Ok(ore_config) = ore_api::state::Config::try_from_bytes(&data_bytes) {
+                                                    let _ = sender.send(AccountUpdatesData::TreasuryConfigData(*ore_config));
+                                                }
+                                                if let Ok(proof) = Proof::try_from_bytes(&data_bytes) {
+                                                    let _ = sender.send(AccountUpdatesData::ProofData(*proof));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }).detach();
+
+                        let sender_c = sender.clone();
+                        let ps_client_c = ps_client.clone();
+                        task_pool.spawn(async move {
+                            let ps_client = ps_client_c;
+                            let sender = sender_c;
+                            let account_pubkey = ore_api::consts::TREASURY_TOKENS_ADDRESS;
+                            let pubsub = ps_client.account_subscribe(
+                                &account_pubkey,
+                            Some(
+                                    RpcAccountInfoConfig {
+                                            encoding: Some(UiAccountEncoding::Base64),
+                                            data_slice: None,
+                                            commitment: Some(CommitmentConfig::confirmed()),
+                                            min_context_slot: None,
+                                    }
+                                )).await;
+
+                                if let Ok((mut account_sub_notifications, _account_unsub)) = pubsub {
+                                    loop {
+                                        if let Some(response) = account_sub_notifications.next().await {
+
+                                            let data = response.value.data.decode();
+                                            if let Some(data_bytes) = data {
+                                                if let Ok(token_account) = spl_token::state::Account::unpack(&data_bytes) {
+                                                    let _ = sender.send(AccountUpdatesData::TreasuryBalanceData(token_account.amount));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }).detach();
+                    } else {
+                        error!("Failed to connect to pubsub client via wss");
+                    }
+                })).detach();
+
+
+                event_writer.send(EventFetchUiDataFromRpc);
+            }
         } else {
-            next_state.set(AppScreenState::WalletSetup);
+
+            let wallet_path = Path::new("save.data");
+            if wallet_path.exists() {
+                next_state.set(AppScreenState::Unlock);
+            } else {
+                next_state.set(AppScreenState::WalletSetup);
+            }
         }
+    }
+
+}
+
+fn hide_mining_screen(
+    mut query: Query<(Entity, &mut Visibility), With<MiningScreenNode>>,
+) {
+    if let Ok((_screen_node, mut visibility)) = query.get_single_mut() {
+        *visibility = Visibility::Hidden;
     }
 }
 
@@ -517,15 +531,26 @@ fn setup_dashboard_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     query: Query<Entity, With<AppScreenParent>>,
+    mut query_app_screen: Query<(Entity, &mut Visibility), With<DashboardScreenNode>>,
 ) {
     let base_screen_entity_id = query.get_single().unwrap();
+    if let Ok((_mining_screen_ent, mut visibility)) = query_app_screen.get_single_mut() {
+        *visibility = Visibility::Visible;
+    } else {
+        let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
 
-    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+        parent.with_children(|parent| {
+            spawn_dashboard_screen(parent, asset_server);
+        });
+    }
+}
 
-    parent.with_children(|parent| {
-        spawn_dashboard_screen(parent, asset_server);
-    });
-
+fn hide_dashboard_screen(
+    mut query: Query<(Entity, &mut Visibility), With<DashboardScreenNode>>,
+) {
+    if let Ok((_screen_node, mut visibility)) = query.get_single_mut() {
+        *visibility = Visibility::Hidden;
+    }
 }
 
 fn setup_settings_config_screen(
