@@ -16,7 +16,7 @@ use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{
-        find_hash_par, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey, ORE_TOKEN_DECIMALS
+        find_hash_par, get_auth_ix, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey, ORE_TOKEN_DECIMALS
     }, tasks::{
         SigCheckResults, TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskSigChecks, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
@@ -316,6 +316,9 @@ pub fn handle_event_submit_hash_tx(
                 let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(500000);
 
                 ixs.push(cu_limit_ix);
+
+                let noop_ix = get_auth_ix(signer.pubkey());
+                ixs.push(noop_ix);
 
 
                 if time_until_reset <= 5 {
