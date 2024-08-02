@@ -21,6 +21,12 @@ use crate::MiningDataChannelMessage;
 
 pub const ORE_TOKEN_DECIMALS: u8 = TOKEN_DECIMALS;
 
+pub fn get_auth_ix(signer: Pubkey, ) -> Instruction {
+    let proof = proof_pubkey(signer);
+
+    instruction::auth(proof)
+}
+
 pub fn get_mine_ix(signer: Pubkey, solution: Solution, bus: usize) -> Instruction {
     instruction::mine(signer, signer, BUS_ADDRESSES[bus], solution)
 }
@@ -208,7 +214,7 @@ pub fn get_cutoff(proof: Proof, buffer_time: u64) -> i64 {
 }
 
 pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, min_difficulty: u32, mining_messages_reciever: Receiver<MiningDataChannelMessage>, mining_messages_sender: Sender<MiningDataChannelMessage>) -> (Solution, u32, Hash, u64) {
-    let handles: Vec<_> = (0..threads)
+    let handles = (0..threads)
         .map(|i| {
             std::thread::spawn({
                 let proof = proof.clone();
@@ -222,24 +228,23 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, min_difficult
                     let mut best_nonce = nonce;
                     let mut best_difficulty = 0;
                     let mut best_hash = Hash::default();
+                    let mut total_hashes: u64 = 0;
                     loop {
                         // Create hash
-                        if let Ok(hx) = drillx::hash_with_memory(
+                        if let Ok(hash) = drillx::hash_with_memory(
                             &mut memory,
                             &proof.challenge,
                             &nonce.to_le_bytes(),
                         ) {
-                            // validate hash
-                            let difficulty = hx.difficulty();
+                            total_hashes += 1;
+                            let difficulty = hash.difficulty();
                             if difficulty.gt(&best_difficulty) {
-                                // let solution = Solution::new(hx.d, nonce.to_le_bytes());
-                                // if solution.is_valid(&proof.challenge) {
                                     best_nonce = nonce;
                                     best_difficulty = difficulty;
-                                    best_hash = hx;
-                                // }
+                                    best_hash = hash;
                             }
                         }
+
 
 
                         if let Ok(message) = message_receiver.try_recv() {
@@ -269,22 +274,20 @@ pub fn find_hash_par(proof: Proof, cutoff_time: u64, threads: u64, min_difficult
                         nonce += 1;
                     }
                     
-                    let nonces_checked = nonce - first_nonce;
-
                     // Return the best nonce
-                    (best_nonce, best_difficulty, best_hash, nonces_checked)
+                    Some((best_nonce, best_difficulty, best_hash, total_hashes))
                 }
             })
         })
-        .collect();
+        .collect::<Vec<_>>();
 
     // Join handles and return best nonce
-    let mut best_nonce = 0;
+    let mut best_nonce: u64 = 0;
     let mut best_difficulty = 0;
     let mut best_hash = Hash::default();
     let mut total_nonces_checked = 0;
     for h in handles {
-        if let Ok((nonce, difficulty, hash, nonces_checked)) = h.join() {
+        if let Ok(Some((nonce, difficulty, hash, nonces_checked))) = h.join() {
             total_nonces_checked += nonces_checked;
             if difficulty > best_difficulty {
                 best_difficulty = difficulty;
