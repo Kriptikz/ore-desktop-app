@@ -48,6 +48,18 @@ pub struct BaseScreenNode;
 pub struct NavItem(pub NavItemScreen);
 
 #[derive(Component)]
+pub struct NavItemWhiteSelectedBar(pub NavItemScreen);
+
+#[derive(Component)]
+pub struct NavItemIcon(pub NavItemScreen);
+
+#[derive(Component)]
+pub struct NavItemText(pub NavItemScreen);
+
+#[derive(Component)]
+pub struct NavItemArrow(pub NavItemScreen);
+
+#[derive(Component)]
 pub struct TxPopUpArea;
 
 #[derive(Component)]

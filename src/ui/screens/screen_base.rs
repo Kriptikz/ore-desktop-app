@@ -16,7 +16,7 @@ use crate::{
 };
 
 use crate::ui::
-    components::{AppScreenParent, BaseScreenNode, NavItem, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance, ToggleAutoMine, TxPopUpArea}
+    components::{AppScreenParent, BaseScreenNode, NavItem, NavItemArrow, NavItemIcon, NavItemText, NavItemWhiteSelectedBar, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance, ToggleAutoMine, TxPopUpArea}
     
 ;
 
@@ -495,6 +495,7 @@ pub fn spawn_base_screen(
                                                     ..default()
                                                 },
                                                 Name::new("Nav Item Selected"),
+                                                NavItemWhiteSelectedBar(NavItemScreen::Dashboard),
                                             ));
                                             parent.spawn((
                                                 NodeBundle {
@@ -522,6 +523,7 @@ pub fn spawn_base_screen(
                                                         asset_server.load(DASHBOARD_ICON_WHITE),
                                                     ),
                                                 Name::new("Dashboard Icon"),
+                                                NavItemIcon(NavItemScreen::Dashboard),
                                             ));
                                             parent.spawn((
                                                 TextBundle::from_section(
@@ -533,6 +535,7 @@ pub fn spawn_base_screen(
                                                     },
                                                 ),
                                                 Name::new("TextDashboard"),
+                                                NavItemText(NavItemScreen::Dashboard),
                                             ));
                                         });
 
@@ -563,6 +566,7 @@ pub fn spawn_base_screen(
                                                         asset_server.load(NAV_ARROW_ICON),
                                                     ),
                                                 Name::new("Nav Arrow Icon"),
+                                                NavItemArrow(NavItemScreen::Dashboard),
                                             ));
                                         });
                                     });
@@ -613,6 +617,7 @@ pub fn spawn_base_screen(
                                             parent.spawn((
                                                 NodeBundle {
                                                     background_color: Color::WHITE.into(),
+                                                    visibility: Visibility::Hidden,
                                                     style: Style {
                                                         width: Val::Px(2.5),
                                                         height: Val::Px(FONT_SIZE_SMALL),
@@ -621,6 +626,7 @@ pub fn spawn_base_screen(
                                                     ..default()
                                                 },
                                                 Name::new("Nav Item Selected"),
+                                                NavItemWhiteSelectedBar(NavItemScreen::Mining),
                                             ));
                                             parent.spawn((
                                                 NodeBundle {
@@ -648,6 +654,7 @@ pub fn spawn_base_screen(
                                                         asset_server.load(MINING_ICON),
                                                     ),
                                                 Name::new("Mining Icon"),
+                                                NavItemIcon(NavItemScreen::Mining),
                                             ));
                                             parent.spawn((
                                                 TextBundle::from_section(
@@ -659,6 +666,7 @@ pub fn spawn_base_screen(
                                                     },
                                                 ),
                                                 Name::new("TextMining"),
+                                                NavItemText(NavItemScreen::Mining)
                                             ));
                                         });
 
@@ -689,6 +697,7 @@ pub fn spawn_base_screen(
                                                         asset_server.load(NAV_ARROW_ICON),
                                                     ),
                                                 Name::new("Nav Arrow Icon"),
+                                                NavItemArrow(NavItemScreen::Mining),
                                             ));
                                         });
                                     });
@@ -825,6 +834,7 @@ pub fn spawn_base_screen(
                                                 ..default()
                                             },
                                             Name::new("Nav Item Selected"),
+                                            NavItemWhiteSelectedBar(NavItemScreen::SettingsConfig),
                                         ));
                                         parent.spawn((
                                             NodeBundle {
@@ -852,6 +862,7 @@ pub fn spawn_base_screen(
                                                     asset_server.load(DASHBOARD_ICON_WHITE),
                                                 ),
                                             Name::new("Config Icon"),
+                                            NavItemIcon(NavItemScreen::SettingsConfig),
                                         ));
                                         parent.spawn((
                                             TextBundle::from_section(
@@ -863,6 +874,7 @@ pub fn spawn_base_screen(
                                                 },
                                             ),
                                             Name::new("TextConfig"),
+                                            NavItemText(NavItemScreen::SettingsConfig),
                                         ));
                                     });
 
@@ -892,6 +904,7 @@ pub fn spawn_base_screen(
                                                     asset_server.load(NAV_ARROW_ICON),
                                                 ),
                                             Name::new("Nav Arrow Icon"),
+                                            NavItemArrow(NavItemScreen::SettingsConfig),
                                         ));
                                     });
                                 });
@@ -942,7 +955,8 @@ pub fn spawn_base_screen(
                                     )).with_children(|parent| {
                                         parent.spawn((
                                             NodeBundle {
-                                                background_color: hex_dark_mode_background().into(),
+                                                background_color: Color::WHITE.into(),
+                                                visibility: Visibility::Hidden,
                                                 style: Style {
                                                     width: Val::Px(2.5),
                                                     height: Val::Px(FONT_SIZE_SMALL),
@@ -951,6 +965,7 @@ pub fn spawn_base_screen(
                                                 ..default()
                                             },
                                             Name::new("Nav Item Selected"),
+                                            NavItemWhiteSelectedBar(NavItemScreen::SettingsWallet)
                                         ));
                                         parent.spawn((
                                             NodeBundle {
@@ -978,6 +993,7 @@ pub fn spawn_base_screen(
                                                     asset_server.load(MINING_ICON),
                                                 ),
                                             Name::new("Mining Icon"),
+                                            NavItemIcon(NavItemScreen::SettingsWallet),
                                         ));
                                         parent.spawn((
                                             TextBundle::from_section(
@@ -989,6 +1005,7 @@ pub fn spawn_base_screen(
                                                 },
                                             ),
                                             Name::new("TextWallet"),
+                                            NavItemText(NavItemScreen::SettingsWallet),
                                         ));
                                     });
 
@@ -1018,6 +1035,7 @@ pub fn spawn_base_screen(
                                                     asset_server.load(NAV_ARROW_ICON),
                                                 ),
                                             Name::new("Nav Arrow Icon"),
+                                            NavItemArrow(NavItemScreen::SettingsWallet),
                                         ));
                                     });
                                 });
@@ -1068,7 +1086,8 @@ pub fn spawn_base_screen(
                                     )).with_children(|parent| {
                                         parent.spawn((
                                             NodeBundle {
-                                                background_color: hex_dark_mode_background().into(),
+                                                background_color: Color::WHITE.into(),
+                                                visibility: Visibility::Hidden,
                                                 style: Style {
                                                     width: Val::Px(2.5),
                                                     height: Val::Px(FONT_SIZE_SMALL),
@@ -1077,6 +1096,7 @@ pub fn spawn_base_screen(
                                                 ..default()
                                             },
                                             Name::new("Nav Item Selected"),
+                                            NavItemWhiteSelectedBar(NavItemScreen::SettingsGeneral),
                                         ));
                                         parent.spawn((
                                             NodeBundle {
@@ -1104,6 +1124,7 @@ pub fn spawn_base_screen(
                                                     asset_server.load(MINING_ICON),
                                                 ),
                                             Name::new("General Settings Icon"),
+                                            NavItemIcon(NavItemScreen::SettingsGeneral),
                                         ));
                                         parent.spawn((
                                             TextBundle::from_section(
@@ -1115,6 +1136,7 @@ pub fn spawn_base_screen(
                                                 },
                                             ),
                                             Name::new("TextGeneral"),
+                                            NavItemText(NavItemScreen::SettingsGeneral),
                                         ));
                                     });
 
@@ -1144,6 +1166,7 @@ pub fn spawn_base_screen(
                                                     asset_server.load(NAV_ARROW_ICON),
                                                 ),
                                             Name::new("Nav Arrow Icon"),
+                                            NavItemText(NavItemScreen::SettingsGeneral),
                                         ));
                                     });
                                 });

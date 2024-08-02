@@ -7,7 +7,7 @@ use super::{components::NavItem, styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED
 pub fn nav_item_interactions(
     mut interaction_query: Query<
         (Entity, &Interaction, &mut BackgroundColor, &mut BorderColor, &NavItem),
-        (Changed<Interaction>),
+        Changed<Interaction>,
     >,
     mut next_state: ResMut<NextState<AppScreenState>>,
 ) {

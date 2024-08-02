@@ -22,7 +22,7 @@ use tasks::{
     handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskSendTx
 };
 use ui::{
-    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, DashboardScreenNode, MiningScreenNode, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}, screen_setup_wallet::{despawn_wallet_create_screen, spawn_wallet_setup_screen}}, ui_button_systems::{
+    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, DashboardScreenNode, MiningScreenNode, NavItem, NavItemArrow, NavItemIcon, NavItemText, NavItemWhiteSelectedBar, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}, screen_setup_wallet::{despawn_wallet_create_screen, spawn_wallet_setup_screen}}, ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     }, ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_miners_ui, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_hash_rate_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -77,6 +77,7 @@ pub enum AppScreenState {
     SettingsGeneral,
 }
 
+#[derive(PartialEq)]
 pub enum NavItemScreen {
     Dashboard,
     Mining,
@@ -370,8 +371,13 @@ fn setup_mining_screen(
     mut query_mining_screen: Query<(Entity, &mut Visibility), (With<MiningScreenNode>, Without<AppScreenParent>)>,
     mut event_writer: EventWriter<EventFetchUiDataFromRpc>,
     mut next_state: ResMut<NextState<AppScreenState>>,
+    mut set: ParamSet<(
+        Query<(&mut Visibility, &NavItemWhiteSelectedBar), Without<MiningScreenNode>>,
+        Query<(&mut BackgroundColor, &NavItemIcon)>,
+        Query<(&mut Text, &NavItemText)>,
+        Query<(&mut BackgroundColor, &NavItemArrow)>,
+    )>,
 ) {
-
     let base_screen_entity_id = query.get_single().unwrap();
 
     let config = &app_state.config;
@@ -517,6 +523,36 @@ fn setup_mining_screen(
         }
     }
 
+    // Update Nav Items Highlights
+    for (mut visibility, nav_item_screen) in set.p0().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Mining {
+            *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p1().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Mining {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
+    for (mut text, nav_item_screen) in set.p2().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Mining {
+            text.sections[0].style.color = Color::WHITE;
+        } else {
+            text.sections[0].style.color = Color::GRAY;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p3().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Mining {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
+
 }
 
 fn hide_mining_screen(
@@ -532,8 +568,15 @@ fn setup_dashboard_screen(
     asset_server: Res<AssetServer>,
     query: Query<Entity, With<AppScreenParent>>,
     mut query_app_screen: Query<(Entity, &mut Visibility), With<DashboardScreenNode>>,
+    mut set: ParamSet<(
+        Query<(&mut Visibility, &NavItemWhiteSelectedBar), Without<DashboardScreenNode>>,
+        Query<(&mut BackgroundColor, &NavItemIcon)>,
+        Query<(&mut Text, &NavItemText)>,
+        Query<(&mut BackgroundColor, &NavItemArrow)>,
+    )>,
 ) {
     let base_screen_entity_id = query.get_single().unwrap();
+
     if let Ok((_mining_screen_ent, mut visibility)) = query_app_screen.get_single_mut() {
         *visibility = Visibility::Visible;
     } else {
@@ -542,6 +585,36 @@ fn setup_dashboard_screen(
         parent.with_children(|parent| {
             spawn_dashboard_screen(parent, asset_server);
         });
+    }
+
+    // Update Nav Items Highlights
+    for (mut visibility, nav_item_screen) in set.p0().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Dashboard {
+            *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p1().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Dashboard {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
+    for (mut text, nav_item_screen) in set.p2().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Dashboard {
+            text.sections[0].style.color = Color::WHITE;
+        } else {
+            text.sections[0].style.color = Color::GRAY;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p3().iter_mut() {
+        if nav_item_screen.0 == NavItemScreen::Dashboard {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
     }
 }
 
@@ -558,6 +631,12 @@ fn setup_settings_config_screen(
     asset_server: Res<AssetServer>,
     app_state: Res<OreAppState>,
     query: Query<Entity, With<AppScreenParent>>,
+    mut set: ParamSet<(
+        Query<(&mut Visibility, &NavItemWhiteSelectedBar)>,
+        Query<(&mut BackgroundColor, &NavItemIcon)>,
+        Query<(&mut Text, &NavItemText)>,
+        Query<(&mut BackgroundColor, &NavItemArrow)>,
+    )>,
 ) {
     let base_screen_entity_id = query.get_single().unwrap();
 
@@ -567,12 +646,49 @@ fn setup_settings_config_screen(
         spawn_settings_config_screen(parent, asset_server, app_state.config.clone());
     });
 
+    // Update Nav Items Highlights
+    let this_nav_screen = NavItemScreen::SettingsConfig;
+    for (mut visibility, nav_item_screen) in set.p0().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p1().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
+    for (mut text, nav_item_screen) in set.p2().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            text.sections[0].style.color = Color::WHITE;
+        } else {
+            text.sections[0].style.color = Color::GRAY;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p3().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
+
 }
 
 fn setup_settings_general_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     query: Query<Entity, With<AppScreenParent>>,
+    mut set: ParamSet<(
+        Query<(&mut Visibility, &NavItemWhiteSelectedBar)>,
+        Query<(&mut BackgroundColor, &NavItemIcon)>,
+        Query<(&mut Text, &NavItemText)>,
+        Query<(&mut BackgroundColor, &NavItemArrow)>,
+    )>,
 ) {
     let base_screen_entity_id = query.get_single().unwrap();
 
@@ -581,6 +697,36 @@ fn setup_settings_general_screen(
     parent.with_children(|parent| {
         spawn_settings_general_screen(parent, asset_server);
     });
+
+    let this_nav_screen = NavItemScreen::SettingsGeneral;
+    for (mut visibility, nav_item_screen) in set.p0().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p1().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
+    for (mut text, nav_item_screen) in set.p2().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            text.sections[0].style.color = Color::WHITE;
+        } else {
+            text.sections[0].style.color = Color::GRAY;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p3().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
 
 }
 
@@ -602,6 +748,12 @@ fn setup_settings_wallet_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     query: Query<Entity, With<AppScreenParent>>,
+    mut set: ParamSet<(
+        Query<(&mut Visibility, &NavItemWhiteSelectedBar)>,
+        Query<(&mut BackgroundColor, &NavItemIcon)>,
+        Query<(&mut Text, &NavItemText)>,
+        Query<(&mut BackgroundColor, &NavItemArrow)>,
+    )>,
 ) {
     let base_screen_entity_id = query.get_single().unwrap();
 
@@ -610,6 +762,36 @@ fn setup_settings_wallet_screen(
     parent.with_children(|parent| {
         spawn_settings_wallet_screen(parent, asset_server);
     });
+
+    let this_nav_screen = NavItemScreen::SettingsWallet;
+    for (mut visibility, nav_item_screen) in set.p0().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p1().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
+    for (mut text, nav_item_screen) in set.p2().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            text.sections[0].style.color = Color::WHITE;
+        } else {
+            text.sections[0].style.color = Color::GRAY;
+        }
+    }
+    for (mut background_color, nav_item_screen) in set.p3().iter_mut() {
+        if nav_item_screen.0 == this_nav_screen {
+            *background_color = Color::WHITE.into();
+        } else {
+            *background_color = Color::GRAY.into();
+        }
+    }
 
 }
 
