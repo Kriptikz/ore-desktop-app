@@ -1,16 +1,16 @@
 use std::{
-    borrow::BorrowMut, fs, path::Path, str::FromStr, sync::{mpsc, Arc, Mutex}, time::{Duration, Instant}
+    fs, path::Path, sync::Arc, time::{Duration, Instant}
 };
 
-use async_compat::{Compat, CompatExt};
+use async_compat::Compat;
 use async_std::task::sleep;
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, tasks::{futures_lite::StreamExt, AsyncComputeTaskPool, IoTaskPool, Task}, utils::{hashbrown::Equivalent, HashMap}, window::RequestRedraw, winit::{UpdateMode, WinitSettings}};
+use bevy::{prelude::*, tasks::{futures_lite::StreamExt, IoTaskPool}, utils::HashMap, winit::{UpdateMode, WinitSettings}};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use events::*;
 use ore_api::{consts::TOKEN_DECIMALS, state::{Bus, Proof, Treasury}};
-use ore_utils::{proof_pubkey, ORE_TOKEN_DECIMALS, AccountDeserialize};
+use ore_utils::{ORE_TOKEN_DECIMALS, AccountDeserialize};
 use serde::{Deserialize, Serialize};
 use solana_account_decoder::{parse_token::UiTokenAccount, UiAccountEncoding};
 use solana_client::{nonblocking::{pubsub_client::PubsubClient, rpc_client::RpcClient}, rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig}, rpc_filter::RpcFilterType, rpc_response::{Response, RpcKeyedAccount}};
@@ -18,21 +18,17 @@ use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel}, keccak::Hash as KeccakHash, program_pack::Pack, pubkey::Pubkey, signature::{Keypair, Signature}, signer::Signer, transaction::Transaction
 };
 use solana_transaction_status::UiTransactionEncoding;
-use spl_token::state::GenericTokenAccount;
 use tasks::{
     handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskSendTx
 };
 use ui::{
-    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}}, ui_button_systems::{
+    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}, screen_setup_wallet::{despawn_wallet_create_screen, spawn_wallet_setup_screen}}, ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     }, ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_miners_ui, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_hash_rate_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
     }
 };
 
-// screens::{
-//     spawn_initial_setup_screen, spawn_locked_screen, spawn_mining_screen,
-// },
 
 pub const FAST_DURATION: Duration = Duration::from_millis(30);
 pub const REGULAR_DURATION: Duration = Duration::from_millis(100);
@@ -264,6 +260,13 @@ fn main() {
             OnExit(AppScreenState::SettingsWallet),
             (
                 despawn_settings_wallet_screen,
+            )
+        )
+        .add_systems(OnEnter(AppScreenState::WalletSetup), setup_wallet_create_screen)
+        .add_systems(
+            OnExit(AppScreenState::WalletSetup),
+            (
+                despawn_wallet_create_screen,
             )
         )
         // .add_systems(OnExit(GameState::WalletSetup), despawn_wallet_setup_screen)
@@ -500,7 +503,13 @@ fn setup_mining_screen(
             event_writer.send(EventFetchUiDataFromRpc);
         }
     } else {
-        next_state.set(AppScreenState::Unlock);
+
+        let wallet_path = Path::new("save.data");
+        if wallet_path.exists() {
+            next_state.set(AppScreenState::Unlock);
+        } else {
+            next_state.set(AppScreenState::WalletSetup);
+        }
     }
 }
 
@@ -548,6 +557,20 @@ fn setup_settings_general_screen(
         spawn_settings_general_screen(parent, asset_server);
     });
 
+}
+
+fn setup_wallet_create_screen(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<Entity, With<AppScreenParent>>,
+) {
+    let base_screen_entity_id = query.get_single().unwrap();
+
+    let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
+
+    parent.with_children(|parent| {
+        spawn_wallet_setup_screen(parent, asset_server);
+    });
 }
 
 fn setup_settings_wallet_screen(
