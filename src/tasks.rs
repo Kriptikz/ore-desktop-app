@@ -11,7 +11,7 @@ use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, trans
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_REGULAR, FONT_SIZE_MEDIUM, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
+    ui::{components::{SpinnerIcon, TextTxProcessorTxType, ToggleAutoMineParent, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_REGULAR, FONT_SIZE_MEDIUM, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
 };
 
 // Task Components
@@ -99,6 +99,7 @@ pub fn task_update_app_wallet_sol_balance(
     mut treasury_account_res: ResMut<TreasuryAccountResource>,
     mut busses_res: ResMut<BussesResource>,
     mut query: Query<(Entity, &mut TaskUpdateAppWalletSolBalance)>,
+    mut query_toggle_mine: Query<&mut Visibility, With<ToggleAutoMineParent>>,
     mut event_fetch_ui_data: EventWriter<EventFetchUiDataFromRpc>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
@@ -106,6 +107,16 @@ pub fn task_update_app_wallet_sol_balance(
             let mut fetch_failed = false;
             match result {
                 Ok(result) => {
+                    // if result.proof_account_data.challenge == "Not Found" {
+                    //     // TODO: Spawn Open Button
+                    // } else {
+                           // if let Ok(mut vis) = query_toggle_mine.get_single_mut() {
+                           //     *vis = Visibility::Visible;
+                           // }
+                    // }
+                    if let Ok(mut vis) = query_toggle_mine.get_single_mut() {
+                        *vis = Visibility::Visible;
+                    }
                     app_wallet.sol_balance = result.sol_balance;
                     app_wallet.ore_balance = result.ore_balance;
                     busses_res.busses = result.busses;

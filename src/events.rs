@@ -20,7 +20,7 @@ use crate::{
     }, tasks::{
         SigCheckResults, TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskSigChecks, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
-        components::{ButtonAutoScroll, DashboardProofUpdatesLogsList, DashboardProofUpdatesLogsListItem, MiningScreenTxResultList, MovingScrollPanel, ScrollingList, ScrollingListNode, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
+        components::{ButtonAutoScroll, DashboardProofUpdatesLogsList, DashboardProofUpdatesLogsListItem, MiningScreenTxResultList, MovingScrollPanel, ScrollingList, ScrollingListNode, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine, ToggleAutoMineParent},
         spawn_utils::{spawn_new_list_item, UiListItem}, styles::{FONT_REGULAR, FONT_SIZE_MEDIUM, MINE_TOGGLE_OFF, MINE_TOGGLE_ON, TOGGLE_OFF, TOGGLE_ON},
     }, utils::{find_best_bus, get_unix_timestamp, shorten_string}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashStatus, HashrateResource, MinerStatusResource, MiningDataChannelMessage, MiningDataChannelResource, MiningProofsResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
@@ -960,7 +960,6 @@ pub fn handle_event_lock(
 }
 
 pub fn handle_event_unlock(
-    mut commands: Commands,
     mut event_reader: EventReader<EventUnlock>,
     mut app_wallet: ResMut<AppWallet>,
     query: Query<&TextInput, With<TextPasswordInput>>,

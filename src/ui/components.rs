@@ -259,6 +259,10 @@ pub struct AutoScrollCheckIcon;
 #[derive(Component)]
 pub struct ButtonCopyText;
 
+
+#[derive(Component)]
+pub struct ToggleAutoMineParent;
+
 #[derive(Component)]
 pub struct ToggleAutoMine(pub bool);
 

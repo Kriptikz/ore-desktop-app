@@ -9,11 +9,12 @@ use crate::ui::{
 
 pub fn spawn_dashboard_screen(
     parent: &mut ChildBuilder,
-    asset_server: Res<AssetServer>,
+    asset_server: &AssetServer,
 ) {
     parent
         .spawn((
             NodeBundle {
+                visibility: Visibility::Hidden,
                 style: Style {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),

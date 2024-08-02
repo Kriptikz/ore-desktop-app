@@ -583,7 +583,7 @@ fn setup_dashboard_screen(
         let mut parent = commands.get_entity(base_screen_entity_id).unwrap();
 
         parent.with_children(|parent| {
-            spawn_dashboard_screen(parent, asset_server);
+            spawn_dashboard_screen(parent, &asset_server);
         });
     }
 

@@ -16,11 +16,13 @@ use crate::{
 };
 
 use crate::ui::
-    components::{AppScreenParent, BaseScreenNode, NavItem, NavItemArrow, NavItemIcon, NavItemText, NavItemWhiteSelectedBar, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance, ToggleAutoMine, TxPopUpArea}
+    components::{AppScreenParent, BaseScreenNode, NavItem, NavItemArrow, NavItemIcon, NavItemText, NavItemWhiteSelectedBar, TextWalletOreBalance, TextWalletPubkey, TextWalletSolBalance, ToggleAutoMine, ToggleAutoMineParent, TxPopUpArea}
     
 ;
 
+use super::screen_dashboard::spawn_dashboard_screen;
 use super::screen_locked::spawn_locked_screen;
+use super::screen_mining::spawn_app_screen_mining;
 
 pub fn spawn_base_screen(
     mut commands: Commands,
@@ -186,6 +188,7 @@ pub fn spawn_base_screen(
                     // Mine Toggle
                     parent.spawn((
                         NodeBundle {
+                            visibility: Visibility::Hidden,
                             style: Style {
                                 width: Val::Percent(28.0),
                                 height: Val::Percent(100.0),
@@ -196,6 +199,7 @@ pub fn spawn_base_screen(
                             ..default()
                         },
                         Name::new("Top Section Header Mine Toggle Section"),
+                        ToggleAutoMineParent,
                     )).with_children(|parent| {
                         parent.spawn((
                             ButtonBundle {
@@ -1189,8 +1193,7 @@ pub fn spawn_base_screen(
                     Name::new("App Screen Parent"),
                     AppScreenParent,
                 )).with_children(|parent| {
-                    // spawn_locked_screen(parent, asset_server);
-                    //spawn_app_screen_mining(parent, &asset_server);
+                    spawn_dashboard_screen(parent, &asset_server)
                 });
             });
         });
