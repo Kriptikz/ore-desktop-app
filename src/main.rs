@@ -67,7 +67,6 @@ impl Default for AppConfig {
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum AppScreenState {
-    ConfigSetup,
     WalletSetup,
     Unlock,
     Dashboard,
@@ -87,9 +86,9 @@ pub enum NavItemScreen {
 }
 
 fn main() {
-    let mut starting_state = AppScreenState::ConfigSetup;
+    let mut starting_state = AppScreenState::SettingsConfig;
     let config_path = Path::new("config.toml");
-    let config: Option<AppConfig> = if config_path.exists() {
+    let config: AppConfig = if config_path.exists() {
         let config_string = fs::read_to_string(config_path).unwrap();
         let config = match toml::from_str(&config_string) {
             Ok(d) => {
@@ -98,9 +97,9 @@ fn main() {
             }
             Err(_) => None,
         };
-        config
+        config.unwrap_or(AppConfig::default())
     } else {
-        None
+        AppConfig::default()
     };
 
     if starting_state == AppScreenState::WalletSetup {
@@ -109,8 +108,6 @@ fn main() {
             starting_state = AppScreenState::Unlock;
         }
     }
-
-    let config = config.unwrap_or(AppConfig::default());
 
     // let tx_send_interval = config.tx_send_interval;
     let threads = config.threads;
