@@ -314,12 +314,13 @@ pub fn handle_event_submit_hash_tx(
                 let mut ixs = vec![];
                 // TODO: set cu's
                 let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(500000);
-
                 ixs.push(cu_limit_ix);
+
+                let prio_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(10);
+                ixs.push(prio_fee_ix);
 
                 let noop_ix = get_auth_ix(signer.pubkey());
                 ixs.push(noop_ix);
-
 
                 if time_until_reset <= 5 {
                     let reset_ix = get_reset_ix(signer.pubkey());
