@@ -316,7 +316,7 @@ pub fn handle_event_submit_hash_tx(
                 let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(500000);
                 ixs.push(cu_limit_ix);
 
-                let prio_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(10);
+                let prio_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(510000);
                 ixs.push(prio_fee_ix);
 
                 let noop_ix = get_auth_ix(signer.pubkey());

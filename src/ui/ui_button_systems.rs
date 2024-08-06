@@ -78,7 +78,7 @@ pub fn button_open_web_tx_explorer(
                     }
                 }
                 if let Some(text) = text {
-                    let url = format!("https://solscan.io/tx/{}?cluster=devnet", text);
+                    let url = format!("https://solscan.io/tx/{}", text);
                     if let Err(_) = open::that(url) {
                         error!("Failed to open web tx explorer with default web browser.");
                     }

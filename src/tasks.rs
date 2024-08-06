@@ -11,7 +11,7 @@ use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, trans
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{SpinnerIcon, TextTxProcessorTxType, ToggleAutoMineParent, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_REGULAR, FONT_SIZE_MEDIUM, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
+    ui::{components::{SpinnerIcon, TextTxProcessorTxType, ToggleAutoMineParent, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_REGULAR, FONT_SIZE_MEDIUM, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppConfig, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
 };
 
 // Task Components
@@ -194,6 +194,7 @@ pub fn handle_task_process_tx_result(
     asset_server: Res<AssetServer>,
     app_wallet: Res<AppWallet>,
     proof_account: Res<ProofAccountResource>,
+    ore_app_state: Res<OreAppState>,
     mut winit_settings: ResMut<WinitSettings>,
     mut query_task_handler: Query<(Entity, &mut TaskProcessTx)>,
     mut event_writer: EventWriter<EventTxResult>,
@@ -264,7 +265,8 @@ pub fn handle_task_process_tx_result(
                         None
                     };
 
-                    let timer = Timer::new(Duration::from_millis(3000), TimerMode::Once);
+                    let tx_send_interval = ore_app_state.config.tx_send_interval;
+                    let timer = Timer::new(Duration::from_millis(tx_send_interval), TimerMode::Once);
 
                     let pop_up_area = query_pop_up.single_mut();
 
