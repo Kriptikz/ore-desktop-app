@@ -213,7 +213,7 @@ pub fn handle_event_mine_for_hash(
                 let cutoff = proof
                                     .last_hash_at
                                     .saturating_add(60)
-                                    .saturating_sub(2 as i64)
+                                    .saturating_sub(8 as i64)
                                     .saturating_sub(current_ts as i64)
                                     .max(0) as u64;
 
