@@ -1307,13 +1307,16 @@ pub fn tx_processors_send(
                             min_context_slot: None,
                         };
 
-                        let sig = client.send_transaction_with_config(&tx, send_cfg).await;
-                        if let Ok(sig) = sig {
-                            return Ok(sig);
-                        } else {
-                            error!("Failed to send initial transaction...");
-                            return Err("Failed to send tx".to_string());
+                        for _ in 0..3 {
+                            let sig = client.send_transaction_with_config(&tx, send_cfg).await;
+                            if let Ok(sig) = sig {
+                                return Ok(sig);
+                            }
+                            sleep(Duration::from_millis(100)).await;
                         }
+
+                        error!("Failed to send initial transaction...");
+                        return Err("Failed to send tx".to_string());
                     }));
 
                     commands
@@ -1423,6 +1426,7 @@ pub fn tx_processor_result_checks(
                             commands.entity(entity).despawn_recursive();
                         }
                     } else if status == "FAILED" {
+                        info!("Found a FAILED tx");
                             event_writer.send(EventTxResult {
                                 tx_type: tx_processor.tx_type.to_string(),
                                 sig,
@@ -1575,6 +1579,8 @@ pub fn read_accounts_update_channel(
                     mining_proofs_res.miners_this_epoch = 0;
 
                     info!("miners last epoch: {}", mining_proofs_res.miners_last_epoch);
+                    let top_stake = (new_treasury_data.top_balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                    info!("top stake: {}", top_stake);
                 }
                 treasury_account.last_reset_at = new_treasury_data.last_reset_at;
                 let base_reward_rate =

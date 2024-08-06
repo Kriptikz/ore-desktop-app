@@ -389,8 +389,15 @@ pub fn handle_task_send_tx_result(
 ) {
     for (entity, mut task, mut tx_processor) in &mut query.iter_mut() {
         if let Some(send_tx_result) = block_on(future::poll_once(&mut task.task)) {
-            if let Ok(sig) = send_tx_result {
-                tx_processor.signature = Some(sig);
+            match send_tx_result {
+                Ok(sig) => {
+                    tx_processor.signature = Some(sig);
+                }, 
+                Err(msg) => {
+                    info!("setting status to failed!");
+                    tx_processor.status = "FAILED".to_string();
+                    tx_processor.error = msg;
+                }
             }
             commands.entity(entity).remove::<TaskSendTx>();
         }
