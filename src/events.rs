@@ -1326,7 +1326,6 @@ pub fn handle_event_proof_account_updated(
                     }
                 }
 
-                info!("{}", item_log_data.clone());
                 if let Ok((moving_scroll_panel_entity, moving_scroll_panel_node, parent_scroll_list, mut moving_scroll_panel_style, mut moving_scroll_panel_scrolling_list)) = moving_scroll_panel_query.get_single_mut() {
                     let new_list_item_id = commands.spawn((
                         NodeBundle {

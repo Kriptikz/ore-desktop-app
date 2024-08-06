@@ -22,7 +22,7 @@ use tasks::{
     handle_task_got_sig_checks, handle_task_process_tx_result, handle_task_send_tx_result, handle_task_tx_sig_check_results, task_generate_hash, task_register_wallet, task_update_app_wallet_sol_balance, TaskSendTx
 };
 use ui::{
-    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, DashboardScreenNode, MiningScreenNode, NavItem, NavItemArrow, NavItemIcon, NavItemText, NavItemWhiteSelectedBar, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}, screen_setup_wallet::{despawn_wallet_create_screen, spawn_wallet_setup_screen}}, ui_button_systems::{
+    components::{AppScreenParent, BaseScreenNode, ButtonCaptureTextInput, DashboardProofUpdatesLogsList, DashboardScreenNode, MiningScreenNode, NavItem, NavItemArrow, NavItemIcon, NavItemText, NavItemWhiteSelectedBar, ScrollingList, SpinnerIcon, TextInput, TextPasswordInput}, nav_item_systems::nav_item_interactions, screens::{screen_base::spawn_base_screen, screen_dashboard::{despawn_dashboard_screen, spawn_dashboard_screen}, screen_locked::{despawn_locked_screen, spawn_locked_screen}, screen_mining::{despawn_mining_screen, spawn_app_screen_mining}, screen_settings_config::{despawn_settings_config_screen, spawn_settings_config_screen}, screen_settings_general::{despawn_settings_general_screen, spawn_settings_general_screen}, screen_settings_wallet::{despawn_settings_wallet_screen, spawn_settings_wallet_screen}, screen_setup_wallet::{despawn_wallet_create_screen, spawn_wallet_setup_screen}}, ui_button_systems::{
         button_auto_scroll, button_capture_text, button_claim_ore_rewards, button_copy_text, button_generate_wallet, button_lock, button_open_web_tx_explorer, button_request_airdrop, button_save_config, button_save_wallet, button_stake_ore, button_start_stop_mining, button_unlock, tick_button_cooldowns
     }, ui_sync_systems::{
         fps_counter_showhide, fps_text_update_system, mouse_scroll, update_active_miners_ui, update_active_text_input_cursor_vis, update_app_wallet_ui, update_busses_ui, update_hash_rate_ui, update_miner_status_ui, update_proof_account_ui, update_text_input_ui, update_treasury_account_ui
@@ -203,6 +203,7 @@ fn main() {
         .add_systems(Update, nav_item_interactions)
         .add_systems(Update, update_app_wallet_ui)
         .add_systems(Update, mouse_scroll)
+        .add_systems(Update, dashboard_list_cleanup_system)
         .add_systems(Update, 
             (
                 (
@@ -1318,6 +1319,24 @@ pub fn tx_processors_send(
                     commands
                         .entity(entity)
                         .insert(TaskSendTx { task });
+                }
+            }
+        }
+    }
+}
+
+pub fn dashboard_list_cleanup_system(
+    mut commands: Commands,
+    mut moving_scroll_panel_query: Query<(Entity, &Children), With<DashboardProofUpdatesLogsList>>,
+) {
+    if let Ok((entity, children_log_items)) = moving_scroll_panel_query.get_single_mut() {
+    if children_log_items.len() >= 1000 {
+            info!("Cleaning up some log items.");
+            let amount = children_log_items.len() - (children_log_items.len() - 500);
+            for i in 0..amount {
+                if let Some(ent) = children_log_items.get(i) {
+                    commands.entity(*ent).remove_parent();
+                    commands.entity(*ent).despawn_recursive();
                 }
             }
         }
