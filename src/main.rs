@@ -1315,7 +1315,7 @@ pub fn tx_processors_send(
                             sleep(Duration::from_millis(100)).await;
                         }
 
-                        error!("Failed to send initial transaction...");
+                        error!("Failed to send tx.");
                         return Err("Failed to send tx".to_string());
                     }));
 
@@ -1378,6 +1378,11 @@ pub fn tx_processor_result_checks(
 ) {
     for (entity, tx_processor) in query_tx.iter() {
         let status = tx_processor.status.clone();
+        let sig = if let Some(s) = tx_processor.signature {
+            s.to_string()
+        } else {
+            "FAILED".to_string()
+        };
         if status == "SUCCESS" || status == "FAILED" {
             let sig = if let Some(s) = tx_processor.signature {
                 s.to_string()
@@ -1473,6 +1478,21 @@ pub fn tx_processor_result_checks(
 
                     commands.entity(entity).despawn_recursive();
                 }
+            }
+        } else {
+            if tx_processor.created_at.elapsed().as_secs() >= 80 {
+                event_writer.send(EventTxResult {
+                    tx_type: tx_processor.tx_type.to_string(),
+                    sig,
+                    hash_status: tx_processor.hash_status,
+                    tx_time: tx_processor.created_at.elapsed().as_secs(),
+                    tx_status:  TxStatus {
+                        status,
+                        error: "Expired: ".to_string() + &tx_processor.error,
+                    }
+                });
+
+                commands.entity(entity).despawn_recursive();
             }
         }
     }

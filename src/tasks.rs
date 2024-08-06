@@ -390,14 +390,12 @@ pub fn handle_task_send_tx_result(
     for (entity, mut task, mut tx_processor) in &mut query.iter_mut() {
         if let Some(send_tx_result) = block_on(future::poll_once(&mut task.task)) {
             match send_tx_result {
+                // the txn's are sent on an interval, only successfull sends will 
+                // return the sig.
+                // Txn's will expire after about 80's automatically
                 Ok(sig) => {
                     tx_processor.signature = Some(sig);
                 }, 
-                Err(msg) => {
-                    info!("setting status to failed!");
-                    tx_processor.status = "FAILED".to_string();
-                    tx_processor.error = msg;
-                }
             }
             commands.entity(entity).remove::<TaskSendTx>();
         }
