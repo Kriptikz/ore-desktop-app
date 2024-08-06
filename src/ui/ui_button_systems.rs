@@ -347,8 +347,11 @@ pub fn button_save_config(
                     break;
                 };
 
+                let ws_url =  "ws".to_string() + &text_rpc_url[4..];
+
                 event_writer.send(EventSaveConfig(AppConfig {
                     rpc_url: text_rpc_url.clone(),
+                    ws_url: ws_url.clone(),
                     // TODO: fix for mainnet
                     is_devnet: true,
                     threads,
