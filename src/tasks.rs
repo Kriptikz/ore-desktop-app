@@ -389,14 +389,12 @@ pub fn handle_task_send_tx_result(
 ) {
     for (entity, mut task, mut tx_processor) in &mut query.iter_mut() {
         if let Some(send_tx_result) = block_on(future::poll_once(&mut task.task)) {
-            match send_tx_result {
-                // the txn's are sent on an interval, only successfull sends will 
-                // return the sig.
-                // Txn's will expire after about 80's automatically
-                Ok(sig) => {
-                    tx_processor.signature = Some(sig);
-                }, 
-            }
+            // the txn's are sent on an interval, only successfull sends will 
+            // return the sig.
+            // Txn's will expire after about 80's automatically
+            if let Ok(sig) = send_tx_result {
+                tx_processor.signature = Some(sig);
+            } 
             commands.entity(entity).remove::<TaskSendTx>();
         }
     }
