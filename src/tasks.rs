@@ -271,17 +271,7 @@ pub fn handle_task_process_tx_result(
                     let pop_up_area = query_pop_up.single_mut();
 
                     let sol_balance = app_wallet.sol_balance;
-                    let staked_balance = if tx_type == TxType::Mine {
-                        let current_ts = get_unix_timestamp();
-                        let time_since_last_hash = current_ts - proof_account.last_hash_at as u64;
-                        if time_since_last_hash >= 62 || time_since_last_hash <= 53 {
-                            None
-                        } else {
-                            Some(proof_account.stake)
-                        }
-                    } else {
-                        None
-                    };
+                    let staked_balance = Some(proof_account.stake);
 
                     let new_tx = commands.spawn((
                         NodeBundle {
