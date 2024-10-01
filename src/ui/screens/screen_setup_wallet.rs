@@ -5,18 +5,19 @@ use solana_sdk::signature::Keypair;
 
 use crate::ui::{
     components::{
-        BaseScreenNode, ButtonCaptureTextInput, ButtonGenerateWallet,
-        ButtonSaveGeneratedWallet, InitialSetupScreenNode,
-        TextCursor, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2,
-        TextMnemonicLine3, TextPasswordInput, TextPasswordLabel, WalletSetupScreenNode,
+        BaseScreenNode, ButtonCaptureTextInput, ButtonGenerateWallet, ButtonSaveGeneratedWallet,
+        InitialSetupScreenNode, TextCursor, TextGeneratedKeypair, TextInput, TextMnemonicLine1,
+        TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, TextPasswordLabel,
+        WalletSetupScreenNode,
     },
     styles::{
-        BUTTON_GENERATE, BUTTON_SAVE_WALLET, FONT_ROBOTO, FONT_SIZE, NORMAL_BUTTON, TREASURY_BACKGROUND
+        BUTTON_GENERATE, BUTTON_SAVE_WALLET, FONT_REGULAR, FONT_SIZE_MEDIUM, NORMAL_BUTTON,
+        TREASURY_BACKGROUND,
     },
 };
 
-pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
+pub fn spawn_wallet_setup_screen(parent: &mut ChildBuilder, asset_server: Res<AssetServer>) {
+    parent
         .spawn((
             NodeBundle {
                 style: Style {
@@ -191,8 +192,8 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                                 TextBundle::from_section(
                                                     "Pubkey: ",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
+                                                        font: asset_server.load(FONT_REGULAR),
+                                                        font_size: FONT_SIZE_MEDIUM,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
                                                 ),
@@ -202,8 +203,8 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                                 TextBundle::from_section(
                                                     "Click Generate to make a new key. OR Drag-&-Drop a `.json` key file to import it.",
                                                     TextStyle {
-                                                        font: asset_server.load(FONT_ROBOTO),
-                                                        font_size: FONT_SIZE,
+                                                        font: asset_server.load(FONT_REGULAR),
+                                                        font_size: FONT_SIZE_MEDIUM,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
                                                 ),
@@ -277,8 +278,8 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                                             " ",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
+                                                                    .load(FONT_REGULAR),
+                                                                font_size: FONT_SIZE_MEDIUM,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
@@ -309,8 +310,8 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                                             " ",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
+                                                                    .load(FONT_REGULAR),
+                                                                font_size: FONT_SIZE_MEDIUM,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
@@ -341,8 +342,8 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                                             " ",
                                                             TextStyle {
                                                                 font: asset_server
-                                                                    .load(FONT_ROBOTO),
-                                                                font_size: FONT_SIZE,
+                                                                    .load(FONT_REGULAR),
+                                                                font_size: FONT_SIZE_MEDIUM,
                                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                                             },
                                                         ),
@@ -390,7 +391,7 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                             "Password: ",
                                             TextStyle {
                                                 font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                                font_size: FONT_SIZE,
+                                                font_size: FONT_SIZE_MEDIUM,
                                                 color: Color::rgb(0.9, 0.9, 0.9),
                                             },
                                         ),
@@ -423,7 +424,7 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                                                     TextStyle {
                                                         font: asset_server
                                                             .load("fonts/FiraSans-Bold.ttf"),
-                                                        font_size: FONT_SIZE,
+                                                        font_size: FONT_SIZE_MEDIUM,
                                                         color: Color::rgb(0.9, 0.9, 0.9),
                                                     },
                                                 ),
@@ -485,4 +486,12 @@ pub fn spawn_wallet_setup_screen(mut commands: Commands, asset_server: Res<Asset
                         });
                 });
         });
+}
+
+pub fn despawn_wallet_create_screen(
+    mut commands: Commands,
+    query: Query<Entity, With<WalletSetupScreenNode>>,
+) {
+    let screen_node = query.get_single().unwrap();
+    commands.entity(screen_node).despawn_recursive();
 }

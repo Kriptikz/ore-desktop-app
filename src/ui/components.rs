@@ -3,14 +3,26 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use solana_sdk::signature::Keypair;
 
+use crate::NavItemScreen;
+
 // Components
 #[derive(Component, Default)]
 pub struct ScrollingList {
     pub position: f32,
 }
 
+
+#[derive(Component)]
+pub struct ScrollingListNode(pub bool);
+
 #[derive(Component)]
 pub struct MovingScrollPanel;
+
+#[derive(Component)]
+pub struct TextActiveMinersThisEpoch;
+
+#[derive(Component)]
+pub struct TextActiveMinersLastEpoch;
 
 /// Marker to find the container entity so we can show/hide the FPS counter
 #[derive(Component)]
@@ -21,7 +33,31 @@ pub struct FpsRoot;
 pub struct FpsText;
 
 #[derive(Component)]
+pub struct TextHighestDifficultySeen;
+
+#[derive(Component)]
+pub struct TextCrownStakeAmount;
+
+#[derive(Component)]
+pub struct TextCrownStakeBy;
+
+#[derive(Component)]
 pub struct BaseScreenNode;
+
+#[derive(Component)]
+pub struct NavItem(pub NavItemScreen);
+
+#[derive(Component)]
+pub struct NavItemWhiteSelectedBar(pub NavItemScreen);
+
+#[derive(Component)]
+pub struct NavItemIcon(pub NavItemScreen);
+
+#[derive(Component)]
+pub struct NavItemText(pub NavItemScreen);
+
+#[derive(Component)]
+pub struct NavItemArrow(pub NavItemScreen);
 
 #[derive(Component)]
 pub struct TxPopUpArea;
@@ -36,7 +72,22 @@ pub struct WalletSetupScreenNode;
 pub struct MiningScreenNode;
 
 #[derive(Component)]
+pub struct AppScreenParent;
+
+#[derive(Component)]
 pub struct LockedScreenNode;
+
+#[derive(Component)]
+pub struct DashboardScreenNode;
+
+#[derive(Component)]
+pub struct SettingsConfigScreenNode;
+
+#[derive(Component)]
+pub struct SettingsGeneralScreenNode;
+
+#[derive(Component)]
+pub struct SettingsWalletScreenNode;
 
 #[derive(Component)]
 pub struct CopyableText {
@@ -73,6 +124,15 @@ pub struct TextPasswordLabel;
 
 #[derive(Component)]
 pub struct TextWalletPubkey;
+
+#[derive(Component)]
+pub struct DashboardProofUpdatesLogsList;
+
+#[derive(Component)]
+pub struct DashboardProofUpdatesLogsListItem;
+
+#[derive(Component)]
+pub struct MiningScreenTxResultList;
 
 #[derive(Component)]
 pub struct ButtonOpenWebTxExplorer;
@@ -161,6 +221,9 @@ pub struct TextMinerStatusCpuUsage;
 pub struct TextMinerStatusRamUsage;
 
 #[derive(Component)]
+pub struct TextHashrate;
+
+#[derive(Component)]
 pub struct TextCurrentTxSig;
 
 #[derive(Component)]
@@ -195,6 +258,10 @@ pub struct AutoScrollCheckIcon;
 
 #[derive(Component)]
 pub struct ButtonCopyText;
+
+
+#[derive(Component)]
+pub struct ToggleAutoMineParent;
 
 #[derive(Component)]
 pub struct ToggleAutoMine(pub bool);

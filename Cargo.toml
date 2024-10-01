@@ -20,8 +20,9 @@ bevy-inspector-egui = "0.24.0"
 cocoon = "=0.3.1"
 copypasta = "0.10.1"
 serde = "1.0.199"
-ore = { package = "ore-program", git = "https://github.com/regolith-labs/ore", branch = "hardhat/v2", features = ["no-entrypoint"]}
-drillx = { git = "https://github.com/regolith-labs/drillx", branch = "master", features = ["solana"] }
+ore-utils = { path = "../regolith-labs/ore/utils"}
+ore-api = { path = "../regolith-labs/ore/api"}
+drillx = { path = "../regolith-labs/forks/drillx/drillx"}
 solana-client = "1.18.12"
 solana-sdk = "1.18.12"
 spl-token = { version = "^4", features = ["no-entrypoint"] }
@@ -37,3 +38,5 @@ open = "5.1.2"
 async-compat = "0.2.3"
 crossbeam-channel = "0.5.12"
 solana-account-decoder = "1.18.13"
+async-std = "1.12.0"
+core_affinity = "0.8.1"

@@ -1,4 +1,5 @@
 use async_compat::Compat;
+use async_std::task::sleep;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, IoTaskPool},
@@ -6,24 +7,26 @@ use bevy::{
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use chrono::DateTime;
 use cocoon::Cocoon;
+use crossbeam_channel::{bounded, unbounded};
 use drillx::{Solution};
+use ore_api::state::Proof;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     ore_utils::{
-        find_hash_par, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey
+        find_hash_par, get_auth_ix, get_claim_ix, get_clock_account, get_cutoff, get_mine_ix, get_ore_epoch_duration, get_ore_mint, get_proof, get_proof_and_treasury_with_busses, get_register_ix, get_reset_ix, get_stake_ix, get_treasury, proof_pubkey, treasury_tokens_pubkey, ORE_TOKEN_DECIMALS
     }, tasks::{
         SigCheckResults, TaskGenerateHash, TaskProcessTx, TaskProcessTxData, TaskRegisterWallet, TaskSigChecks, TaskUpdateAppWalletSolBalance, TaskUpdateAppWalletSolBalanceData
     }, ui::{
-        components::{ButtonAutoScroll, MovingScrollPanel, ScrollingList, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine},
-        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{TOGGLE_OFF, TOGGLE_ON},
-    }, utils::{find_best_bus, get_unix_timestamp}, AppWallet, BussesResource, AppConfig, EntityTaskFetchUiData, EntityTaskHandler, GameState, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
+        components::{ButtonAutoScroll, DashboardProofUpdatesLogsList, DashboardProofUpdatesLogsListItem, MiningScreenTxResultList, MovingScrollPanel, ScrollingList, ScrollingListNode, TextGeneratedKeypair, TextInput, TextMnemonicLine1, TextMnemonicLine2, TextMnemonicLine3, TextPasswordInput, ToggleAutoMine, ToggleAutoMineParent},
+        spawn_utils::{spawn_new_list_item, UiListItem}, styles::{FONT_REGULAR, FONT_SIZE_MEDIUM, MINE_TOGGLE_OFF, MINE_TOGGLE_ON, TOGGLE_OFF, TOGGLE_ON},
+    }, utils::{find_best_bus, get_unix_timestamp, shorten_string}, AppConfig, AppScreenState, AppWallet, BussesResource, EntityTaskFetchUiData, EntityTaskHandler, HashStatus, HashrateResource, MinerStatusResource, MiningDataChannelMessage, MiningDataChannelResource, MiningProofsResource, NavItemScreen, OreAppState, ProofAccountResource, RpcConnection, TreasuryAccountResource, TxProcessor, TxStatus
 };
 
 use std::{
-    fs::File, io::{stdout, Write}, path::{Path, PathBuf}, str::FromStr, sync::{atomic::AtomicBool, Arc, Mutex}, time::Instant
+    fs::File, io::{stdout, Write}, path::{Path, PathBuf}, str::FromStr, sync::{atomic::AtomicBool, Arc, Mutex}, time::{Duration, Instant}
 };
 
 use solana_sdk::{
@@ -47,13 +50,10 @@ pub struct EventSaveWallet;
 pub struct EventMineForHash;
 
 #[derive(Event)]
-pub struct EventStopMining;
-
-#[derive(Event)]
 pub struct EventRequestAirdrop;
 
 #[derive(Event)]
-pub struct EventSubmitHashTx(pub (Solution, u32, u64));
+pub struct EventSubmitHashTx(pub (Solution, u32, u64, u64));
 
 pub struct TxResult {
     pub sig: String,
@@ -106,6 +106,7 @@ pub struct EventSaveConfig(pub AppConfig);
 pub fn handle_event_start_stop_mining_clicked(
     mut ev_start_stop_mining: EventReader<EventStartStopMining>,
     mut event_writer: EventWriter<EventMineForHash>,
+    mut event_writer_cancel_mining: EventWriter<EventCancelMining>,
     mut event_writer_register: EventWriter<EventRegisterWallet>,
     app_wallet: Res<AppWallet>,
     mut miner_status: ResMut<MinerStatusResource>,
@@ -119,11 +120,11 @@ pub fn handle_event_start_stop_mining_clicked(
             "MINING" |
             "PROCESSING" => {
                 // stop mining
-                // event_writer_stop.send(EventStopMining);
                 miner_status.miner_status = "STOPPED".to_string();
                 let (mut btn, mut toggle) = query.single_mut();
                 toggle.0 = false;
-                *btn = UiImage::new(asset_server.load(TOGGLE_OFF));
+                *btn = UiImage::new(asset_server.load(MINE_TOGGLE_OFF));
+                event_writer_cancel_mining.send(EventCancelMining);
             
             },
             "STOPPED" => {
@@ -134,7 +135,7 @@ pub fn handle_event_start_stop_mining_clicked(
                     event_writer.send(EventMineForHash);
                     let (mut btn, mut toggle) = query.single_mut();
                     toggle.0 = true;
-                    *btn = UiImage::new(asset_server.load(TOGGLE_ON));
+                    *btn = UiImage::new(asset_server.load(MINE_TOGGLE_ON));
                 }
             },
             _ => {
@@ -150,18 +151,50 @@ pub fn handle_event_mine_for_hash(
     mut event_reader: EventReader<EventMineForHash>,
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
+    ore_config_res: Res<TreasuryAccountResource>,
     mut miner_status: ResMut<MinerStatusResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
+    mut mining_channels_res: ResMut<MiningDataChannelResource>,
 ) {
     for _ev in event_reader.read() {
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = AsyncComputeTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let wallet = if let Some(wallet) =  &app_wallet.wallet {
+                wallet.clone()
+            } else {
+                next_state.set(AppScreenState::Unlock);
+                error!("wallet is None, switching to wallet unlock screen");
+                continue;
+            }; 
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
+
+            if mining_channels_res.sender.is_none() {
+                let (sender, receiver) = bounded::<MiningDataChannelMessage>(1);
+                mining_channels_res.sender = Some(sender.clone());
+                mining_channels_res.receiver = Some(receiver.clone());
+            }
 
             let sys_info = &miner_status.sys_info;
             let cpu_count = sys_info.cpus().len() as u64;
             let threads = miner_status.miner_threads.clamp(1, cpu_count);
+
+            let channel_rec = mining_channels_res.receiver.as_ref().unwrap();
+            let channel_sender = mining_channels_res.sender.as_ref().unwrap();
+
+            let receiver = channel_rec.clone();
+            let sender = channel_sender.clone();
+
+            while let Ok(_) = receiver.try_recv() {
+                // clear out any current messages
+            }
+
+            let min_difficulty = ore_config_res.min_difficulty;
 
             let task = pool.spawn(Compat::new(async move {
                 // TODO: use proof resource cached proof. May need LatestHash Resource to ensure a new proof if loaded before mining.
@@ -180,18 +213,21 @@ pub fn handle_event_mine_for_hash(
                 let cutoff = proof
                                     .last_hash_at
                                     .saturating_add(60)
-                                    .saturating_sub(2 as i64)
+                                    .saturating_sub(8 as i64)
                                     .saturating_sub(current_ts as i64)
                                     .max(0) as u64;
 
                 let hash_time = Instant::now();
-                let (solution, best_difficulty, best_hash) = find_hash_par(
+                let (solution, best_difficulty, best_hash, total_nonces_checked) = find_hash_par(
                     proof,
                     cutoff,
                     threads,
+                    min_difficulty as u32,
+                    receiver,
+                    sender,
                 );
 
-                Ok((solution, best_difficulty, hash_time.elapsed().as_secs()))
+                Ok((solution, best_difficulty, hash_time.elapsed().as_secs(), total_nonces_checked))
             }));
             miner_status.miner_status = "MINING".to_string();
 
@@ -221,12 +257,25 @@ pub fn handle_event_submit_hash_tx(
     mut miner_status: ResMut<MinerStatusResource>,
     rpc_connection: Res<RpcConnection>,
     mut busses_res: ResMut<BussesResource>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
+    mut hashrate_res: ResMut<HashrateResource>,
 ) {
     for ev in ev_submit_hash_tx.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot , rpc_connection.rpc is None");
+                continue;
+            };
 
             let bus = find_best_bus(&busses_res.busses);
 
@@ -235,16 +284,25 @@ pub fn handle_event_submit_hash_tx(
             let solution;
             let difficulty;
             let hash_time;
+            let new_hashes_checked;
 
             {
-                let (s, d, ht) = &ev.0;
+                let (s, d, ht, hashes_checked) = &ev.0;
                 solution = Solution::new(s.d, s.n);
 
                 difficulty = *d;
                 hash_time = *ht;
+                new_hashes_checked = *hashes_checked;
             }
 
             let last_reset_at = treasury.last_reset_at;
+
+            if hash_time > 0 {
+                hashrate_res.hashrate = new_hashes_checked as f64 / hash_time as f64;
+            } else {
+                hashrate_res.hashrate = new_hashes_checked as f64;
+            }
+            info!("Hashrate: {}/second", hashrate_res.hashrate);
 
             let current_ts = get_unix_timestamp() as i64;
 
@@ -256,9 +314,13 @@ pub fn handle_event_submit_hash_tx(
                 let mut ixs = vec![];
                 // TODO: set cu's
                 let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(500000);
-
                 ixs.push(cu_limit_ix);
 
+                let prio_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(510000);
+                ixs.push(prio_fee_ix);
+
+                let noop_ix = get_auth_ix(signer.pubkey());
+                ixs.push(noop_ix);
 
                 if time_until_reset <= 5 {
                     let reset_ix = get_reset_ix(signer.pubkey());
@@ -270,35 +332,40 @@ pub fn handle_event_submit_hash_tx(
                 //     ComputeBudgetInstruction::set_compute_unit_price(self.priority_fee);
                 let ix_mine = get_mine_ix(signer.pubkey(), solution, bus);
                 ixs.push(ix_mine);
-                let latest_blockhash = client
-                    .get_latest_blockhash_with_commitment(client.commitment()).await;
 
-                if let Ok((hash, _slot)) = latest_blockhash {
-                    let mut tx = Transaction::new_with_payer(&ixs, Some(&signer.pubkey()));
+                let mut attempts = 3;
+                while attempts > 0 {
+                    if let Ok((hash, _slot)) = client.get_latest_blockhash_with_commitment(client.commitment()).await {
+                        let mut tx = Transaction::new_with_payer(&ixs, Some(&signer.pubkey()));
 
-                    tx.sign(&[&signer], hash);
-                    
-                    let process_data = TaskProcessTxData {
-                        tx_type: "Mine".to_string(),
-                        signature: None,
-                        signed_tx: Some(tx),
-                        hash_time: Some((hash_time, difficulty)),
-                    };
+                        tx.sign(&[&signer], hash);
+                        
+                        let process_data = TaskProcessTxData {
+                            tx_type: "Mine".to_string(),
+                            signature: None,
+                            signed_tx: Some(tx),
+                            hash_time: Some((hash_time, difficulty)),
+                        };
 
-                    return Ok(process_data);
-                } else {
-                    error!("Failed to get latest blockhash. handle_event_submit_hash_tx");
-                    let process_data = TaskProcessTxData {
-                        tx_type: "Mine".to_string(),
-                        signature: None,
-                        signed_tx: None,
-                        hash_time: Some((hash_time, difficulty)),
-                    };
-                    return Err((
-                        process_data,
-                        "Failed to get latest blockhash".to_string()
-                    ));
+                        return Ok(process_data);
+                    } else {
+                        error!("Failed to get latest blockhash. retrying...");
+                        sleep(Duration::from_millis(1000)).await;
+                        attempts = attempts - 1;
+                    }
                 }
+
+                let process_data = TaskProcessTxData {
+                    tx_type: "Mine".to_string(),
+                    signature: None,
+                    signed_tx: None,
+                    hash_time: Some((hash_time, difficulty)),
+                };
+                return Err((
+                    process_data,
+                    "Failed to get latest blockhash".to_string()
+                ));
+
             }));
 
             miner_status.miner_status = "PROCESSING".to_string();
@@ -316,10 +383,11 @@ pub fn handle_event_tx_result(
     mut ev_tx_result: EventReader<EventTxResult>,
     mut event_writer: EventWriter<EventMineForHash>,
     asset_server: Res<AssetServer>,
-    mut query: Query<(Entity, &mut ScrollingList, &mut Style, &Parent, &Node), With<MovingScrollPanel>>,
+    mut query: Query<(Entity, &mut ScrollingList, &mut Style, &Parent, &Node), With<MiningScreenTxResultList>>,
     query_node: Query<&Node>,
     query_auto_scroll: Query<&ButtonAutoScroll>,
     query_toggle: Query<&ToggleAutoMine>,
+    mut local: Local<bool>,
 ) {
     for ev in ev_tx_result.read() {
         let (hash_time, difficulty) = if let Some(ht) = &ev.hash_status {
@@ -327,43 +395,47 @@ pub fn handle_event_tx_result(
         } else {
             ("N/A".to_string(), "".to_string())
         };
-        let (scroll_panel_entity, mut scrolling_list, mut style, parent, list_node) = query.get_single_mut().expect("There should only be 1 scroll panel entity.");
-        let status = format!(
-            "{}  {}",
-            ev.tx_status.status.clone(),
-            ev.tx_status.error.clone()
-        );
+        if let Ok((scroll_panel_entity, mut scrolling_list, mut style, parent, list_node)) = query.get_single_mut() {
+            let status = format!(
+                "{}  {}",
+                ev.tx_status.status.clone(),
+                ev.tx_status.error.clone()
+            );
 
-        let ts = get_unix_timestamp();
-        let date_time = if let Some(dt) = DateTime::from_timestamp(ts as i64, 0) {
-            dt.to_string()
-        } else {
-            "Err".to_string()
-        };
+            let ts = get_unix_timestamp();
+            let date_time = if let Some(dt) = DateTime::from_timestamp(ts as i64, 0) {
+                dt.to_string()
+            } else {
+                "Err".to_string()
+            };
 
-        let hash_time = format!("{} - {}", hash_time, difficulty);
-        let item_data = UiListItem {
-            id: ev.tx_type.clone(),
-            landed_at: date_time.clone(),
-            sig: ev.sig.clone(),
-            tx_time: ev.tx_time.to_string(),
-            hash_time,
-            status,
-        };
-        spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data);
+            let hash_time = format!("{} - {}", hash_time, difficulty);
+            let item_data = UiListItem {
+                id: ev.tx_type.clone(),
+                landed_at: date_time.clone(),
+                sig: ev.sig.clone(),
+                tx_time: ev.tx_time.to_string(),
+                hash_time,
+                status,
+            };
+            let use_light_background = local.clone();
+            spawn_new_list_item(&mut commands, &asset_server, scroll_panel_entity, item_data, use_light_background);
 
-        let auto_scroll = query_auto_scroll.single();
+            *local = !*local;
 
-        if auto_scroll.0 {
-            let items_height = list_node.size().y + 20.0;
-            if let Ok(query_node_parent) = query_node.get(parent.get()) {
-                let container_height = query_node_parent.size().y;
+            let auto_scroll = query_auto_scroll.single();
 
-                if items_height > container_height {
-                    let max_scroll = items_height - container_height;
+            if auto_scroll.0 {
+                let items_height = list_node.size().y + 20.0;
+                if let Ok(query_node_parent) = query_node.get(parent.get()) {
+                    let container_height = query_node_parent.size().y;
 
-                    scrolling_list.position = -max_scroll;
-                    style.top = Val::Px(scrolling_list.position);
+                    if items_height > container_height {
+                        let max_scroll = items_height - container_height;
+
+                        scrolling_list.position = -max_scroll;
+                        style.top = Val::Px(scrolling_list.position);
+                    }
                 }
             }
         }
@@ -383,14 +455,26 @@ pub fn handle_event_fetch_ui_data_from_rpc(
     rpc_connection: ResMut<RpcConnection>,
     mut event_reader: EventReader<EventFetchUiDataFromRpc>,
     query_task_handler: Query<Entity, With<EntityTaskFetchUiData>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
-            let pubkey = app_wallet.wallet.pubkey();
+            let pubkey = wallet.pubkey();
 
             let pool = IoTaskPool::get();
-
-            let connection = rpc_connection.rpc.clone();
+            let connection = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot fetch ui data, rpc_connection.rpc is None");
+                continue;
+            };
             let ore_mint = get_ore_mint();
             let task = pool.spawn(Compat::new(async move {
                 let balance = if let Ok(result) = connection.get_balance(&pubkey).await {
@@ -446,7 +530,7 @@ pub fn handle_event_fetch_ui_data_from_rpc(
                 let treasury_account_res_data;
                 if let Ok(treasury_account) = treasury_config {
                     let base_reward_rate =
-                        (treasury_account.base_reward_rate as f64) / 10f64.powf(ore::TOKEN_DECIMALS as f64);
+                        (treasury_account.base_reward_rate as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
 
                     let clock = if let Ok(clock) =  get_clock_account(&connection).await {
                         clock
@@ -465,18 +549,18 @@ pub fn handle_event_fetch_ui_data_from_rpc(
 
                     treasury_account_res_data = TreasuryAccountResource {
                         balance: treasury_ore_balance.to_string(),
-                        admin: treasury_account.admin.to_string(),
                         last_reset_at: treasury_account.last_reset_at,
+                        min_difficulty: treasury_account.min_difficulty,
                         need_epoch_reset,
                         base_reward_rate,
                     };
                 } else {
                     treasury_account_res_data = TreasuryAccountResource {
                         balance: "Not Found".to_string(),
-                        admin: "".to_string(),
                         last_reset_at: 0,
                         need_epoch_reset: false,
                         base_reward_rate: 0.0,
+                        min_difficulty: 0,
                     };
                 }
                 let mut busses_res_data = vec![];
@@ -514,12 +598,25 @@ pub fn handle_event_register_wallet(
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let wallet = wallet;
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
             let task = pool.spawn(Compat::new(async move {
                 let proof = get_proof(&client, wallet.pubkey()).await;
 
@@ -618,12 +715,24 @@ pub fn handle_event_claim_ore_rewards(
     rpc_connection: ResMut<RpcConnection>,
     proof_account: Res<ProofAccountResource>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
             let claim_amount = proof_account.stake;
             let task = pool.spawn(Compat::new(async move {
                 let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
@@ -719,12 +828,24 @@ pub fn handle_event_stake_ore(
     app_wallet: Res<AppWallet>,
     rpc_connection: ResMut<RpcConnection>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot mine for hash, rpc_connection.rpc is None");
+                continue;
+            };
             let task = pool.spawn(Compat::new(async move {
                 let token_account_pubkey = spl_associated_token_account::get_associated_token_address(
                     &wallet.pubkey(),
@@ -831,19 +952,19 @@ pub fn handle_event_stake_ore(
 pub fn handle_event_lock(
     mut commands: Commands,
     mut event_reader: EventReader<EventLock>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
         commands.remove_resource::<AppWallet>();
-        next_state.set(GameState::Locked);
+        next_state.set(AppScreenState::Unlock);
     }
 }
 
 pub fn handle_event_unlock(
-    mut commands: Commands,
     mut event_reader: EventReader<EventUnlock>,
+    mut app_wallet: ResMut<AppWallet>,
     query: Query<&TextInput, With<TextPasswordInput>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
         let text = query.get_single();
@@ -860,12 +981,8 @@ pub fn handle_event_unlock(
                 let wallet = Keypair::from_bytes(&encoded);
                 if let Ok(wallet) = wallet {
                     let wallet = Arc::new(wallet);
-                    commands.insert_resource(AppWallet {
-                        wallet,
-                        sol_balance: 0.0,
-                        ore_balance: 0.0,
-                    });
-                    next_state.set(GameState::Mining);
+                    app_wallet.wallet = Some(wallet);
+                    next_state.set(AppScreenState::Mining);
                 } else {
                     error!("Failed to parse keypair from bytes. (events.rs: handle_event_unlock)");
                 }
@@ -881,7 +998,8 @@ pub fn handle_event_unlock(
 pub fn handle_event_save_config(
     mut event_reader: EventReader<EventSaveConfig>,
     mut ore_app_state: ResMut<OreAppState>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut miner_status: ResMut<MinerStatusResource>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for ev in event_reader.read() {
         let new_config = ev.0.clone();
@@ -895,11 +1013,12 @@ pub fn handle_event_save_config(
         let new_state;
         let wallet_path = Path::new("save.data");
         if wallet_path.exists() {
-            new_state = GameState::Locked;
+            new_state = AppScreenState::Mining;
         } else {
-            new_state = GameState::WalletSetup;
+            new_state = AppScreenState::WalletSetup;
         }
 
+        miner_status.miner_threads = new_config.threads;
         ore_app_state.config = new_config;
         next_state.set(new_state);
     }
@@ -1012,7 +1131,7 @@ pub fn handle_event_save_wallet(
         Query<&TextGeneratedKeypair>,
         Query<&TextInput, With<TextPasswordInput>>,
     )>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
         let generated_keypair = set.p0().single().0.clone();
@@ -1030,7 +1149,7 @@ pub fn handle_event_save_wallet(
 
             if let Ok(_) = container {
                 // go to locked screen
-                next_state.set(GameState::Locked);
+                next_state.set(AppScreenState::Unlock);
             } else {
                 error!("Error: Failed to save wallet file.");
             }
@@ -1045,11 +1164,18 @@ pub fn handle_event_request_airdrop(
     mut event_reader: EventReader<EventRequestAirdrop>,
     app_wallet: Res<AppWallet>,
     query_task_handler: Query<Entity, With<EntityTaskHandler>>,
+    mut next_state: ResMut<NextState<AppScreenState>>,
 ) {
     for _ev in event_reader.read() {
+        let wallet = if let Some(wallet) =  &app_wallet.wallet {
+            wallet.clone()
+        } else {
+            next_state.set(AppScreenState::Unlock);
+            error!("wallet is None, switching to wallet unlock screen");
+            continue;
+        }; 
         if let Ok(task_handler_entity) = query_task_handler.get_single() {
             let pool = IoTaskPool::get();
-            let wallet = app_wallet.wallet.clone();
             let task = pool.spawn(Compat::new(async move {
                 let devnet_url = "https://api.devnet.solana.com".to_string();
                 let client = RpcClient::new(devnet_url);
@@ -1114,7 +1240,12 @@ pub fn handle_event_check_sigs(
 
         if sigs.len() > 0 {
             let task_pool = IoTaskPool::get();
-            let client = rpc_connection.rpc.clone();
+            let client = if let Some(rpc) = &rpc_connection.rpc {
+                rpc.clone()
+            } else {
+                error!("cannot check sigs, rpc_connection.rpc is None");
+                continue;
+            };
             let task = task_pool.spawn(Compat::new(async move {
                 match client.get_signature_statuses(&sigs).await {
                     Ok(signature_statuses) => {
@@ -1136,6 +1267,139 @@ pub fn handle_event_check_sigs(
                 .entity(task_handler_entity)
                 .insert(TaskSigChecks { task });
 
+        }
+    }
+}
+
+
+#[derive(Event)]
+pub struct EventProofAccountUpdated(pub Proof);
+
+pub fn handle_event_proof_account_updated(
+    mut commands: Commands,
+    mut event_reader: EventReader<EventProofAccountUpdated>,
+    mut mining_proofs: ResMut<MiningProofsResource>,
+    asset_server: Res<AssetServer>,
+    scrolling_list_node_query: Query<&Node, (With<ScrollingListNode>, Without<ScrollingList>)>,
+    mut moving_scroll_panel_query: Query<(Entity, &Node, &Parent, &mut Style, &mut ScrollingList), With<DashboardProofUpdatesLogsList>>,
+) {
+    for ev in event_reader.read() {
+        let proof = ev.0;
+        let pubkey = proof.authority;
+        let mut active_miner = false;
+        if let Some(old_proof) = mining_proofs.proofs.get_mut(&pubkey) {
+            if proof.miner != old_proof.miner {
+                // miner pubkey was updated
+                info!("Proof miner was updated!");
+            } else {
+                let item_log_data: String;
+                // miner pubkey is still the same, do checks for other tx types
+                let old_balance = old_proof.balance;
+                let rewards = proof.balance as i64 - old_balance as i64;
+                let proof_auth = shorten_string(proof.authority.to_string(), 8);
+
+                if proof.challenge != old_proof.challenge {
+                    // Challenge was updated, it was a mine tx
+                    let default_proof_difficulty = [0; 32];
+                    let difficulty = if default_proof_difficulty == proof.last_hash {
+                        0
+                    } else {
+                        drillx::difficulty(proof.last_hash)
+                    };
+
+                    let balance = (proof.balance as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                    let rewards: f64 = (rewards as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+
+                    let _average_reward_per_hash = (proof.total_rewards as f64 / proof.total_hashes as f64) / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                    let total_rewards = proof.total_rewards as f64 / 10f64.powf(ORE_TOKEN_DECIMALS as f64);
+                    active_miner = true;
+
+                    item_log_data = format!("{} mined {} with difficulty {}", proof_auth, rewards, difficulty);
+                } else {
+                    // Challenge was not updated, it was a Stake or Claim
+                    if rewards > 0 {
+                        // Rewards increased, it was a stake
+                        item_log_data = format!("{} staked {} Ore", proof_auth, rewards);
+                    } else {
+                        // Rewards decreased, it was a claim
+                        item_log_data = format!("{} claimed {} Ore", proof_auth, rewards);
+                    }
+                }
+
+                if let Ok((moving_scroll_panel_entity, moving_scroll_panel_node, parent_scroll_list, mut moving_scroll_panel_style, mut moving_scroll_panel_scrolling_list)) = moving_scroll_panel_query.get_single_mut() {
+                    let new_list_item_id = commands.spawn((
+                        NodeBundle {
+                            style: Style {
+                                flex_direction: FlexDirection::Row,
+                                height: Val::Px(20.0),
+                                width: Val::Percent(100.0),
+                                // padding: UiRect::left(Val::Px(20.0)),
+                                // column_gap: Val::Px(30.0),
+                                // justify_content: JustifyContent::SpaceAround,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Name::new("Proof Account Update List Item"),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                item_log_data,
+                                TextStyle {
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
+                                    ..default()
+                                },
+                            ),
+                            DashboardProofUpdatesLogsListItem
+                        ));
+                    }).id();
+
+                    commands.entity(moving_scroll_panel_entity).add_child(new_list_item_id);
+
+                    let items_height = moving_scroll_panel_node.size().y + 20.0;
+                    if let Ok(scrolling_list_node) = scrolling_list_node_query.get(parent_scroll_list.get()) {
+                        let container_height = scrolling_list_node.size().y;
+
+                        if items_height > container_height {
+                            let max_scroll = items_height - container_height;
+
+                            moving_scroll_panel_scrolling_list.position = -max_scroll;
+                            moving_scroll_panel_style.top = Val::Px(moving_scroll_panel_scrolling_list.position);
+                        }
+                    }
+                }
+
+            }
+
+            // update old proof 
+            *old_proof = proof;
+        } else {
+            mining_proofs.proofs.insert(pubkey, proof);
+        }
+
+        if active_miner {
+            mining_proofs.miners_this_epoch += 1;
+        }
+
+    }
+}
+
+#[derive(Event)]
+pub struct EventCancelMining;
+
+pub fn handle_event_cancel_mining(
+    mut event_reader: EventReader<EventCancelMining>,
+    mining_channels_res: Res<MiningDataChannelResource>,
+) {
+    if let Some(channel_rec) = mining_channels_res.sender.as_ref() {
+        for _ev in event_reader.read() {
+            let sender = channel_rec.clone();
+            let _ = sender.try_send(MiningDataChannelMessage::Stop);
+        }
+    } else {
+        for _ev in event_reader.read() {
+            // read and do nothing
         }
     }
 }

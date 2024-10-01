@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 // Buttons
 pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+pub const HOVERED_BUTTON: Color = Color::rgba(1.0, 1.0, 1.0, 0.6);
 pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 pub static TOGGLE_ON: &str = "design_1/toggle_on.png";
@@ -19,7 +19,6 @@ pub static BUTTON_STAKE: &str = "design_1/button_stake.png";
 pub static BUTTON_START_MINING: &str = "design_1/button_start_mining.png";
 pub static BUTTON_STOP_MINING: &str = "design_1/button_stop_mining.png";
 pub static BUTTON_RESET_EPOCH: &str = "design_1/button_reset_epoch.png";
-
 
 // Icons
 pub static CHECKBOX: &str = "design_1/checkbox.png";
@@ -48,15 +47,6 @@ pub static CURRENT_TX_STATUS_BACKGROUND: &str = "design_1/current_tx_background.
 
 pub static TX_POP_UP_BACKGROUND: &str = "design_1/tx_pop_up_background.png";
 
-// Fonts
-pub const FONT_SIZE: f32 = 16.0;
-pub const FONT_SIZE_LARGE: f32 = 20.0;
-pub const FONT_SIZE_TITLE: f32 = 22.0;
-pub static FONT_REGULAR: &str = "fonts/Xirod.otf";
-pub static FONT_ROBOTO: &str = "fonts/Roboto-Regular.ttf";
-pub static FONT_ROBOTO_MEDIUM: &str = "fonts/Roboto-Medium.ttf";
-
-
 // HEX COLORS
 
 pub fn hex_black() -> Color {
@@ -69,4 +59,62 @@ pub fn hex_dark_gray() -> Color {
 
 pub fn hex_light_gray() -> Color {
     Color::hex("#404040").unwrap()
+}
+
+// Design 2
+
+pub static ORE_LOGO_WHITE: &str = "design_2/ore_logo_white.png";
+
+
+// Fonts
+pub const FONT_SIZE_X_SMALL: f32 = 16.0;
+pub const FONT_SIZE_SMALL: f32 = 18.0;
+pub const FONT_SIZE_MEDIUM: f32 = 20.0;
+pub const FONT_SIZE_LARGE: f32 = 28.0;
+
+pub static FONT_REGULAR: &str = "fonts/OpenSans-Semibold.ttf";
+pub static FONT_BOLD: &str = "fonts/OpenSans-Bold.ttf";
+
+// Icons
+pub static DASHBOARD_ICON_WHITE: &str = "design_2/dashboard_icon_white.png";
+pub static MINING_ICON: &str = "design_2/mining_icon.png";
+pub static NAV_ARROW_ICON: &str = "design_2/nav_arrow_icon.png";
+
+// Backgrounds
+pub static MINE_TOGGLE_BACKGROUND: &str = "design_2/mine_toggle_background.png";
+pub static MINE_TOGGLE_BUTTON: &str = "design_2/mine_toggle_button.png";
+pub static CONTENT_BACKGROUND_SMALL: &str = "design_2/content_background_small.png";
+pub static CONTENT_BACKGROUND_MEDIUM: &str = "design_2/content_background_medium.png";
+pub static LOG_ITEMS_BACKGROUND: &str = "design_2/log_items_background.png";
+pub static MINE_TOGGLE_ON: &str = "design_2/mine_toggle_on.png";
+pub static MINE_TOGGLE_OFF: &str = "design_2/mine_toggle_off.png";
+
+
+// Hex Colors
+pub fn hex_dark_mode_background() -> Color {
+    Color::hex("#323741").unwrap()
+}
+
+pub fn hex_dark_mode_nav_title() -> Color {
+    Color::hex("#2A2D35").unwrap()
+}
+
+pub fn hex_dark_mode_text_white() -> Color {
+    Color::hex("#EFEFEF").unwrap()
+}
+
+pub fn hex_dark_mode_text_white_2() -> Color {
+    Color::hex("#FAFAFA").unwrap()
+}
+
+pub fn hex_dark_mode_text_gray() -> Color {
+    Color::hex("#8A8A8A").unwrap()
+}
+
+pub fn hex_dark_mode_header_border() -> Color {
+    Color::hex("#30353E").unwrap()
+}
+
+pub fn hex_dark_mode_app_screen_background() -> Color {
+    Color::hex("#383D47").unwrap()
 }

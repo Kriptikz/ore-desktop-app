@@ -23,14 +23,25 @@ pub fn spawn_new_list_item(
     asset_server: &Res<AssetServer>,
     scroll_panel_entity: Entity,
     item_data: UiListItem,
+    use_light_background: bool,
 ) {
     let sig = shorten_string(item_data.sig.clone(), 10);
+    let background_color = if use_light_background {
+        hex_dark_mode_app_screen_background()
+    } else {
+        hex_dark_mode_nav_title()
+    };
+
     let new_result_item = commands
         .spawn((
             NodeBundle {
+                background_color: background_color.into(),
                 style: Style {
                     flex_direction: FlexDirection::Row,
-                    width: Val::Percent(100.0),
+                    width: Val::Percent(99.0),
+                    height: Val::Px(25.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
                     // padding: UiRect::left(Val::Px(20.0)),
                     // column_gap: Val::Px(30.0),
                     // justify_content: JustifyContent::SpaceAround,
@@ -39,6 +50,9 @@ pub fn spawn_new_list_item(
                 ..default()
             },
             Name::new("TxResult Item"),
+            UiImage::new(
+                    asset_server.load(LOG_ITEMS_BACKGROUND),
+                ),
             AccessibilityNode(NodeBuilder::new(Role::ListItem)),
         ))
         .with_children(|parent| {
@@ -59,8 +73,9 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.id,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO_MEDIUM),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
+                            color: hex_dark_mode_text_gray().into(),
                             ..default()
                         },
                     ),
@@ -94,8 +109,9 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                             value,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
+                            color: hex_dark_mode_text_gray().into(),
                             ..default()
                         },
                     ),
@@ -136,8 +152,9 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.tx_time,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
+                            color: hex_dark_mode_text_gray().into(),
                             ..default()
                         },
                     ),
@@ -162,8 +179,9 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.hash_time,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
+                            color: hex_dark_mode_text_gray().into(),
                             ..default()
                         },
                     ),
@@ -193,8 +211,9 @@ pub fn spawn_new_list_item(
                     TextBundle::from_section(
                         item_data.status,
                         TextStyle {
-                            font: asset_server.load(FONT_ROBOTO),
-                            font_size: FONT_SIZE,
+                            font: asset_server.load(FONT_REGULAR),
+                            font_size: FONT_SIZE_MEDIUM,
+                            color: hex_dark_mode_text_gray().into(),
                             ..default()
                         },
                     ),
@@ -241,12 +260,11 @@ pub fn spawn_copyable_text(
                 TextBundle::from_section(
                     &display_text,
                     TextStyle {
-                        font: asset_server.load(FONT_ROBOTO),
-                        font_size: FONT_SIZE,
+                        font: asset_server.load(FONT_REGULAR),
+                        font_size: FONT_SIZE_MEDIUM,
                         color: Color::rgb(0.9, 0.9, 0.9),
                     },
                 ),
-                TextWalletPubkey,
                 Name::new("WalletPubkeyText"),
             ));
             parent
@@ -304,12 +322,11 @@ pub fn spawn_web_link_icon(
                 TextBundle::from_section(
                     &display_text,
                     TextStyle {
-                        font: asset_server.load(FONT_ROBOTO),
-                        font_size: FONT_SIZE,
-                        color: Color::rgb(0.9, 0.9, 0.9),
+                        font: asset_server.load(FONT_REGULAR),
+                        font_size: FONT_SIZE_MEDIUM,
+                        color: hex_dark_mode_text_gray().into(),
                     },
                 ),
-                TextWalletPubkey,
                 Name::new("WalletPubkeyText"),
             ));
             parent

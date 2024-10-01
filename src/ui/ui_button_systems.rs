@@ -11,7 +11,7 @@ use super::{
     components::{
         AutoScrollCheckIcon, ButtonAutoScroll, ButtonCaptureTextInput, ButtonClaimOreRewards, ButtonCooldownSpinner, ButtonCopyText, ButtonGenerateWallet, ButtonLock, ButtonOpenWebTxExplorer, ButtonRequestAirdrop, ButtonSaveConfig, ButtonSaveGeneratedWallet, ButtonStakeOre, ButtonUnlock, CopyableText, TextConfigInputRpcFetchAccountsInterval, TextConfigInputRpcSendTxInterval, TextConfigInputRpcUrl, TextConfigInputThreads, TextInput, ToggleAutoMine
     },
-    styles::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
+    styles::{hex_dark_mode_app_screen_background, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON},
 };
 
 pub fn button_copy_text(
@@ -78,7 +78,7 @@ pub fn button_open_web_tx_explorer(
                     }
                 }
                 if let Some(text) = text {
-                    let url = format!("https://solscan.io/tx/{}?cluster=devnet", text);
+                    let url = format!("https://solscan.io/tx/{}", text);
                     if let Err(_) = open::that(url) {
                         error!("Failed to open web tx explorer with default web browser.");
                     }
@@ -347,8 +347,11 @@ pub fn button_save_config(
                     break;
                 };
 
+                let ws_url =  "ws".to_string() + &text_rpc_url[4..];
+
                 event_writer.send(EventSaveConfig(AppConfig {
                     rpc_url: text_rpc_url.clone(),
+                    ws_url: ws_url.clone(),
                     // TODO: fix for mainnet
                     is_devnet: true,
                     threads,
@@ -444,7 +447,7 @@ pub fn button_auto_scroll(
                 // }
             }
             Interaction::None => {
-                *color = HOVERED_BUTTON.into();
+                *color = hex_dark_mode_app_screen_background().into();
                 // if ui_image.flip_y {
                 //     ui_image.flip_y = false;
                 // }

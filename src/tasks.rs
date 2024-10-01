@@ -5,13 +5,13 @@ use bevy::{
     tasks::{block_on, futures_lite::future, Task}, winit::{UpdateMode, WinitSettings},
 };
 use drillx::Solution;
-use ore::state::Bus;
+use ore_api::state::Bus;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{commitment_config::CommitmentLevel, signature::Signature, transaction::Transaction};
 use solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus, UiTransactionEncoding};
 
 use crate::{
-    ui::{components::{SpinnerIcon, TextTxProcessorTxType, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_ROBOTO, FONT_SIZE_TITLE, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
+    ui::{components::{SpinnerIcon, TextTxProcessorTxType, ToggleAutoMineParent, TxPopUpArea}, styles::{hex_black, CURRENT_TX_STATUS_BACKGROUND, FONT_REGULAR, FONT_SIZE_MEDIUM, SPINNER_ICON, TX_POP_UP_BACKGROUND}}, utils::get_unix_timestamp, AppConfig, AppWallet, BussesResource, EventFetchUiDataFromRpc, EventProcessTx, EventSubmitHashTx, EventTxResult, HashStatus, MinerStatusResource, OreAppState, ProofAccountResource, TreasuryAccountResource, TxProcessor, TxStatus, TxType, FAST_DURATION, REGULAR_DURATION
 };
 
 // Task Components
@@ -30,7 +30,7 @@ pub struct TaskUpdateAppWalletSolBalance {
 
 #[derive(Component)]
 pub struct TaskGenerateHash {
-    pub task: Task<Result<(Solution, u32, u64), String>>,
+    pub task: Task<Result<(Solution, u32, u64, u64), String>>,
 }
 
 #[derive(Component)]
@@ -99,6 +99,7 @@ pub fn task_update_app_wallet_sol_balance(
     mut treasury_account_res: ResMut<TreasuryAccountResource>,
     mut busses_res: ResMut<BussesResource>,
     mut query: Query<(Entity, &mut TaskUpdateAppWalletSolBalance)>,
+    mut query_toggle_mine: Query<&mut Visibility, With<ToggleAutoMineParent>>,
     mut event_fetch_ui_data: EventWriter<EventFetchUiDataFromRpc>,
 ) {
     for (entity, mut task) in &mut query.iter_mut() {
@@ -106,6 +107,16 @@ pub fn task_update_app_wallet_sol_balance(
             let mut fetch_failed = false;
             match result {
                 Ok(result) => {
+                    // if result.proof_account_data.challenge == "Not Found" {
+                    //     // TODO: Spawn Open Button
+                    // } else {
+                           // if let Ok(mut vis) = query_toggle_mine.get_single_mut() {
+                           //     *vis = Visibility::Visible;
+                           // }
+                    // }
+                    if let Ok(mut vis) = query_toggle_mine.get_single_mut() {
+                        *vis = Visibility::Visible;
+                    }
                     app_wallet.sol_balance = result.sol_balance;
                     app_wallet.ore_balance = result.ore_balance;
                     busses_res.busses = result.busses;
@@ -183,6 +194,7 @@ pub fn handle_task_process_tx_result(
     asset_server: Res<AssetServer>,
     app_wallet: Res<AppWallet>,
     proof_account: Res<ProofAccountResource>,
+    ore_app_state: Res<OreAppState>,
     mut winit_settings: ResMut<WinitSettings>,
     mut query_task_handler: Query<(Entity, &mut TaskProcessTx)>,
     mut event_writer: EventWriter<EventTxResult>,
@@ -253,22 +265,13 @@ pub fn handle_task_process_tx_result(
                         None
                     };
 
-                    let timer = Timer::new(Duration::from_millis(3000), TimerMode::Once);
+                    let tx_send_interval = ore_app_state.config.tx_send_interval;
+                    let timer = Timer::new(Duration::from_millis(tx_send_interval), TimerMode::Once);
 
                     let pop_up_area = query_pop_up.single_mut();
 
                     let sol_balance = app_wallet.sol_balance;
-                    let staked_balance = if tx_type == TxType::Mine {
-                        let current_ts = get_unix_timestamp();
-                        let time_since_last_hash = current_ts - proof_account.last_hash_at as u64;
-                        if time_since_last_hash >= 62 || time_since_last_hash <= 53 {
-                            None
-                        } else {
-                            Some(proof_account.stake)
-                        }
-                    } else {
-                        None
-                    };
+                    let staked_balance = Some(proof_account.stake);
 
                     let new_tx = commands.spawn((
                         NodeBundle {
@@ -303,8 +306,8 @@ pub fn handle_task_process_tx_result(
                             TextBundle::from_section(
                                 tx_type.to_string(),
                                 TextStyle {
-                                    font: asset_server.load(FONT_ROBOTO),
-                                    font_size: FONT_SIZE_TITLE,
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
                                     color: Color::hex("#FFFFFF").unwrap(),
                                 },
                             ),
@@ -315,8 +318,8 @@ pub fn handle_task_process_tx_result(
                             TextBundle::from_section(
                                 "SENDING".to_string(),
                                 TextStyle {
-                                    font: asset_server.load(FONT_ROBOTO),
-                                    font_size: FONT_SIZE_TITLE,
+                                    font: asset_server.load(FONT_REGULAR),
+                                    font_size: FONT_SIZE_MEDIUM,
                                     color: Color::ORANGE.into(),
                                 },
                             ),
@@ -376,9 +379,12 @@ pub fn handle_task_send_tx_result(
 ) {
     for (entity, mut task, mut tx_processor) in &mut query.iter_mut() {
         if let Some(send_tx_result) = block_on(future::poll_once(&mut task.task)) {
+            // the txn's are sent on an interval, only successfull sends will 
+            // return the sig.
+            // Txn's will expire after about 80's automatically
             if let Ok(sig) = send_tx_result {
                 tx_processor.signature = Some(sig);
-            }
+            } 
             commands.entity(entity).remove::<TaskSendTx>();
         }
     }

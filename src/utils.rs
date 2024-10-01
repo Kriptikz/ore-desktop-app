@@ -42,7 +42,7 @@ pub fn get_unix_timestamp() -> u64 {
         .as_secs()
 }
 
-pub fn find_best_bus(busses: &Vec<ore::state::Bus>) -> usize {
+pub fn find_best_bus(busses: &Vec<ore_api::state::Bus>) -> usize {
     if busses.len() > 1 {
         let mut best_bus = 0;
         for (i, bus) in busses.iter().enumerate() {
